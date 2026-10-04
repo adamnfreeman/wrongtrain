@@ -145,7 +145,10 @@ button{font:inherit;color:inherit}
 .chipbtn{appearance:none;border:1px solid var(--rule);background:var(--card);border-radius:999px;padding:6px 12px;font:600 13.5px var(--f-body);color:var(--muted);cursor:pointer}
 .chipbtn[aria-pressed="true"]{background:var(--line,var(--ink));border-color:var(--line,var(--ink));color:var(--on-line)}
 .chipbtn.plain[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
-.sbar{position:relative;margin-bottom:14px}
+.sbar{position:relative;margin-bottom:14px;display:flex;gap:8px}
+.sin{position:relative;flex:1;min-width:0}
+.notebtn{flex:none;appearance:none;border:1px solid var(--rule);background:var(--card);color:var(--ink);border-radius:10px;padding:0 12px;font:600 14px var(--f-body);cursor:pointer}
+.notebox{resize:vertical;min-height:84px;padding-right:12px;line-height:1.4;display:block}
 .search{width:100%;padding:10px 74px 10px 12px;border:1px solid var(--rule);border-radius:10px;background:var(--card);color:var(--ink);font:16px var(--f-body);-webkit-appearance:none;appearance:none}
 .search::-webkit-search-cancel-button{display:none}
 .sclear{position:absolute;right:6px;top:50%;transform:translateY(-50%);appearance:none;border:0;background:var(--chip);color:var(--ink);border-radius:8px;padding:6px 10px;font:600 13px var(--f-body);cursor:pointer}
@@ -233,7 +236,7 @@ body.locked .tabs, body.locked .sbar{display:none}
 </style>
 
 <div class="wrap">
-  <div class="sbar" id="gbar"><input class="search" id="gq" type="search" placeholder="Search the whole trip" aria-label="Search the whole trip" autocomplete="off" enterkeyhint="search"><button class="sclear" id="gx" hidden>Clear</button></div>
+  <div class="sbar" id="gbar"><div class="sin"><input class="search" id="gq" type="search" placeholder="Search the whole trip" aria-label="Search the whole trip" autocomplete="off" enterkeyhint="search"><button class="sclear" id="gx" hidden>Clear</button></div><button class="notebtn" id="gn" data-note hidden>+ Note</button></div>
   <div class="status" id="status" role="status" hidden></div>
   <div id="view"></div>
 </div>
@@ -396,7 +399,12 @@ function parseTrip(raw){
     prow.slice(ph+1).forEach(r=>{ const en=g(r,['english']), ja=g(r,['japanese']);
       if(en && ja) phrases.push({cat:g(r,['category'])||'From the sheet', en, ja, ro:g(r,['romaji','reading']), say:g(r,['say it','pronunciation']), when:g(r,['when to use','when','notes'])}); });
   }
-  return {updated:raw.updated, sheetUrl:SHEET_URL, mapUrl, transportNote, days, legs, todo, food, ideas, pins, notes, phrases};
+  /* "Group Notes" tab: what people have asked for from the page (When, Who, Note, Done) */
+  const gnotes=[], nrow=tab('Group Notes');
+  const nh=nrow.findIndex(r=>r.some(c=>/^who$/i.test(c.t)) && r.some(c=>/^note$/i.test(c.t)));
+  if(nh>-1){ const col={}; nrow[nh].forEach((c,i)=>{ if(c.t) col[c.t.toLowerCase()]=i; });
+    nrow.slice(nh+1).forEach(r=>{ const text=cell(r,col.note); if(text) gnotes.push({when:'when' in col?cell(r,col.when):'', who:cell(r,col.who), text, done:'done' in col && cell(r,col.done).toUpperCase()==='TRUE'}); }); }
+  return {updated:raw.updated, sheetUrl:SHEET_URL, mapUrl, transportNote, days, legs, todo, food, ideas, pins, notes, phrases, gnotes};
 }
 /*PARSER-END*/
 </script>
@@ -411,7 +419,7 @@ let D=null, byId={}, byLabel={}, N={cur:null, phase:'before', togo:0};
 const LIVE={on:!!LIVE_URL, ok:false, at:null, busy:false, last:0};
 let CREDS=null;
 const statusEl=document.getElementById('status');
-const S = {tab:'today', day:'', seg:'food', city:'All', gq:'', exp:{}, hide:{}, veg:false, sim:{day:'', min:840}, pq:'', pcat:'All'};
+const S = {tab:'today', day:'', seg:'food', city:'All', gq:'', exp:{}, hide:{}, veg:false, sim:{day:'', min:840}, pq:'', pcat:'All', draft:'', noteMsg:'', noteBad:false};
 try{ S.veg = localStorage.getItem('veg')==='1'; }catch(e){}
 
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -911,6 +919,7 @@ function buildIndex(){
   D.todo.groups.forEach(g=>g.items.forEach(t=>add({g:'To do',k:g.title+(t.when?' · '+t.when:''),t:t.what,x:[t.details,t.where].filter(Boolean).join(' · '),
     pill:t.done?'<span class="pill ok">✓ Done</span>':'',go:'prep'})));
   D.notes.forEach(t=>t.rows.forEach(r=>add({g:'Notes',k:t.src+' · '+t.title,t:r[0],x:r.slice(1).filter(Boolean).join(' · ')})));
+  (D.gnotes||[]).forEach(n=>add({g:'Notes',k:'Group notes · '+n.who+(n.when?' · '+n.when:''),t:'',x:n.text,go:'prep'}));
   phraseGroups().forEach(grp=>grp.items.forEach(it=>add({g:'Phrases',k:grp.cat,t:it.en,x:[it.ja,it.ro,it.when].filter(Boolean).join(' · '),go:'phrases',pq:it.en})));
 }
 function hl(s, terms){
@@ -952,8 +961,38 @@ function vSearch(q){
       + (list.length>show.length?'<button class="linkbtn" data-exp="'+g+'">Show all '+list.length+'</button>':'')+'</section>'; });
   return h;
 }
+function noteItem(n){
+  return '<li><div class="kick">'+esc(n.who||'Someone')+(n.when?' · '+esc(n.when):'')+(n.pending?' · saving…':'')+'</div><p class="item-d">'+esc(n.text)+'</p></li>';
+}
+function notesBlock(){
+  const all=(D.gnotes||[]).slice().reverse(), open=all.filter(n=>!n.done), done=all.filter(n=>n.done);
+  const canAdd=LIVE.on && AUTH && CREDS;
+  if(!canAdd && !all.length) return '';
+  return '<section class="blk" id="gnotes"><div class="sec-h"><h2>Group notes</h2><span class="kicker">'+open.length+' open</span></div>'
+    + (canAdd ? '<p class="note">Anything you want added or changed. It goes into the sheet with your name on it.</p>'
+        + '<textarea class="search notebox" id="gnote" rows="3" maxlength="600" placeholder="For example: add the ramen place near the hotel to Nov 3" aria-label="Your note">'+esc(S.draft)+'</textarea>'
+        + '<div class="chips"><button class="chipbtn go" data-addnote>Add note</button></div><p class="geomsg'+(S.noteBad?' bad':'')+'" id="gnmsg" role="status"'+(S.noteMsg?'':' hidden')+'>'+esc(S.noteMsg)+'</p>' : '')
+    + (open.length?'<ul class="sheet" style="margin-top:12px">'+open.map(noteItem).join('')+'</ul>':'')
+    + (done.length?'<details class="fold"><summary>Dealt with<span class="count">'+done.length+'</span></summary><ul class="sheet">'+done.map(noteItem).join('')+'</ul></details>':'')+'</section>';
+}
+function addNote(btn){
+  const box=document.getElementById('gnote'), text=(box?box.value:'').trim();
+  const say=(m,bad)=>{ S.noteMsg=m; S.noteBad=!!bad; const el=document.getElementById('gnmsg'); if(el){ el.textContent=m; el.hidden=!m; el.className='geomsg'+(bad?' bad':''); } };
+  if(!text) return say('Write the note first.', true);
+  btn.disabled=true; btn.textContent='Saving…'; say('');
+  call({action:'note', text:text}).then(r=>{
+    if(AUTH && r && r.ok===false && r.error==='signin') return signOut('Please sign in again.');
+    if(r && r.ok && r.noted){
+      S.draft=''; D.gnotes=(D.gnotes||[]).concat([{when:r.when||'', who:r.who||(CREDS&&CREDS.shown)||'', text:r.text||text, done:false}]);
+      S.noteMsg='Saved to the Group Notes tab in the sheet.'; S.noteBad=false; buildIndex(); render(true); return;
+    }
+    if(r && Array.isArray(r.tabs)) return say('Notes are not switched on yet. The sheet\'s script needs updating first.', true);
+    say(r && r.error ? 'That note was not saved: '+r.error+'.' : 'That note was not saved. Try again.', true);
+  }).catch(()=>say('That note was not saved. Check your connection and try again.', true))
+    .then(()=>{ const b=document.querySelector('[data-addnote]'); if(b){ b.disabled=false; b.textContent='Add note'; } });
+}
 function vPrep(){
-  let h='<h1 class="page-h">To do</h1><p class="lede">'+esc(D.todo.note.replace(/\s*Tick the box.*$/,''))+(LIVE.on?' Tap a box to tick it off for everyone; it ticks the box in the sheet too.':' Tick things off in the sheet.')+'</p>';
+  let h='<h1 class="page-h">To do</h1>'+notesBlock()+'<p class="lede" style="margin-top:22px">'+esc(D.todo.note.replace(/\s*Tick the box.*$/,''))+(LIVE.on?' Tap a box to tick it off for everyone; it ticks the box in the sheet too.':' Tick things off in the sheet.')+'</p>';
   D.todo.groups.forEach(g=>{ const open=g.items.filter(t=>!t.done), done=g.items.filter(t=>t.done);
     h+='<section class="blk"><div class="sec-h"><h2>'+esc(g.title)+'</h2><span class="kicker">'+open.length+' open</span></div>'
       + (open.length?'<ul class="sheet">'+open.map(t=>todoItem(t)).join('')+'</ul>':'<p class="empty">All done.</p>')
@@ -975,17 +1014,66 @@ if(CAN_SPEAK){ pickVoice(); try{ speechSynthesis.addEventListener('voiceschanged
 let UTTER=null, SPEAK_T=null;
 function sayBtn(btn, on){ if(btn && btn.isConnected) btn.textContent = on ? 'Playing…' : (btn.dataset.slow ? 'Slow' : 'Play'); }
 function speechHelp(btn, text){
+  sayBtn(btn,false);
   const card=btn && btn.isConnected ? btn.closest('.phrase') : null; if(!card || card.querySelector('.sphelp')) return;
   card.querySelector('.pbtns').insertAdjacentHTML('afterend','<p class="geomsg bad sphelp">No sound came out. Check the volume and that the phone is not on silent, or '+ext(trLink(text,'ja','en'),'hear it in Google Translate')+'.</p>');
 }
+/* Recorded clips for the built-in phrases live in phrases-audio.json beside this page. They play through an ordinary
+   audio element, which works on every phone. Phrases added in the sheet have no clip and use the device's own voice. */
+const CLIPS={el:null, map:null, state:'idle', p:null, urls:{}};
+const SILENT_WAV="data:audio/wav;base64,UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YSADAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==";
+function loadClips(){
+  if(CLIPS.state!=='idle') return CLIPS.p;
+  CLIPS.state='loading';
+  CLIPS.p=fetch('phrases-audio.json').then(r=>{ if(!r.ok) throw new Error('http'); return r.json(); })
+    .then(j=>{ CLIPS.map=j.clips||{}; CLIPS.state='ready'; }).catch(()=>{ CLIPS.state='failed'; });
+  return CLIPS.p;
+}
+function clipUrl(key){
+  if(CLIPS.urls[key]) return CLIPS.urls[key];
+  const b=CLIPS.map && CLIPS.map[key]; if(!b) return null;
+  const bin=atob(b), bytes=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+  return CLIPS.urls[key]=URL.createObjectURL(new Blob([bytes],{type:'audio/mpeg'}));
+}
+function playPhrase(it, slow, btn){
+  const key=it.tts||it.ja;
+  if(!CLIPS.el){ CLIPS.el=new Audio(); CLIPS.el.preload='auto'; }
+  const a=CLIPS.el, rate=slow?0.65:1;
+  const fail=()=>{ sayBtn(btn,false); speechHelp(btn,key); };
+  const startClip=()=>{
+    const url=clipUrl(key); if(!url) return false;
+    try{ if(CAN_SPEAK) speechSynthesis.cancel(); }catch(e){}
+    document.querySelectorAll('[data-say]').forEach(b=>sayBtn(b,false));
+    a.onplaying=()=>{ a.playbackRate=rate; sayBtn(btn,true); const h=btn.isConnected&&btn.closest('.phrase').querySelector('.sphelp'); if(h) h.remove(); };
+    a.onended=()=>sayBtn(btn,false); a.onerror=fail;
+    a.pause(); a.src=url; a.defaultPlaybackRate=rate; a.playbackRate=rate;      /* some browsers reset the speed when the source changes */
+    try{ a.preservesPitch=true; a.webkitPreservesPitch=true; }catch(e){}
+    const pr=a.play(); if(pr && pr.catch) pr.catch(fail);
+    return true;
+  };
+  if(CLIPS.state==='ready'){ if(!startClip()) speak(key, slow, btn); return; }
+  if(CLIPS.state==='failed'){ speak(key, slow, btn); return; }
+  /* clips still downloading: start a silent sound now so the phone lets this tap play audio a moment later */
+  if(btn) btn.textContent='Loading…';
+  try{ a.src=SILENT_WAV; const pr=a.play(); if(pr && pr.catch) pr.catch(()=>{}); }catch(e){}
+  loadClips().then(()=>{ if(CLIPS.state==='ready' && startClip()) return; sayBtn(btn,false); speak(key, slow, btn); });
+}
+/* the device's own voices: prefer the natural ones, never the novelty "Eloquence" set that sounds like an old robot */
+function jaVoice(){
+  let v=[]; try{ v=speechSynthesis.getVoices().filter(x=>/^ja([-_]|$)/i.test(x.lang||'')); }catch(e){}
+  const bad=/Eddy|Flo|Grandma|Grandpa|Reed|Rocko|Sandy|Shelley|Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Jester|Organ|Superstar|Trinoids|Whisper|Wobble|Zarvox|eSpeak/i;
+  const good=[/Kyoko/i,/O-?ren/i,/Otoya/i,/Hattori/i,/Siri/i,/Google/i];
+  for(const g of good){ const hit=v.find(x=>g.test(x.name||'') && !bad.test(x.name||'')); if(hit) return hit; }
+  return v.find(x=>!bad.test(x.name||'')) || null;
+}
 function speak(text, slow, btn){
-  if(!CAN_SPEAK) return;
+  if(!CAN_SPEAK) return speechHelp(btn, text);
   const synth=window.speechSynthesis;
   const fire=()=>{
     let started=false;
     const u=new SpeechSynthesisUtterance(text); UTTER=u;              /* keep a reference, or some browsers drop it mid-word */
-    u.lang='ja-JP'; u.rate=slow?0.6:0.9;
-    try{ const v=synth.getVoices().find(x=>/^ja([-_]|$)/i.test(x.lang||'')); if(v) u.voice=v; }catch(e){}
+    u.lang='ja-JP'; u.rate=slow?0.5:0.9;
+    const v=jaVoice(); if(v) u.voice=v;
     u.onstart=()=>{ started=true; sayBtn(btn,true); const h=btn&&btn.isConnected&&btn.closest('.phrase').querySelector('.sphelp'); if(h) h.remove(); };
     u.onend=()=>sayBtn(btn,false);
     u.onerror=e=>{ sayBtn(btn,false); if(!started && !(e && /interrupted|cancel/i.test(e.error||''))) speechHelp(btn,text); };
@@ -1013,8 +1101,7 @@ function phraseList(){
       return '<li class="phrase"><div class="item-h"><span class="item-n">'+esc(it.en)+'</span></div>'
         + '<p class="ja" lang="ja">'+esc(it.ja)+'</p>'
         + '<p class="ro">'+esc(it.ro)+(it.say?' <span class="say">'+esc(it.say)+'</span>':'')+'</p>'
-        + '<div class="chips pbtns">'+(CAN_SPEAK?'<button class="chipbtn go" data-say="'+x.id+'">Play</button><button class="chipbtn" data-say="'+x.id+'" data-slow="1">Slow</button>'
-            :ext(trLink(it.tts||it.ja,'ja','en'),'Hear it in Google Translate'))
+        + '<div class="chips pbtns"><button class="chipbtn go" data-say="'+x.id+'">Play</button><button class="chipbtn" data-say="'+x.id+'" data-slow="1">Slow</button>'
         + '<button class="chipbtn" data-big aria-pressed="false">Show big</button></div>'
         + (it.when?'<p class="item-d">'+esc(it.when)+'</p>':'')+'</li>'; }).join('')+'</ul></section>'; });
   const q=S.pq.trim();
@@ -1027,7 +1114,6 @@ function phraseList(){
 function vPhrases(){
   return '<h1 class="page-h">Phrases</h1>'
     + '<p class="lede">Vowels are always a “ah”, i “ee”, u “oo”, e “eh”, o “oh”. A line over a vowel (ō, ū) means hold it twice as long. The “u” in desu and masu is nearly silent.</p>'
-    + (CAN_SPEAK && VOICES && !JA_VOICE ? '<p class="geomsg bad">This device has no Japanese voice installed, so Play may sound wrong or stay silent.</p>' : '')
     + '<div class="sbar"><input class="search" id="pq" type="search" placeholder="Find a phrase or type a word" aria-label="Find a phrase" autocomplete="off" value="'+esc(S.pq)+'"><button class="sclear" id="px"'+(S.pq?'':' hidden')+'>Clear</button></div>'
     + catStrip()+'<div id="phraselist">'+phraseList()+'</div>';
 }
@@ -1045,6 +1131,8 @@ function render(keepScroll){
   view.innerHTML = (searching ? vSearch(q) : VIEWS[S.tab]()) + footer();
   gx.hidden = !S.gq;
   document.getElementById('gbar').hidden = S.tab==='phrases' && !searching;
+  document.getElementById('gn').hidden = !(LIVE.on && AUTH && CREDS) || S.tab==='prep';
+  if(S.tab==='phrases') loadClips();
   document.querySelectorAll('.tab').forEach(b=>{ if(b.dataset.go===S.tab) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
   if(!keepScroll) window.scrollTo(0,0);
   const cur=view.querySelector('.daychip[aria-current="true"]');
@@ -1058,7 +1146,9 @@ function go(tab, day, keep){ if(day) S.day=day; S.tab=tab; clearSearch(); render
 document.addEventListener('click', e=>{
   if(e.target===gx){ clearSearch(); return render(); }
   if(e.target.id==='px'){ S.pq=''; return render(true); }
-  const t=e.target.closest('[data-go],[data-day],[data-seg],[data-city],[data-veg],[data-more],[data-exp],[data-pg],[data-refresh],[data-tick],[data-signout],[data-locate],[data-center],[data-say],[data-big],[data-pcat]'); if(!t) return;
+  const t=e.target.closest('[data-go],[data-day],[data-seg],[data-city],[data-veg],[data-more],[data-exp],[data-pg],[data-refresh],[data-tick],[data-signout],[data-locate],[data-center],[data-say],[data-big],[data-pcat],[data-note],[data-addnote]'); if(!t) return;
+  if(t.hasAttribute('data-addnote')) return addNote(t);
+  if(t.hasAttribute('data-note')){ go('prep'); const box=document.getElementById('gnote'); if(box){ box.focus(); } return; }
   if(t.dataset.pcat!=null){ S.pcat=t.dataset.pcat; S.pq=''; const box=document.getElementById('pq'); if(box){ box.value=''; document.getElementById('px').hidden=true; }
     const strip=document.getElementById('cats'), list=document.getElementById('phraselist'); strip.outerHTML=catStrip(); list.innerHTML=phraseList();
     const fresh=document.getElementById('cats'), on=fresh.querySelector('[aria-pressed="true"]'); if(on) fresh.scrollLeft=on.offsetLeft-fresh.clientWidth/2+on.clientWidth/2;
@@ -1068,7 +1158,7 @@ document.addEventListener('click', e=>{
   if(t.hasAttribute('data-center')){ if(MAP && GEO.pos) MAP.setView([GEO.pos.lat,GEO.pos.lng], Math.max(MAP.getZoom(),15)); return; }
   if(t.hasAttribute('data-signout')) return signOut('');
   if(t.hasAttribute('data-refresh')) return refresh(true);
-  if(t.dataset.say!=null){ const it=phraseById(+t.dataset.say); if(it) speak(it.tts||it.ja, !!t.dataset.slow, t); return; }
+  if(t.dataset.say!=null){ const it=phraseById(+t.dataset.say); if(it) playPhrase(it, !!t.dataset.slow, t); return; }
   if(t.hasAttribute('data-big')){ const on=t.closest('.phrase').classList.toggle('big'); t.setAttribute('aria-pressed',on); t.textContent=on?'Show small':'Show big'; return; }
   if(t.dataset.tick) return tick(+t.dataset.tick);
   if(t.hasAttribute('data-more')){ const box=t.closest('.cl'), sn=box.querySelector('.snip'); let open;
@@ -1086,7 +1176,7 @@ document.addEventListener('click', e=>{
 });
 gq.addEventListener('input', ()=>{ S.gq=gq.value; S.exp={}; render(true); });
 gq.addEventListener('keydown', e=>{ if(e.key==='Enter') gq.blur(); });
-document.addEventListener('input', e=>{ if(e.target.id!=='pq') return; S.pq=e.target.value;
+document.addEventListener('input', e=>{ if(e.target.id==='gnote'){ S.draft=e.target.value; return; } if(e.target.id!=='pq') return; S.pq=e.target.value;
   document.getElementById('phraselist').innerHTML=phraseList(); document.getElementById('px').hidden=!S.pq; document.getElementById('cats').outerHTML=catStrip(); });
 document.addEventListener('keydown', e=>{ if(e.target.id==='pq' && e.key==='Enter') e.target.blur(); });
 /* swipe left/right between days */
@@ -1163,7 +1253,7 @@ function refresh(manual){
   if(manual || !LIVE.ok) setStatus('busy');
   call().then(raw=>{
     if(AUTH && raw && raw.ok===false && raw.error==='signin') return signOut('Please sign in again.');
-    if(!raw || !Array.isArray(raw.tabs) || (AUTH && raw.v!==2)) throw new Error('shape');
+    if(!raw || !Array.isArray(raw.tabs) || (AUTH && !(raw.v>=2))) throw new Error('shape');
     const str=JSON.stringify(raw.tabs);
     let changed=false;
     if(str!==RAWSTR){ const d=parseTrip(raw); if(!d.days.length) throw new Error('no days'); adopt(d); applyTicks(); buildIndex(); RAWSTR=str; changed=true;
@@ -1201,7 +1291,7 @@ function signIn(name, code, quiet){
   call().then(raw=>{
     if(raw && raw.ok===false){ CREDS=null; store.del('trip-auth');
       say(raw.error==='locked' ? 'Too many tries for that name. Wait ten minutes and try again.' : 'That name and passcode do not match.'); return; }
-    if(!raw || !Array.isArray(raw.tabs) || raw.v!==2){ CREDS=null; say('The sheet is not set up for sign-in yet. Ask whoever runs the sheet to update its script.'); return; }
+    if(!raw || !Array.isArray(raw.tabs) || !(raw.v>=2)){ CREDS=null; say('The sheet is not set up for sign-in yet. Ask whoever runs the sheet to update its script.'); return; }
     if(!parseTrip(raw).days.length){ CREDS=null; say('Signed in, but the sheet has no day tabs to show.'); return; }
     CREDS.shown=raw.name||name; store.set('trip-auth', CREDS); store.set('trip-raw', raw);
     LIVE.ok=true; LIVE.at=new Date(); LIVE.last=Date.now();
@@ -1227,6 +1317,7 @@ if(!AUTH){
   else if(saved && saved.name && saved.code){ gate('loading'); signIn(saved.name, saved.code, true); }
   else gate('form','');
 }
+setTimeout(()=>{ if(D) loadClips(); }, 6000);
 setInterval(()=>{ if(D && S.tab==='today' && N.phase==='during' && !document.hidden && S.gq.trim().length<2) redrawNext(); }, 60000);
 document.addEventListener('change', e=>{
   if(e.target.id==='simday'){ S.sim.day=e.target.value; redrawNext(); }
