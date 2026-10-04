@@ -162,6 +162,12 @@ mark{background:var(--warn-bg);color:inherit;border-radius:3px;padding:0 1px}
 .map .leaflet-popup-content i{font-style:normal;color:var(--muted);font-size:12.5px}
 .leaflet-container a{color:var(--link)}
 .dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--pc);margin-right:6px;vertical-align:-1px}
+.geomsg{font-size:13.5px;color:var(--muted);margin-top:8px}
+.geomsg.bad{color:var(--warn)}
+.me{background:var(--c-travel);border:3px solid var(--card);border-radius:50%;box-shadow:0 0 0 2px var(--c-travel)}
+.me::after{content:"";position:absolute;inset:-3px;border-radius:50%;border:2px solid var(--c-travel);opacity:0}
+@media (prefers-reduced-motion:no-preference){ .me::after{animation:me-pulse 2.2s ease-out infinite} }
+@keyframes me-pulse{ from{transform:scale(1);opacity:.7} to{transform:scale(2.6);opacity:0} }
 .chipbtn.pg[aria-pressed="false"]{opacity:.5}
 .chipbtn.pg[aria-pressed="true"]{background:var(--card);border-color:var(--muted);color:var(--ink)}
 .group-h{font:900 20px/1.2 var(--f-display);margin:24px 0 2px}
@@ -556,19 +562,80 @@ const PIN_GROUPS=[['stay','Stays',['Hotel'],'--ink'],['plan','Planned',['Booked 
 const pinGroup = type => PIN_GROUPS.find(g=>g[2].includes(type)) || PIN_GROUPS[2];
 const pinShown = (sec,it) => (S.city==='All'||sec.city===S.city) && !S.hide[pinGroup(it.type)[0]];
 let MAP=null;
+/* your own location: kept on this device, never sent anywhere */
+const GEO={on:false, watch:null, pos:null, dot:null, ring:null, map:null, msg:'', bad:false, centered:false, drawn:0};
+const canLocate = () => !!(window.L && navigator.geolocation && window.isSecureContext);
+function metres(a,b,c,d){ const R=6371000, t=Math.PI/180, x=(c-a)*t, y=(d-b)*t;
+  const h=Math.sin(x/2)**2+Math.cos(a*t)*Math.cos(c*t)*Math.sin(y/2)**2; return 2*R*Math.asin(Math.sqrt(h)); }
+function fmtDist(m){ return m<950 ? Math.max(10,Math.round(m/10)*10)+' m' : m<100000 ? (m/1000).toFixed(1)+' km' : Math.round(m/1000).toLocaleString('en-US')+' km'; }
+function pinItem(it){
+  const p=GEO.on&&GEO.pos, away=p&&it.lat!=null ? '<span>'+fmtDist(metres(p.lat,p.lng,it.lat,it.lng))+' away</span>' : '';
+  return '<li><div class="item-h"><span class="item-n"><span class="dot" style="--pc:var('+pinGroup(it.type)[3]+')"></span>'+esc(it.name)+'</span><span class="pill">'+esc(it.type)+'</span></div>'
+    + txt(it.notes,'item-d')+(it.link||away?'<div class="meta">'+away+(it.link?ext(it.link,'Open in Google Maps'):'')+'</div>':'')+'</li>';
+}
+function nearest(){
+  const p=GEO.on&&GEO.pos, out=[]; if(!p) return out;
+  D.pins.forEach(sec=>sec.items.forEach(it=>{ if(it.lat!=null && !S.hide[pinGroup(it.type)[0]]) out.push([metres(p.lat,p.lng,it.lat,it.lng),it]); }));
+  return out.sort((a,b)=>a[0]-b[0]);
+}
+const FAR=300000;   /* further than this from every pin: you are not on the trip yet, so the map stays put */
+function pinList(){
+  let h='', any=false; const near=nearest();
+  if(near.length){
+    h+= near[0][0]>FAR
+      ? '<p class="geomsg">You are about '+fmtDist(near[0][0])+' from the nearest pin, so the map has stayed on the trip.</p>'
+      : '<section class="blk"><h3>Nearest to you</h3><ul class="sheet">'+near.slice(0,6).map(n=>pinItem(n[1])).join('')+'</ul></section>';
+  }
+  D.pins.forEach(sec=>{ const list=sec.items.filter(it=>pinShown(sec,it)); if(!list.length) return; any=true;
+    h+='<section class="blk"><h3>'+esc(sec.title)+'</h3><ul class="sheet">'+list.map(pinItem).join('')+'</ul></section>'; });
+  return h+(any?'':'<p class="empty">No pins for that filter.</p>');
+}
 function vMap(){
   const cities=['All','Kyoto','Nara','Osaka','Tokyo'];
-  let h='<h1 class="page-h">Map</h1>'
+  return '<h1 class="page-h">Map</h1>'
     + '<div class="chips">'+cities.map(c=>'<button class="chipbtn" data-city="'+c+'" aria-pressed="'+(S.city===c)+'" '+(c==='All'?'':line(c.toLowerCase()))+'>'+c+'</button>').join('')+'</div>'
     + (window.L?'<div class="map" id="map" role="application" aria-label="Map of trip pins"></div>':'')
+    + (canLocate()?'<div class="chips"><button class="chipbtn plain" data-locate aria-pressed="'+GEO.on+'">'+(GEO.on?'My location: on':'Show my location')+'</button>'
+        + (GEO.on&&GEO.pos?'<button class="chipbtn" data-center>Center on me</button>':'')+'</div>'
+        + '<p class="geomsg'+(GEO.bad?' bad':'')+'" id="geomsg" role="status"'+(GEO.msg?'':' hidden')+'>'+esc(GEO.msg)+'</p>':'')
     + '<div class="chips">'+PIN_GROUPS.map(g=>'<button class="chipbtn pg" data-pg="'+g[0]+'" aria-pressed="'+!S.hide[g[0]]+'"><span class="dot" style="--pc:var('+g[3]+')"></span>'+g[1]+'</button>').join('')+'</div>'
-    + (D.mapUrl?'<p class="foot" style="margin-top:12px">For directions and your own location, '+ext(D.mapUrl,'open the group map in Google Maps')+'.</p>':'');
-  let any=false;
-  D.pins.forEach(sec=>{ const list=sec.items.filter(it=>pinShown(sec,it)); if(!list.length) return; any=true;
-    h+='<section class="blk"><h3>'+esc(sec.title)+'</h3><ul class="sheet">'
-      + list.map(it=>'<li><div class="item-h"><span class="item-n"><span class="dot" style="--pc:var('+pinGroup(it.type)[3]+')"></span>'+esc(it.name)+'</span><span class="pill">'+esc(it.type)+'</span></div>'
-          + txt(it.notes,'item-d')+(it.link?'<div class="meta">'+ext(it.link,'Open in Google Maps')+'</div>':'')+'</li>').join('')+'</ul></section>'; });
-  return h+(any?'':'<p class="empty">No pins for that filter.</p>');
+    + (D.mapUrl?'<p class="foot" style="margin-top:12px">For directions'+(canLocate()?'':' and your own location')+', '+ext(D.mapUrl,'open the group map in Google Maps')+'.</p>':'')
+    + '<div id="pinlist">'+pinList()+'</div>';
+}
+function geoStart(){
+  if(GEO.watch!=null || !canLocate()) return;
+  GEO.watch=navigator.geolocation.watchPosition(geoFix, geoFail, {enableHighAccuracy:true, maximumAge:15000, timeout:20000});
+}
+function geoStop(){ if(GEO.watch!=null){ try{ navigator.geolocation.clearWatch(GEO.watch); }catch(e){} GEO.watch=null; } }
+function geoFix(pos){
+  const firstFix=!GEO.pos;
+  GEO.pos={lat:pos.coords.latitude, lng:pos.coords.longitude, acc:pos.coords.accuracy||0}; GEO.msg=''; GEO.bad=false;
+  if(!GEO.on || S.tab!=='map' || S.gq.trim().length>1) return;
+  if(firstFix) return render(true);                  /* draws the dot, the Center button and the nearest list */
+  geoDraw();
+  if(Date.now()-GEO.drawn>8000){ GEO.drawn=Date.now(); const el=document.getElementById('pinlist'); if(el) el.innerHTML=pinList(); }
+}
+function geoFail(err){
+  /* a passing hiccup (no fix for a moment) should not switch the feature off once it has found you */
+  if(GEO.pos && !(err && err.code===1)) return;
+  geoStop(); GEO.on=false; GEO.pos=null; GEO.bad=true;
+  GEO.msg = err && err.code===1
+    ? 'Location is switched off for this site. Allow it in your browser settings for this site, then try again.'
+    : 'Could not find your location. Try again outdoors, or with Wi-Fi on.';
+  if(S.tab==='map' && D) render(true);
+}
+function geoDraw(){
+  if(!MAP || !GEO.on || !GEO.pos) return;
+  const ll=[GEO.pos.lat, GEO.pos.lng];
+  if(GEO.map===MAP && GEO.dot){ GEO.ring.setLatLng(ll).setRadius(GEO.pos.acc); GEO.dot.setLatLng(ll); return; }
+  const c=getComputedStyle(document.documentElement).getPropertyValue('--c-travel').trim();
+  GEO.ring=L.circle(ll,{radius:GEO.pos.acc,color:c,weight:1,fillColor:c,fillOpacity:.14,interactive:false}).addTo(MAP);
+  GEO.dot=L.marker(ll,{icon:L.divIcon({className:'me',iconSize:[22,22]}),zIndexOffset:1000,keyboard:false}).addTo(MAP).bindPopup('<b>You are here</b>');
+  GEO.map=MAP;
+}
+function geoToggle(){
+  if(GEO.on){ GEO.on=false; geoStop(); GEO.pos=null; GEO.msg=''; GEO.bad=false; GEO.centered=false; return render(true); }
+  GEO.on=true; GEO.bad=false; GEO.msg='Finding you…'; GEO.centered=false; render(true);   /* render starts the watch */
 }
 function initMap(){
   const el=document.getElementById('map'); if(!el||!window.L) return;
@@ -585,6 +652,8 @@ function initMap(){
       if(S.city==='All' ? sec.city!=='Other' : sec.city===S.city) pts.push([it.lat,it.lng]);
     }));
     if(pts.length) MAP.fitBounds(pts,{padding:[26,26],maxZoom:15}); else MAP.setView([35.3,137.6],6);
+    geoDraw();
+    if(GEO.on && GEO.pos && !GEO.centered){ GEO.centered=true; const n=nearest(); if(n.length && n[0][0]<=FAR) MAP.setView([GEO.pos.lat,GEO.pos.lng],15); }
   }catch(err){ el.hidden=true; MAP=null; }
 }
 /* ---------- search across everything ---------- */
@@ -676,14 +745,16 @@ function render(keepScroll){
   if(!keepScroll) window.scrollTo(0,0);
   const cur=view.querySelector('.daychip[aria-current="true"]');
   if(cur){ const st=document.getElementById('strip'); st.scrollLeft = cur.offsetLeft - st.clientWidth/2 + cur.clientWidth/2; }
-  if(S.tab==='map' && !searching) initMap();
+  if(S.tab==='map' && !searching){ initMap(); if(GEO.on) geoStart(); } else geoStop();
   try{ history.replaceState(null,'','#'+(S.tab==='days'?S.day:S.tab)); }catch(e){}
 }
 function clearSearch(){ S.gq=''; S.exp={}; gq.value=''; }
 function go(tab, day, keep){ if(day) S.day=day; S.tab=tab; clearSearch(); render(keep); }
 document.addEventListener('click', e=>{
   if(e.target===gx){ clearSearch(); return render(); }
-  const t=e.target.closest('[data-go],[data-day],[data-seg],[data-city],[data-veg],[data-more],[data-exp],[data-pg],[data-refresh],[data-tick],[data-signout]'); if(!t) return;
+  const t=e.target.closest('[data-go],[data-day],[data-seg],[data-city],[data-veg],[data-more],[data-exp],[data-pg],[data-refresh],[data-tick],[data-signout],[data-locate],[data-center]'); if(!t) return;
+  if(t.hasAttribute('data-locate')) return geoToggle();
+  if(t.hasAttribute('data-center')){ if(MAP && GEO.pos) MAP.setView([GEO.pos.lat,GEO.pos.lng], Math.max(MAP.getZoom(),15)); return; }
   if(t.hasAttribute('data-signout')) return signOut('');
   if(t.hasAttribute('data-refresh')) return refresh(true);
   if(t.dataset.tick) return tick(+t.dataset.tick);
@@ -821,7 +892,7 @@ function signIn(name, code, quiet){
   }).catch(()=>{ CREDS=null; say('Could not reach the sheet. Check your connection and try again.'); })
     .then(()=>{ const b=document.getElementById('lgo'); if(b){ b.disabled=false; b.textContent='Sign in'; } });
 }
-function signOut(msg){ CREDS=null; D=null; RAWSTR=''; LIVE.ok=false; store.del('trip-auth'); store.del('trip-raw'); gate('form', msg); }
+function signOut(msg){ geoStop(); GEO.on=false; GEO.pos=null; CREDS=null; D=null; RAWSTR=''; LIVE.ok=false; store.del('trip-auth'); store.del('trip-raw'); gate('form', msg); }
 document.addEventListener('submit', e=>{ if(e.target.id!=='login') return; e.preventDefault();
   const n=document.getElementById('ln').value.trim(), c=document.getElementById('lc').value.trim();
   if(!n || !c){ document.getElementById('lmsg').textContent='Enter your name and passcode.'; return; }
@@ -839,7 +910,11 @@ if(!AUTH){
   else if(saved && saved.name && saved.code){ gate('loading'); signIn(saved.name, saved.code, true); }
   else gate('form','');
 }
-if(LIVE.on) document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && D && Date.now()-LIVE.last>60000) refresh(false); });
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden) return geoStop();
+  if(GEO.on && D && S.tab==='map' && S.gq.trim().length<2) geoStart();
+  if(LIVE.on && D && Date.now()-LIVE.last>60000) refresh(false);
+});
 })();
 </script>
 
