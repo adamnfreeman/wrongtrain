@@ -132,7 +132,7 @@ button{font:inherit;color:inherit}
 .dim{opacity:.55}
 .lbl{display:block;font:500 11px var(--f-data);letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-top:8px}
 
-.pill{display:inline-flex;align-items:center;font:600 11.5px/1 var(--f-body);padding:4px 8px;border-radius:999px;white-space:nowrap;background:var(--chip);color:var(--muted)}
+.pill{display:inline-flex;align-items:center;font:600 11.5px/1.25 var(--f-body);padding:3px 8px;border-radius:11px;max-width:100%;background:var(--chip);color:var(--muted)}
 .pill.ok{background:var(--ok-bg);color:var(--ok)}
 .pill.todo{background:var(--warn-bg);color:var(--warn)}
 .pill.no{background:var(--no-bg);color:var(--no)}
@@ -208,7 +208,7 @@ details.fold>.note{padding:0 14px 10px;font-size:14px;color:var(--muted)}
 details.fold>.sheet{border:0;border-top:1px solid var(--rule);border-radius:0 0 12px 12px;background:none}
 
 /* to do */
-.todo{display:grid;grid-template-columns:22px minmax(0,1fr);gap:11px}
+li.todo{display:grid;grid-template-columns:22px minmax(0,1fr);gap:11px}
 .box{width:22px;height:22px;border:2px solid var(--muted);border-radius:6px;display:grid;place-items:center;font:700 13px var(--f-body);margin-top:1px}
 .todo.done .box{background:var(--ok);border-color:var(--ok);color:var(--card)}
 button.box{appearance:none;background:none;padding:0;cursor:pointer;position:relative;color:inherit}
@@ -964,14 +964,21 @@ function vSearch(q){
 function noteItem(n){
   return '<li><div class="kick">'+esc(n.who||'Someone')+(n.when?' · '+esc(n.when):'')+(n.pending?' · saving…':'')+'</div><p class="item-d">'+esc(n.text)+'</p></li>';
 }
+const NOTE_HOW='<details class="fold" style="margin-top:12px"><summary>What happens to your note<span class="count">How it works</span></summary><ul class="sheet">'
+  + [['Every hour','New notes are picked up automatically, once an hour. Nobody has to do anything.'],
+     ['Filed in the right section','A clear addition is looked up, given a short description and put where it belongs: Ideas or Food on the Places tab, under the right city and area, or Phrases, or the packing and tips lists further down this page.'],
+     ['Pinned on the map','When its location can be confirmed, it gets a pin on the Map tab as well.'],
+     ['Shows up for everyone','The guide reloads from the sheet whenever you open it, so the addition appears on everyone\'s phone and your note moves to Dealt with.'],
+     ['Left for Adam','Changes to plans already made, anything about bookings, times or money, and questions stay open here until Adam decides.']]
+    .map(s=>'<li><div class="kick">'+s[0]+'</div><p class="item-d">'+s[1]+'</p></li>').join('')+'</ul></details>';
 function notesBlock(){
   const all=(D.gnotes||[]).slice().reverse(), open=all.filter(n=>!n.done), done=all.filter(n=>n.done);
   const canAdd=LIVE.on && AUTH && CREDS;
   if(!canAdd && !all.length) return '';
   return '<section class="blk" id="gnotes"><div class="sec-h"><h2>Group notes</h2><span class="kicker">'+open.length+' open</span></div>'
-    + (canAdd ? '<p class="note">Anything you want added or changed. It goes into the sheet with your name on it.</p>'
+    + (canAdd ? '<p class="note">More than a to-do list: this is how things get added to the guide. Leave a note with what you want added (a shop, somewhere to eat, a sight, a phrase, something to pack). Within about an hour it is filed in the right section, pinned on the map and showing on everyone\'s phone.</p>'
         + '<textarea class="search notebox" id="gnote" rows="3" maxlength="600" placeholder="For example: add the ramen place near the hotel to Nov 3" aria-label="Your note">'+esc(S.draft)+'</textarea>'
-        + '<div class="chips"><button class="chipbtn go" data-addnote>Add note</button></div><p class="geomsg'+(S.noteBad?' bad':'')+'" id="gnmsg" role="status"'+(S.noteMsg?'':' hidden')+'>'+esc(S.noteMsg)+'</p>' : '')
+        + '<div class="chips"><button class="chipbtn go" data-addnote>Add note</button></div><p class="geomsg'+(S.noteBad?' bad':'')+'" id="gnmsg" role="status"'+(S.noteMsg?'':' hidden')+'>'+esc(S.noteMsg)+'</p>'+NOTE_HOW : '')
     + (open.length?'<ul class="sheet" style="margin-top:12px">'+open.map(noteItem).join('')+'</ul>':'')
     + (done.length?'<details class="fold"><summary>Dealt with<span class="count">'+done.length+'</span></summary><ul class="sheet">'+done.map(noteItem).join('')+'</ul></details>':'')+'</section>';
 }
@@ -1272,21 +1279,23 @@ function start(raw){
   document.body.classList.remove('locked');
   fromHash(); render();
 }
+const SIGN_HINT="The first sign-in can take a little while, because it loads the whole trip. After that, this phone remembers you and opens straight away.", SIGN_WAIT="Loading the whole trip. The first time takes a little longer, so hang tight.";
 function gate(mode, msg){
   document.body.classList.add('locked'); statusEl.hidden=true; clearSearch();
   if(MAP){ try{ MAP.remove(); }catch(e){} MAP=null; }
-  if(mode==='loading'){ view.innerHTML='<div class="gate"><p class="empty">Loading the trip…</p></div>'; return; }
+  if(mode==='loading'){ view.innerHTML='<div class="gate"><p class="empty">Loading the trip…<br>This can take a little while.</p></div>'; return; }
   view.innerHTML='<div class="gate"><header class="board"><div class="board-main"><div class="kicker">Japan 2026</div><h1>Sign in</h1>'
     + '<p class="board-sub">Use the name and passcode you were given.</p></div>'
     + '<div class="stripe">'+['kyoto','nara','osaka','tokyo'].map(k=>'<i '+line(k)+'></i>').join('')+'</div></header>'
     + '<form id="login" novalidate><label for="ln">Name</label><input id="ln" name="username" autocomplete="username" autocapitalize="words" autocorrect="off" spellcheck="false">'
     + '<label for="lc">Passcode</label><input id="lc" name="password" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false">'
     + '<button class="gobtn" id="lgo" type="submit">Sign in</button><p class="msg" id="lmsg" role="alert">'+esc(msg||'')+'</p></form>'
-    + '<p class="hint">This phone remembers you after the first sign-in.</p></div>';
+    + '<p class="hint" id="lhint">'+SIGN_HINT+'</p></div>';
 }
 function signIn(name, code, quiet){
   const btn=document.getElementById('lgo'), say=m=>{ const el=document.getElementById('lmsg'); if(el) el.textContent=m; else gate('form', m); };
-  if(btn){ btn.disabled=true; btn.textContent='Signing in…'; }
+  const hint=t=>{ const el=document.getElementById('lhint'); if(el) el.textContent=t; };
+  if(btn){ btn.disabled=true; btn.textContent='Signing in…'; hint(SIGN_WAIT); }
   CREDS={name:name, code:code};
   call().then(raw=>{
     if(raw && raw.ok===false){ CREDS=null; store.del('trip-auth');
@@ -1297,7 +1306,7 @@ function signIn(name, code, quiet){
     LIVE.ok=true; LIVE.at=new Date(); LIVE.last=Date.now();
     first=true; start(raw);
   }).catch(()=>{ CREDS=null; say('Could not reach the sheet. Check your connection and try again.'); })
-    .then(()=>{ const b=document.getElementById('lgo'); if(b){ b.disabled=false; b.textContent='Sign in'; } });
+    .then(()=>{ const b=document.getElementById('lgo'); if(b){ b.disabled=false; b.textContent='Sign in'; } hint(SIGN_HINT); });
 }
 function signOut(msg){ geoStop(); GEO.on=false; GEO.pos=null; CREDS=null; D=null; RAWSTR=''; LIVE.ok=false; store.del('trip-auth'); store.del('trip-raw'); gate('form', msg); }
 document.addEventListener('submit', e=>{ if(e.target.id!=='login') return; e.preventDefault();
