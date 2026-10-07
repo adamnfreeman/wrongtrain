@@ -220,6 +220,20 @@ button.box::after{content:"";position:absolute;inset:-11px}
 .foot .linkbtn,.status .linkbtn{font-size:13.5px;padding:0}
 .status{margin:-6px 0 12px;font-size:13.5px;color:var(--muted)}
 .status.bad{color:var(--warn)}
+/* checking the sheet: a card with a spinner and a train of the four line colours running along the bottom */
+.status.busy{position:relative;overflow:hidden;display:flex;align-items:center;gap:10px;margin:0 0 12px;padding:10px 12px 13px;background:var(--card);border:1px solid var(--rule);border-radius:10px;color:var(--ink);font-weight:600;font-size:14.5px}
+.status.busy::before{content:"";position:absolute;left:0;right:0;bottom:0;height:4px;background:var(--chip)}
+.status.busy::after{content:"";position:absolute;left:0;bottom:0;height:4px;width:45%;border-radius:2px;background:linear-gradient(90deg,var(--c-kyoto) 0 25%,var(--c-nara) 25% 50%,var(--c-osaka) 50% 75%,var(--c-tokyo) 75% 100%)}
+.spin{flex:none;width:16px;height:16px;border-radius:50%;border:2.5px solid var(--chip);border-top-color:var(--ink)}
+@media (prefers-reduced-motion:no-preference){
+  .status.busy{animation:status-in .25s ease-out}
+  .status.busy::after{animation:status-run 1.25s cubic-bezier(.45,.05,.55,.95) infinite}
+  .spin{animation:status-spin .8s linear infinite}
+}
+@media (prefers-reduced-motion:reduce){ .status.busy::after{width:100%} }
+@keyframes status-run{ from{transform:translateX(-100%)} to{transform:translateX(223%)} }
+@keyframes status-spin{ to{transform:rotate(360deg)} }
+@keyframes status-in{ from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:none} }
 /* sign-in */
 body.locked .tabs, body.locked .sbar{display:none}
 .gate{max-width:420px;margin:6vh auto 0}
@@ -1212,10 +1226,13 @@ function adopt(d){
   if(first){ first=false; S.day=D.days[0].id; if(N.cur){ S.day=N.cur.id; if(CITY[N.cur.key] && N.cur.key!=='travel') S.city=CITY[N.cur.key]; } }
   if(!(S.day in byId)) S.day=(N.cur||D.days[0]).id;
 }
+let busyAt=0, busyTimer=0;   /* the checking card stays up at least a moment, so a fast check is still seen */
 function setStatus(kind){
-  if(kind==='busy'){ statusEl.className='status'; statusEl.textContent='Checking the sheet for changes…'; statusEl.hidden=false; }
+  clearTimeout(busyTimer);
+  if(kind==='busy'){ busyAt=Date.now(); statusEl.className='status busy'; statusEl.innerHTML='<span class="spin" aria-hidden="true"></span><span>Checking the sheet for changes…</span>'; statusEl.hidden=false; }
   else if(kind==='bad'){ statusEl.className='status bad'; statusEl.innerHTML='Could not reach the sheet. Showing the copy from '+esc(stamp(D.updated))+'. <button class="linkbtn" data-refresh>Try again</button>'; statusEl.hidden=false; }
-  else statusEl.hidden=true;
+  else { const left=900-(Date.now()-busyAt), isBusy=()=>statusEl.classList.contains('busy');
+    if(left>0 && isBusy() && !statusEl.hidden) busyTimer=setTimeout(()=>{ if(isBusy()) statusEl.hidden=true; }, left); else statusEl.hidden=true; }
 }
 const qs = o => Object.keys(o).map(k=>encodeURIComponent(k)+'='+encodeURIComponent(o[k])).join('&');
 function jsonp(url){
