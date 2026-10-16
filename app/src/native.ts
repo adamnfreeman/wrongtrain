@@ -62,3 +62,12 @@ export async function startNative(onResume: () => void) {
   /* going to the background: make sure the backup is current */
   void App.addListener('pause', backupSoon);
 }
+
+/** Opens a web page: over the app on the iPhone (so whatever the app is doing carries on), in a new tab elsewhere. */
+export async function openPage(url: string) {
+  if (isNative) {
+    const { Browser } = await import('@capacitor/browser');
+    return Browser.open({ url });
+  }
+  window.open(url, '_blank', 'noopener');
+}

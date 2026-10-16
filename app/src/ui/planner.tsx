@@ -80,7 +80,7 @@ export function PlannerSheet({ close }: { close: () => void }) {
       {step === 'style' && <Style a={a} up={up} />}
       {step === 'style' && busy && <PlanningScreen answers={a} />}
       {step === 'outline' && draft.outline && <OutlineView o={draft.outline} days={a.days} left={draft.left} onChange={o => set({ ...draft, outline: o, stops: undefined })} />}
-      {step === 'fill' && draft.outline && states.some(s => s === 'research' || s === 'build' || s === 'waiting') && <PlanningScreen answers={a} title={draft.outline.title}>
+      {step === 'fill' && draft.outline && states.some(s => s === 'research' || s === 'build' || s === 'waiting') && <PlanningScreen answers={a} title={draft.outline.title} city={draft.outline.stops[0]?.city}>
         <ul className="planning-progress">{draft.outline.stops.map((c, i) => (
           <li key={i} className={states[i]}><b>{c.city}</b> {states[i] === 'done' ? 'ready' : states[i] === 'failed' ? 'did not work' : states[i] === 'research' ? 'finding hotels, food and sights' : states[i] === 'build' ? 'planning the days' : 'waiting'}</li>
         ))}</ul>

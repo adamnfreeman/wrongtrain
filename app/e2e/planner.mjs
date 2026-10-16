@@ -39,7 +39,7 @@ await ctx.route(/supabase\.co/, async r => {
   if (/functions\/v1\/plan-trip/.test(u)) {
     const b = JSON.parse(r.request().postData());
     steps.push(b.step + (b.index != null ? b.index : ''));
-    if (b.step === 'outline') { await wait(1500); return json({ plan_id: 'plan1', left: 4, outline }); }
+    if (b.step === 'outline') { await wait(3500); return json({ plan_id: 'plan1', left: 4, outline }); }
     if (b.step === 'research') return json({ notes: `Notes for ${b.outline.stops[b.index].city}` });
     if (b.step === 'build') {
       const o = b.outline, before = o.stops.slice(0, b.index).reduce((n, s) => n + s.nights, 0);
@@ -81,7 +81,15 @@ await next();
 await page.waitForSelector('.planning', { timeout: 3000 }).catch(() => {});
 const icons = await page.locator('.planning-row').first().textContent().catch(() => '');
 check(/🗾/.test(icons) && /🎮|👾/.test(await page.locator('.planning-rows').textContent().catch(() => '')), 'a full-screen planning screen shows Japan and the chosen vibe');
+check(await page.locator('.pcard >> text=a phrase in Japanese').count() === 1 && await page.locator('.pcard >> text=Hear it').count() === 1, 'while it plans, a Japanese phrase to learn');
 await page.screenshot({ path: `${OUT}/p-0-planning.png` });
+await page.locator('.pcard-dots button').nth(1).click();
+const popup = page.waitForEvent('popup', { timeout: 3000 }).catch(() => null);
+check(await page.locator('.pcard >> text=See eSIMs for Japan').count() === 1 && await page.locator('.pcard >> text=may earn a commission').count() === 1, '... and things they will need, labelled as earning a commission');
+await page.locator('.pcard >> text=See eSIMs for Japan').click();
+const pop = await popup;
+check(pop && /airalo\.com\/japan-esim/.test(pop.url()), '... opening the partner for Japan');
+if (pop) await pop.close();
 await sheet.locator('text=Japan in spring').waitFor({ timeout: 10000 });
 check(steps[0] === 'outline', 'asks for an outline first');
 check((await sheet.locator('.item-n').allTextContents()).join() === 'Osaka,Kyoto,Tokyo', 'shows the cities in order');
