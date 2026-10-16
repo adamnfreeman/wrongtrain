@@ -167,9 +167,11 @@ Next:
    terminal, flight number), a bus, or the next booking or meeting (its address, how to get
    there, when to leave). It shows whatever useful details the trip has for that thing, and
    the ticket when there is one. Builds on "How much time do I have?" on Today
-   (`src/ui/next.tsx`, `src/model/next.ts`), the day's legs and plan items. To settle: how long
-   the window is for each kind of thing, and how it appears (taking over Today, a banner, or
-   opening by itself).
+   (`src/ui/next.tsx`, `src/model/next.ts`), the day's legs and plan items. When the window
+   opens, the page opens by itself, and a "Right now" button appears in the bottom bar, to the
+   left of Today; when nothing is happening, the button isn't there at all. To settle: how long
+   the window is for each kind of thing, and how often it may open by itself (once per thing,
+   so closing it sticks).
 
 ## Working together
 
