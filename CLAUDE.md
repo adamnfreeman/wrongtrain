@@ -81,7 +81,10 @@ Next:
 4. **Apple Developer account**: enrollment pending. Then App Store Connect, TestFlight.
 5. **Untested by a person yet**: sharing between two real devices (the live test covers it
    with throwaway users).
-6. Later: Sign in with Apple (needs the developer account), universal links so invite links
+6. **"Something nearby"** (built Oct 16) on Today: pick a mood, get 5 places from OpenStreetMap
+   (Overpass), chosen by Claude on shared trips (`suggest-nearby`), else the nearest. The public
+   Overpass server will not do for many users: move to a paid places API or our own server.
+7. Later: Sign in with Apple (needs the developer account), universal links so invite links
    open the app, a city list for guessing time zones (Kyoto, Florence and similar don't match
    an IANA zone name), editing the "Before you go" guides.
 

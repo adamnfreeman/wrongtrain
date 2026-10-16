@@ -4,13 +4,14 @@ import type { Place } from '../model/types';
 import { lineOf, lineOfDest, runs, cityOf, mapsLink } from '../model/trip';
 import { longDate, shortDate, stamp } from '../model/time';
 import { onToday } from '../model/next';
-import { addNote, toggleNote } from '../model/store';
+import { addNote, toggleNote, getState } from '../model/store';
 import { Requests } from './requests';
 import { useSync } from '../sync/engine';
 import { canFile, dismissFiling, fileNote, undoFile, useFilings, type NoteFiling } from '../sync/filing';
 import { Empty, Fold, Pill, SecH, Txt, line } from './bits';
 import { Board, DayBody, DayStrip, EatItem, LegItem, RouteList, TodoItem, VegToggle, vegOk } from './day';
 import { NextCard } from './next';
+import { Nearby } from './nearby';
 import { useApp } from './ctx';
 
 /* ---------- Today ---------- */
@@ -24,6 +25,7 @@ export function Today() {
       <>
         <Board d={now.cur} />
         <NextCard />
+        <Nearby />
         <DayBody d={now.cur} />
         <section className="sec"><SecH title="The whole route" /><RouteList /></section>
       </>
@@ -55,6 +57,7 @@ export function Today() {
         </section>
       )}
       {now.phase === 'before' && <NextCard />}
+      <Nearby />
       <section className="sec"><SecH title="The route" /><RouteList /></section>
     </>
   );
@@ -232,14 +235,18 @@ function Notes() {
   const filings = useFilings();
   const [draft, setDraft] = useState('');
   const [msg, setMsg] = useState<{ text: string; bad: boolean } | null>(null);
-  const t = ix.trip, claude = canFile(t.id, !!session);
+  const t = ix.trip, claude = canFile(t.id, !!session), shared = !!getState().sync[t.id];
+  /* why Claude is not filing notes here, so a note that just sits there is not a mystery */
+  const why = claude ? '' : t.sample ? 'Claude files notes on your own shared trips, not the sample.'
+    : !shared ? 'To have Claude file notes into the trip, share it: Trip settings, then Share with the group.'
+    : !session ? 'Sign in to have Claude file notes into the trip.' : '';
   const all = t.notes.slice().reverse();
   /* a note Claude just filed stays in view, with what was filed, until you tap OK */
   const open = all.filter(n => !n.done || filings[n.id]), done = all.filter(n => n.done && !filings[n.id]);
   const add = () => {
     if (!draft.trim()) return setMsg({ text: 'Write the note first.', bad: true });
     const id = addNote(t.id, draft); setDraft('');
-    if (id && claude) { setMsg(null); void fileNote(t.id, id); } else setMsg({ text: 'Added for everyone on the trip.', bad: false });
+    if (id && claude) { setMsg(null); void fileNote(t.id, id); } else setMsg({ text: shared ? 'Added for everyone on the trip.' : 'Added.', bad: false });
   };
   const item = (n: (typeof all)[number]) => (
     <li key={n.id} className={'todo' + (n.done ? ' done' : '')}>
@@ -259,7 +266,7 @@ function Notes() {
       <SecH title="Group notes"><span className="kicker">{open.filter(n => !n.done).length} open</span></SecH>
       <p className="note">{claude
         ? 'Leave a note with something to add: somewhere to eat, a sight, a shop, something to book or pack. Claude files it into the trip for everyone. Changes to plans already made wait for the owner.'
-        : 'Ideas, questions and things to add, for everyone on the trip to see.'}</p>
+        : 'Ideas, questions and things to add, for everyone on the trip to see.'}{why && <> {why}</>}</p>
       <textarea className="search notebox" id="gnote" rows={3} maxLength={600} value={draft} onChange={e => setDraft(e.target.value)}
         placeholder={claude ? 'For example: add the ramen place near the hotel to Nov 3' : 'For example: can we fit in a sentō one evening?'} aria-label="Your note" />
       <div className="chips"><button className="chipbtn go" onClick={add}>Add note</button></div>

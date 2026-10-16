@@ -54,6 +54,8 @@ screenshots land in `e2e/out/`.
   Days always stay consecutive: inserting or deleting a day re-dates the ones after it.
 - `src/ui/editors.tsx` – the edit sheets: new trip, trip settings, day, leg, place, to-do.
 - `src/model/rules.ts` – who may change what on a shared trip, and requests for the rest.
+- `src/ui/nearby.tsx`, `src/sync/nearby.ts` – "Something nearby" on Today: a mood, then five places
+  from OpenStreetMap, picked by Claude (`supabase/functions/suggest-nearby`) on shared trips.
 - `src/model/filing.ts`, `src/sync/filing.ts` – group notes filed by Claude, and Undo.
 - `supabase/functions/` – the `file-note` Edge Function and the prompt it sends.
 

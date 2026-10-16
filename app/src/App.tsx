@@ -115,7 +115,8 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
   }, []);
   const [editing, edit] = useState<Edit | null>(null);
   const close = useCallback(() => edit(null), []);
-  const geoWanted = ui.tab === 'map' || (ui.tab === 'today' && now.phase === 'during');
+  /* Today needs it during the trip, and for "Something nearby" at any time */
+  const geoWanted = ui.tab === 'map' || ui.tab === 'today';
   const geo = useGeo(geoWanted);
 
   useEffect(() => {
@@ -136,6 +137,11 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
   return (
     <AppCtx.Provider value={{ ix, now, ui, set, go, geo, me, edit }}>
       <div className="wrap">
+        <div className="tripbar">
+          <button className="linkbtn" onClick={() => selectTrip(null)}>‹ All trips</button>
+          <span className="tripname">{trip.name}</span>
+          {trip.sample && <span className="pill">Sample</span>}
+        </div>
         {!(ui.tab === 'phrases' && !searching) && (
           <div className="sbar">
             <div className="sin">

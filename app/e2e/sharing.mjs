@@ -27,7 +27,7 @@ check(await page.locator('.acct >> text=Sign in').count() === 1, 'welcome offers
 await page.click('text=Plan your own trip');
 await sheet.getByLabel('Stop 1').fill('Lisbon');
 await sheet.getByText('Create').click();
-await page.click('text=Trip settings');
+await page.click('button:has-text("Trip settings")');
 check(await page.locator('text=Only on this phone right now').count() === 1, 'settings says the trip is only on this phone');
 await page.click('text=Share with the group');
 await page.waitForSelector('.sheet-wrap >> text=Sign in to share this trip');
@@ -48,7 +48,7 @@ await page.goto('http://localhost:8092/');
 await page.evaluate(() => localStorage.clear());
 await page.goto('http://localhost:8092/');
 await page.click('text=Explore a sample trip');
-await page.click('text=Trip settings');
+await page.click('button:has-text("Trip settings")');
 check(await page.locator('text=start your own copy of it').count() === 1, 'the sample points you to making a copy before sharing');
 
 /* an invite link opens the join sheet with the code filled in */

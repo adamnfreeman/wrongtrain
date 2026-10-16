@@ -1,4 +1,5 @@
-/* Your own location: asked for only when you switch it on, kept on this phone, never sent anywhere. */
+/* Your own location: asked for only when you switch it on, and kept on this phone. The one exception
+   is "Something nearby" (sync/nearby.ts), which sends it to OpenStreetMap when you pick a mood. */
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 export interface Geo {

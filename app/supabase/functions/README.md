@@ -28,6 +28,21 @@ select trip_id, count(*), sum(input_tokens) as input, sum(output_tokens) as outp
 Places are filed without map coordinates: Claude's guesses are not reliable enough. They show in
 the lists and open a maps search; pins can come once MapTiler geocoding is in.
 
+## suggest-nearby: Claude picks five places nearby
+
+"Something nearby" on the Today screen: pick a mood (food, coffee, rest, sightseeing…). The app
+asks OpenStreetMap's Overpass API for named places of that sort around the phone, then sends the
+list (not the location) here; Claude picks the best five for the mood and the local time and
+says why in a line (`_shared/nearby.ts` has the moods, the query, the prompt and the schema).
+It counts against the same per-trip allowance as file-note. On the sample, a trip that is not
+shared, or when Claude is not available, the app shows the five nearest instead.
+
+The public Overpass server is fine for testing and light use; for many users, pay for a places
+provider or run our own Overpass.
+
+Deploy it with step 4 below, using `suggest-nearby` in place of `file-note`. It uses the same
+`ANTHROPIC_API_KEY` secret.
+
 ## Setting it up
 
 Do these once, in this order. The app works without them: notes just stay as notes, and

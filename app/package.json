@@ -10,7 +10,7 @@
     "test": "vitest run",
     "lint": "oxlint",
     "preview": "vite preview",
-    "e2e": "npm run build && node e2e/screens.mjs dist e2e/out && node e2e/editor.mjs dist e2e/out && node e2e/sharing.mjs dist e2e/out && node e2e/approvals.mjs dist e2e/out && node e2e/filing.mjs dist e2e/out",
+    "e2e": "npm run build && node e2e/screens.mjs dist e2e/out && node e2e/editor.mjs dist e2e/out && node e2e/sharing.mjs dist e2e/out && node e2e/approvals.mjs dist e2e/out && node e2e/filing.mjs dist e2e/out && node e2e/nearby.mjs dist e2e/out",
     "e2e:live": "node e2e/live.mjs",
     "ios": "npm run build && npx cap sync ios && npx cap open ios"
   },

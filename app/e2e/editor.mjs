@@ -104,7 +104,7 @@ await page.click('[aria-label="Tick off: Book Colosseum tickets"]');
 check(await page.locator('[aria-label="Untick: Book Colosseum tickets"]').count() === 1, 'new to-do can be ticked');
 
 /* settings: rename, add a day at the end */
-await page.click('text=Trip settings');
+await page.click('button:has-text("Trip settings")');
 await sheet.waitFor();
 await sheet.getByLabel('Trip name').fill('Rome and Florence');
 await shot('5-settings');

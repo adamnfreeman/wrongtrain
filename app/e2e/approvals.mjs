@@ -40,7 +40,7 @@ await page.waitForSelector('.tabs');
 await shareAs('editor');
 
 /* an editor's rename becomes a request */
-await page.click('text=Trip settings');
+await page.click('button:has-text("Trip settings")');
 await sheet.waitFor();
 check(await sheet.locator('text=Changes by others').count() === 1, 'settings explain the trip rule');
 await sheet.getByLabel('Trip name').fill('Ben’s trip');
@@ -77,7 +77,7 @@ check((await page.evaluate(() => localStorage.getItem('wt-outbox'))) === '[]', '
 
 /* a viewer only leaves notes */
 await shareAs('viewer');
-await page.click('text=Trip settings');
+await page.click('button:has-text("Trip settings")');
 await sheet.waitFor();
 check(await sheet.locator('text=you can see everything and leave notes').count() === 1, 'settings tell a viewer what they can do');
 await sheet.getByLabel('Trip name').fill('Mine now');
@@ -131,7 +131,7 @@ check(saved && saved.name === 'Lisboa' && saved.days.length === trip.days.length
 const mine = await op.evaluate(() => JSON.parse(localStorage.getItem('wrongtrain')));
 check(mine.trips[0].name === 'Lisboa' && mine.sync[trip.id].version === 4 && !mine.sync[trip.id].dirty, '... and her phone has it, saved at the new version');
 check(await op.locator('.tabn').count() === 0, 'the badge goes once it is decided');
-await op.click('text=Trip settings');
+await op.click('button:has-text("Trip settings")');
 await op.locator('.sheet-wrap').last().waitFor();
 check(await op.locator('.sheet-wrap select:has(option:text("Approve changes"))').count() === 1, 'the owner can set the trip rule');
 await op.locator('.sheet-wrap').last().screenshot({ path: `${OUT}/a-4-settings.png` });

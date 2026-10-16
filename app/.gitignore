@@ -25,3 +25,6 @@ dist-ssr
 
 # browser test screenshots
 e2e/out
+
+# Supabase CLI working files
+supabase/.temp
