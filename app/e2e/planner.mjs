@@ -123,6 +123,28 @@ check(!(await page.evaluate(() => localStorage.getItem('wt-plan-draft'))), 'the 
   check(steps.includes('research1') && steps.includes('research2') && !steps.includes('research0'), 'reopened partway, it fills in only the cities still to do');
 }
 
+/* test mode: replays a saved plan, never calling the server */
+{
+  await page.evaluate(() => localStorage.removeItem('wt-plan-draft'));
+  steps.length = 0;
+  await page.goto('http://localhost:8096/');
+  await page.click('text=Plan a trip for me');
+  await sheet.getByLabel('Test mode').check();
+  check(await sheet.locator('.testbanner').count() === 1, 'test mode says it replays a saved plan, at no charge');
+  await sheet.getByLabel('Where to').fill('Anywhere');
+  await next(); await next(); await next();
+  await sheet.locator('text=Fill it in').waitFor({ timeout: 10000 });
+  await next();
+  await sheet.locator('.pill:has-text("Done")').nth(0).waitFor({ timeout: 20000 }).catch(() => {});
+  await page.waitForFunction(() => document.querySelectorAll('.sheet-wrap .pill.ok').length >= 1, null, { timeout: 20000 }).catch(() => {});
+  await page.waitForFunction(() => !document.querySelector('.planning'), null, { timeout: 20000 }).catch(() => {});
+  await next();
+  await page.waitForSelector('.tabs', { timeout: 10000 }).catch(() => {});
+  const made = await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('wrongtrain')); return s.trips.find(x => x.id === s.activeId); });
+  check(steps.length === 0, 'test mode makes no calls to the planner');
+  check(made && made.name === 'Japan in spring', `... and replays the last real plan made on this phone ("${made?.name}")`);
+}
+
 check(errors.length === 0, 'no script errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
 await browser.close();
 srv.kill();

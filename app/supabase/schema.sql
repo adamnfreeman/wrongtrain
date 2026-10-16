@@ -394,10 +394,12 @@ create index if not exists ai_plans_user on public.ai_plans (user_id, created_at
 alter table public.ai_plans enable row level security;
 -- no policies: only the function reads and writes it
 
--- Starts a plan if the person has plans left this month (5 for now). Returns its id and how many are left.
-create or replace function public.claim_plan(user_id uuid)
+-- Starts a plan if the person has plans left this month (cap: 5 for now; the function passes a
+-- higher one for testers). Returns its id and how many are left.
+drop function if exists public.claim_plan(uuid);
+create or replace function public.claim_plan(user_id uuid, cap integer default 5)
 returns jsonb language plpgsql security definer set search_path = public as $$
-declare u uuid := user_id; used integer; cap integer := 5; r uuid;
+declare u uuid := user_id; used integer; r uuid;
 begin
   perform pg_advisory_xact_lock(hashtext(u::text));  -- one claim at a time per person
   select count(*) into used from ai_plans p where p.user_id = u and p.created_at > now() - interval '30 days';
@@ -420,8 +422,19 @@ returns void language sql security definer set search_path = public as $$
   delete from ai_plans where id = plan_id and steps = 0;
 $$;
 
-revoke all on function public.claim_plan(uuid), public.claim_plan_step(uuid, uuid, bigint, bigint), public.refund_plan(uuid) from public, anon, authenticated;
-grant execute on function public.claim_plan(uuid), public.claim_plan_step(uuid, uuid, bigint, bigint), public.refund_plan(uuid) to service_role;
+-- Answers already worked out, by a hash of the request (model, step and everything sent), so
+-- asking the very same thing again costs nothing: retries, and testing with the same answers.
+create table if not exists public.plan_cache (
+  key         text primary key,
+  step        text not null,
+  response    jsonb not null,
+  created_at  timestamptz not null default now()
+);
+alter table public.plan_cache enable row level security;
+-- no policies: only the function reads and writes it
+
+revoke all on function public.claim_plan(uuid, integer), public.claim_plan_step(uuid, uuid, bigint, bigint), public.refund_plan(uuid) from public, anon, authenticated;
+grant execute on function public.claim_plan(uuid, integer), public.claim_plan_step(uuid, uuid, bigint, bigint), public.refund_plan(uuid) to service_role;
 
 -- Why a function call failed, for whoever maintains the app (Edge Function logs are not
 -- reachable from the SQL tools). No policies: only the functions write here.

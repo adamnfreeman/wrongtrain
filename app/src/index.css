@@ -363,3 +363,5 @@ select.input { background-image: linear-gradient(45deg, transparent 50%, var(--m
 .pcard-dots { display: flex; justify-content: center; gap: 6px; margin-top: 10px }
 .pcard-dots button { width: 7px; height: 7px; border-radius: 50%; border: 0; padding: 0; background: var(--rule); cursor: pointer }
 .pcard-dots button[aria-current="true"] { background: var(--ink) }
+
+.testbanner { background: var(--warn-bg); color: var(--warn); border-radius: 10px; padding: 8px 12px; font: 600 14px var(--f-body); margin: 8px 0 }

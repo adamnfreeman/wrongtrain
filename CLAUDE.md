@@ -54,6 +54,10 @@ on a Mac.
   then `src/model/planner.ts` makes a normal trip. Plans are counted per person in `ai_plans`.
 - Appearance (like the phone / light / dark) at the bottom of every page (`src/ui/theme.tsx`).
 
+- Testing the planner cheaply: test mode in the app, `plan_cache`, and the `PLANNER_MODEL`
+  (now `claude-haiku-5-5`) and `PLAN_TESTERS` secrets; see `app/supabase/functions/README.md`.
+  **Before launch:** delete `PLANNER_MODEL` (back to the best model) and hide the test mode switch.
+
 ## Commands (in `app/`)
 
 ```

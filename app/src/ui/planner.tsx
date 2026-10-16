@@ -9,7 +9,8 @@ import {
   DAY_STYLES, DIETS, PACES, STYLES, VIBES, blankAnswers, dollars, stopDates,
   type Answers, type Outline,
 } from '../../supabase/functions/_shared/planner.ts';
-import { fillStop, loadDraft, makeOutline, saveDraft, type Draft, type StopState } from '../sync/planner';
+import { fillStop, isTestMode, loadDraft, makeOutline, rememberPlan, saveDraft, savedPlan, setTestMode, type Draft, type StopState } from '../sync/planner';
+import { Check } from './form';
 import { isSignedIn } from '../sync/engine';
 import { SignInSheet } from './account';
 import { PlanningScreen } from './planning';
@@ -27,8 +28,9 @@ export function PlannerSheet({ close }: { close: () => void }) {
   const set = (d: Draft) => { setDraftState(d); saveDraft(d); };
   const a = draft.answers, up = (p: Partial<Answers>) => set({ ...draft, answers: { ...a, ...p } });
 
+  const [test, setTest] = useState(isTestMode);
   const plan = async () => {
-    if (!isSignedIn()) return setSignIn(true);
+    if (!test && !isSignedIn()) return setSignIn(true);
     setBusy(true); setMsg('');
     try {
       const r = await makeOutline(a);
@@ -68,6 +70,7 @@ export function PlannerSheet({ close }: { close: () => void }) {
 
   const make = () => {
     const t = planToTrip(a, draft.outline!, draft.stops || []);
+    if (draft.planId !== 'test') rememberPlan(draft);
     addTrip(t); saveDraft(null); close();
   };
 
@@ -85,6 +88,7 @@ export function PlannerSheet({ close }: { close: () => void }) {
   return (
     <Sheet title="Plan it for me" onCancel={close} onSave={next[step].go} saveLabel={next[step].label} canSave={next[step].ok}>
       {back[step] && <button type="button" className="linkbtn" onClick={() => setStep(back[step]!)}>‹ Back</button>}
+      {test && step !== 'fill' && <p className="testbanner">Test mode: replays “{savedPlan().outline.title}”. No charge.</p>}
       {step === 'where' && <Where a={a} up={up} />}
       {step === 'who' && <Who a={a} up={up} />}
       {step === 'style' && <Style a={a} up={up} />}
@@ -97,6 +101,8 @@ export function PlannerSheet({ close }: { close: () => void }) {
       </PlanningScreen>}
       {step === 'fill' && draft.outline && <Filling o={draft.outline} states={states} onRetry={() => void fill(draft)} />}
       {msg && <p className="geomsg bad" role="alert">{msg}</p>}
+      {step === 'where' && <Check label="Test mode" checked={test} onChange={v => { setTest(v); setTestMode(v); }}
+        hint="Replays the last plan made on this phone instead of planning a new one. Free and quick, for trying things out." />}
       {step === 'where' && draft.outline && <p className="fhint">You have a plan in progress. <button type="button" className="linkbtn" onClick={() => setStep(draft.stops ? 'fill' : 'outline')}>Carry on with it</button> or <button type="button" className="linkbtn" onClick={() => { saveDraft(null); setDraftState({ answers: blankAnswers() }); }}>start again</button>.</p>}
     </Sheet>
   );

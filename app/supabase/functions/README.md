@@ -57,6 +57,17 @@ It needs sign-in, not a shared trip: plans are counted per person in `ai_plans` 
 now; `claim_plan` in `schema.sql`). Deploy it with step 4 below, using `plan-trip`. It uses the
 same `ANTHROPIC_API_KEY` secret.
 
+### Keeping test costs down
+
+- **Test mode** (a switch on the planner's first page) replays the last plan made on that phone,
+  with no call to the function at all.
+- **The same request twice** is answered from the `plan_cache` table, with no call to Claude.
+- **`PLANNER_MODEL` secret**: `claude-haiku-5-5` for cheap test runs (about a fortieth of the
+  price); delete the secret for the best plans. **`PLAN_TESTERS`**: emails (comma-separated)
+  allowed 1000 plans a month instead of 5. Set them with
+  `npx supabase secrets set NAME=value --project-ref wklwpihkpiuniazhidjz`, or in the dashboard
+  under Edge Functions → Secrets.
+
 ## Setting it up
 
 Do these once, in this order. The app works without them: notes just stay as notes, and
