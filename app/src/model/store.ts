@@ -4,7 +4,7 @@
    Screens call these functions and never touch storage themselves. For a shared trip, the sync
    engine (sync/engine.ts) hears about every change through onTripChange and sends it on. */
 import { useSyncExternalStore } from 'react';
-import type { Trip } from './types';
+import type { Note, Trip } from './types';
 import type { Role, Rule } from './rules';
 import { addDays, daysBetween, todayIn } from './time';
 import { newId } from './trip';
@@ -138,7 +138,21 @@ export function deleteTrip(id: string) {
 
 export const setMe = (me: string) => set({ me: me.trim() });
 
+/* The Japan edition sends ticks and group notes on to the sheet (sheet/live.ts, App.tsx). */
+let todoHook: ((tripId: string, todoId: string, done: boolean) => void) | null = null;
+let noteHook: ((tripId: string, note: Note) => void) | null = null;
+export const onTodoToggle = (f: typeof todoHook) => { todoHook = f; };
+export const onNoteAdd = (f: typeof noteHook) => { noteHook = f; };
+
+/** Replaces a trip with a newer copy from elsewhere (the Japan sheet), without counting it as an edit. */
+export function replaceTrip(t: Trip) {
+  const have = state.trips.some(x => x.id === t.id);
+  set({ trips: have ? state.trips.map(x => (x.id === t.id ? t : x)) : [...state.trips, t], activeId: t.id });
+}
+
 export function toggleTodo(tripId: string, todoId: string) {
+  const was = state.trips.find(t => t.id === tripId)?.todos.find(x => x.id === todoId);
+  if (was) todoHook?.(tripId, todoId, !was.done);
   patchTrip(tripId, t => ({
     ...t,
     todos: t.todos.map(x => (x.id === todoId ? { ...x, done: !x.done, doneBy: !x.done ? state.me || undefined : undefined } : x)),
@@ -154,6 +168,8 @@ export function addNote(tripId: string, text: string): string {
     ...t,
     notes: [...t.notes, { id, author: state.me || 'Me', text: clean, at: new Date().toISOString(), done: false }],
   }));
+  const note = state.trips.find(t => t.id === tripId)?.notes.find(n => n.id === id);
+  if (note) noteHook?.(tripId, note);
   return id;
 }
 

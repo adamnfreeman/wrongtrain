@@ -13,6 +13,7 @@ import '@fontsource/zen-kaku-gothic-new/900.css'
 import './index.css'
 import { restoreBackup, startNative } from './native'
 import { applyTheme } from './ui/theme'
+import { JAPAN } from './edition'
 
 applyTheme()
 
@@ -21,8 +22,14 @@ applyTheme()
 await restoreBackup()
 const [{ default: App }, { pullAll, startSync }] = await Promise.all([import('./App.tsx'), import('./sync/engine')])
 
-startSync()
-void startNative(() => { void pullAll() })
+/* The Japan edition reads its one trip from the Google Sheet, not from shared trips; it keeps
+   working with no signal through its own service worker (public/japan-sw.js). */
+if (JAPAN) {
+  if ('serviceWorker' in navigator) void navigator.serviceWorker.register('./japan-sw.js').catch(() => {})
+} else {
+  startSync()
+  void startNative(() => { void pullAll() })
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

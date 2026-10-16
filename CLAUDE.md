@@ -81,6 +81,20 @@ npm run ios        # build, copy into ios/, open Xcode
 
 The database rules can be checked on a local Postgres: `sh supabase/test/run.sh <psql flags>`.
 
+## The Japan edition at wrongtrain.lol/japan/
+
+The app, built for the Japan 2026 group: `npm run build:japan` (into `dist-japan/`, with
+`VITE_EDITION=japan` from `.env.japan`; `src/edition.ts`). It signs in with the Japan page's name
+and passcode, reads the trip live from the Google Sheet through the same Apps Script web app and
+the page's own parser (`src/sheet/live.ts`, `src/sheet/sheetTrip.js`, the `virtual:parse-trip`
+module in `vite.config.ts`), refreshes every few minutes, and sends ticks and group notes back to
+the sheet. The plan is changed in the sheet: Edit buttons say so (`SheetOnly` in `src/ui/japan.tsx`).
+No Wallet tab and no shared-trip sync. Works offline through `public/japan-sw.js`. Tested by
+`e2e/japan.mjs`, which plays the sheet's script.
+
+To publish: build it on `app`, then on `main` replace the `japan/` folder with `app/dist-japan/` and
+push. Touch nothing else on `main`. The Japan page at `/` stays until Adam says to swap.
+
 ## Publishing the test copy at wrongtrain.lol/app/
 
 Build on the `app` branch, then on `main` replace the `app/` folder with `app/dist/` and push.

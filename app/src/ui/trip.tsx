@@ -8,6 +8,8 @@ import { useApp, type Tab } from './ctx';
 import { useWaitingForMe } from './requests';
 import { RouteList } from './day';
 import { SecH } from './bits';
+import { JAPAN } from '../edition';
+import { SHEET_URL } from '../sheet/live';
 
 /** Sections that open from Trip rather than the bottom bar (none now: every section has a tab). */
 export const UNDER_TRIP: Tab[] = [];
@@ -43,11 +45,14 @@ export function TripHub() {
           </button>
         ))}
       </div>}
-      <ul className="hubrows">
+      {JAPAN ? <ul className="hubrows">
+        <li><button onClick={() => go('prep')}><b>Leave a group note</b><span>Ask for something to be added; it's filed into the trip</span></button></li>
+        <li><a href={SHEET_URL} target="_blank" rel="noopener"><b>Open the Google Sheet</b><span>Where the plan is changed</span></a></li>
+      </ul> : <ul className="hubrows">
         <li><button onClick={() => edit({ kind: 'trip' })}><b>{shared ? 'People and sharing' : 'Share with the group'}</b><span>{shared ? 'Invite, roles, who can change the plan' : 'Plan it together, live'}</span></button></li>
         <li><button onClick={() => edit({ kind: 'trip' })}><b>Trip settings</b><span>Name, dates, destinations</span></button></li>
         <li><button onClick={() => selectTrip(null)}><b>All trips</b><span>{t.sample ? 'Leave the sample, plan your own' : 'Switch trip, or plan a new one'}</span></button></li>
-      </ul>
+      </ul>}
       {!ui.q && days.length > 0 && <section className="sec"><SecH title="The whole route" /><RouteList /></section>}
     </>
   );
