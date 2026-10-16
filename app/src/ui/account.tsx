@@ -1,4 +1,4 @@
-/* Sign-in, sharing a trip with the group, joining one with a code, and the save status line. */
+/* Sign-in, Account & settings, sharing a trip with the group, joining one with a code, and the save status line. */
 import { useEffect, useState } from 'react';
 import type { Trip } from '../model/types';
 import { getState, setMe, useStore } from '../model/store';
@@ -7,6 +7,7 @@ import { DeleteButton, Sheet, Text } from './form';
 import { shareBase } from '../native';
 import { ROLES } from '../model/rules';
 import { RoleControl, RuleSetting } from './requests';
+import { ThemeSwitch } from './theme';
 
 /* ---------- sign in ---------- */
 
@@ -198,19 +199,72 @@ export function SyncLine({ trip }: { trip: Trip }) {
   return <p className={'syncline ' + st}>{st === 'signedout' ? 'Shared · signed out, so changes stay on this phone until you sign in.' : LINE[st]}</p>;
 }
 
-export function AccountLine() {
-  const sync = useSync();
-  const [signIn, setSignIn] = useState(false);
-  if (!sync.ready) return null;
+/* ---------- account & settings ---------- */
+
+/** The round button in the top corner of every page, opening Account & settings. */
+export function AccountButton({ trip }: { trip?: Trip }) {
+  const [open, setOpen] = useState(false);
   return (
-    <p className="acct">
-      {sync.session ? <>Signed in as {sync.session.user.email}. <button className="linkbtn" onClick={() => void signOut()}>Sign out</button>
-        {' · '}<button className="linkbtn" onClick={async () => {
+    <>
+      <button className="acctbtn" aria-label="Account & settings" onClick={() => setOpen(true)}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.6" /><path d="M5 19.5c1.2-3.4 3.8-5 7-5s5.8 1.6 7 5" /></svg>
+      </button>
+      {open && <AccountSheet trip={trip} close={() => setOpen(false)} />}
+    </>
+  );
+}
+
+function AccountSheet({ trip, close }: { trip?: Trip; close: () => void }) {
+  const { me } = useStore();
+  const sync = useSync();
+  const [name, setName] = useState(me);
+  const [signIn, setSignIn] = useState(false);
+  const saveName = () => { setMe(name); if (name.trim()) void setMyName(name.trim()); };
+  return (
+    <Sheet title="Account & settings" cancelLabel="Done" onCancel={() => { saveName(); close(); }}>
+      <section className="sec" style={{ marginTop: 12 }}>
+        <div className="sec-h"><h2>Account</h2></div>
+        {!sync.ready ? <p className="hint">Checking…</p>
+          : sync.session ? <>
+            <p>Signed in as <b>{sync.session.user.email}</b></p>
+            <button className="chipbtn" style={{ marginTop: 10 }} onClick={() => void signOut()}>Sign out</button>
+          </> : <>
+            <p>Sign in to share trips with your group. Trips on this phone stay here either way.</p>
+            <button className="chipbtn go" style={{ marginTop: 10 }} onClick={() => setSignIn(true)}>Sign in</button>
+          </>}
+      </section>
+      <section className="sec">
+        <div className="sec-h"><h2>You</h2></div>
+        <Text label="Your name, for notes and ticks" value={name} onChange={setName}
+          placeholder={trip?.travelers[0] ? `e.g. ${trip.travelers[0]}` : 'Your name'} />
+      </section>
+      <section className="sec">
+        <div className="sec-h"><h2>Settings</h2></div>
+        <ThemeSwitch />
+      </section>
+      <section className="sec">
+        <div className="sec-h"><h2>About</h2></div>
+        <BuildLine />
+      </section>
+      {sync.session && <section className="sec">
+        <button className="dangerbtn" onClick={async () => {
           if (!confirm('Delete your WrongTrain account? You leave every shared trip, and trips nobody else is on are deleted. Trips only on this phone stay.')) return;
           try { await deleteAccount(); } catch (e) { alert(errText(e)); }
-        }}>Delete account</button></>
-        : <><button className="linkbtn" onClick={() => setSignIn(true)}>Sign in</button> to share trips with your group.</>}
+        }}>Delete my account</button>
+      </section>}
       {signIn && <SignInSheet close={() => setSignIn(false)} />}
+    </Sheet>
+  );
+}
+
+/** Which build this is, so you can tell whether a phone has the latest. */
+function BuildLine() {
+  const at = new Date(__BUILD__.at);
+  const when = isNaN(+at) ? '' : at.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  return (
+    <p className="buildline">
+      <b>WrongTrain build {__BUILD__.n || '?'}</b>
+      {when && <span>Made {when}{__BUILD__.commit && ` · ${__BUILD__.commit}`}</span>}
     </p>
   );
 }

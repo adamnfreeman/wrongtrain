@@ -1,5 +1,5 @@
 import { startTransition, useCallback, useEffect, useMemo, useState } from 'react';
-import { openSample, pref, resetSample, selectTrip, setMe, setPref, useStore } from './model/store';
+import { openSample, pref, resetSample, selectTrip, setPref, useStore } from './model/store';
 import { indexTrip, whereNow } from './model/trip';
 import type { Trip } from './model/types';
 import { shortDate } from './model/time';
@@ -12,10 +12,8 @@ import { Phrases } from './ui/phrases';
 import { Search } from './ui/search';
 import { CopySampleSheet, DayEditor, LegEditor, NewTripSheet, PlaceEditor, TodoEditor, TripSettings, type Edit } from './ui/editors';
 import { makeSample } from './model/sample';
-import { AccountLine, JoinSheet, SyncLine, joinCodeFromLink } from './ui/account';
-import { setMyName } from './sync/engine';
+import { AccountButton, JoinSheet, SyncLine, joinCodeFromLink } from './ui/account';
 import { Toast, useWaitingForMe } from './ui/requests';
-import { ThemeSwitch } from './ui/theme';
 import { PlannerSheet } from './ui/planner';
 import { TripHub } from './ui/trip';
 import { useDock } from './ui/dock';
@@ -53,6 +51,7 @@ function Welcome({ trips }: { trips: Trip[] }) {
   const sample = useMemo(() => trips.find(t => t.sample) || makeSample(new Date()), [trips]);
   return (
     <div className="wrap" style={{ paddingBottom: 40 }}>
+      <AccountButton />
       <div className="gate">
         <header className="board">
           <div className="board-main">
@@ -85,7 +84,6 @@ function Welcome({ trips }: { trips: Trip[] }) {
             </ul>
           </section>
         )}
-        <div className="foot"><AccountLine /><ThemeSwitch /></div>
       </div>
     </div>
   );
@@ -242,8 +240,9 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
             <section key={t} className="pane" data-tab={t} aria-hidden={t !== ui.tab}>
               <div className="wrap" id={t === ui.tab ? 'view' : undefined}>
                 {(all || t === ui.tab) && <>
+                  <AccountButton trip={trip} />
                   <Page />
-                  {t === 'trip' && (searching ? <Search q={q} /> : <Footer trip={trip} me={me} />)}
+                  {t === 'trip' && (searching ? <Search q={q} /> : <Footer trip={trip} />)}
                 </>}
               </div>
             </section>
@@ -275,8 +274,7 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
   );
 }
 
-function Footer({ trip, me }: { trip: Trip; me: string }) {
-  const [name, setName] = useState(me);
+function Footer({ trip }: { trip: Trip }) {
   return (
     <div className="foot">
       <SyncLine trip={trip} />
@@ -284,13 +282,6 @@ function Footer({ trip, me }: { trip: Trip; me: string }) {
         {trip.sample ? 'This is the sample trip. Ticks and notes are saved on this phone only. ' : 'Saved on this phone. '}
         {trip.sample && <button className="linkbtn" onClick={resetSample}>Start the sample over</button>}
       </p>
-      <AccountLine />
-      <label className="lbl" htmlFor="me">Your name, for notes and ticks</label>
-      <div className="sbar" style={{ marginTop: 6 }}>
-        <div className="sin"><input id="me" className="search" style={{ paddingRight: 12 }} value={name} placeholder={trip.travelers[0] ? `e.g. ${trip.travelers[0]}` : 'Your name'}
-          onChange={e => setName(e.target.value)} onBlur={() => { setMe(name); if (name.trim()) void setMyName(name.trim()); }} onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} /></div>
-      </div>
-      <ThemeSwitch />
     </div>
   );
 }
