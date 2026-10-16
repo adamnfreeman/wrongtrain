@@ -8,7 +8,7 @@ import { cityOf, codeOf, lineOf, mapsLink, stayLine, destOf } from '../model/tri
 import { dayOfMonth, fmtHM, fmtT, longDate } from '../model/time';
 import { anchorsFor } from '../model/next';
 import { toggleTodo } from '../model/store';
-import { Ext, Pill, Rich, SecH, Txt, line, Glance } from './bits';
+import { Ext, Pill, Rich, SecH, Txt, line } from './bits';
 import { useApp } from './ctx';
 
 /** The day's heading: which day, the city, tonight's stay. compact on Today, where the time to leave leads. */
@@ -44,17 +44,8 @@ const Bullets = ({ items }: { items: Bullet[] }) => (
   </ul>
 );
 
-/** One part of a day: a section, or on Today a fold with a one-line summary. */
-function Part({ glance, id, title, sum, action, style, children }: { glance?: boolean; id: string; title: string; sum: string; action?: React.ReactNode; style?: React.CSSProperties; children: React.ReactNode }) {
-  return glance ? <Glance id={id} title={title} sum={sum}><div style={style}>{children}</div></Glance>
-    : <section className="sec" style={style}><SecH title={title}>{action}</SecH>{children}</section>;
-}
-
-/** The day: plan, fixed times, getting around, tips, food. glance (on Today) folds each part
-    away behind a one-line summary. */
-export function DayBody({ d, glance }: { d: Day; glance?: boolean }) {
+export function DayBody({ d }: { d: Day }) {
   const { ix, ui, go, edit } = useApp();
-  const plural = (n: number, one: string, many = one + 's') => `${n} ${n === 1 ? one : many}`;
   const legs = ix.trip.legs.filter(l => l.dayId === d.id);
   const eats = d.eatIds.map(id => ix.place.get(id)).filter((p): p is Place => !!p);
   const shown = eats.filter(p => vegOk(p, ui.veg));
@@ -72,9 +63,8 @@ export function DayBody({ d, glance }: { d: Day; glance?: boolean }) {
   return (
     <>
       {d.plan.length > 0 && (
-        <Part glance={glance} id="plan" title="Plan" style={line(lineOf(ix, d))}
-          sum={[plural(d.plan.length, 'thing'), d.plan.find(p => p.time) && `${fmtHM(d.plan.find(p => p.time)!.time)} ${d.plan.find(p => p.time)!.text}`].filter(Boolean).join(' · ')}
-          action={<button className="linkbtn" onClick={() => edit({ kind: 'day', id: d.id })}>Edit</button>}>
+        <section className="sec" style={line(lineOf(ix, d))}>
+          <SecH title="Plan"><button className="linkbtn" onClick={() => edit({ kind: 'day', id: d.id })}>Edit</button></SecH>
           <ol className="plan">
             {d.plan.map(p => {
               const place = p.placeId ? ix.place.get(p.placeId) : undefined;
@@ -89,10 +79,11 @@ export function DayBody({ d, glance }: { d: Day; glance?: boolean }) {
               );
             })}
           </ol>
-        </Part>
+        </section>
       )}
       {fixed.length > 0 && (
-        <Part glance={glance} id="fixed" title="Be on time for" sum={fixed.map(a => `${a.at == null ? 'All day' : fmtT(a.at)} ${a.name}`).join(' · ')}>
+        <section className="sec">
+          <SecH title="Be on time for" />
           <ul className="sheet">
             {fixed.map((a, i) => (
               <li key={i}>
@@ -102,22 +93,22 @@ export function DayBody({ d, glance }: { d: Day; glance?: boolean }) {
               </li>
             ))}
           </ul>
-        </Part>
+        </section>
       )}
       {(legs.length > 0 || d.around.length > 0) && (
-        <Part glance={glance} id="around" title="Getting around" sum={legs.length ? legs.map(l => `${l.from} → ${l.to}`).join(' · ') : plural(d.around.length, 'tip')}
-          action={<span><button className="linkbtn" onClick={() => edit({ kind: 'leg', dayId: d.id })}>+ Leg</button> · <button className="linkbtn" onClick={() => go('transit')}>All legs</button></span>}>
+        <section className="sec">
+          <SecH title="Getting around"><span><button className="linkbtn" onClick={() => edit({ kind: 'leg', dayId: d.id })}>+ Leg</button> · <button className="linkbtn" onClick={() => go('transit')}>All legs</button></span></SecH>
           {legs.length > 0 && <ul className="sheet">{legs.map(l => <LegItem key={l.id} l={l} />)}</ul>}
           {d.around.length > 0 && <div className="blk"><Bullets items={d.around} /></div>}
-        </Part>
+        </section>
       )}
-      {d.tips.length > 0 && <Part glance={glance} id="tips" title="Good to know" sum={plural(d.tips.length, 'tip')}><Bullets items={d.tips} /></Part>}
+      {d.tips.length > 0 && <section className="sec"><SecH title="Good to know" /><Bullets items={d.tips} /></section>}
       {eats.length > 0 && (
-        <Part glance={glance} id="eat" title="Where to eat" sum={eats.slice(0, 3).map(p => p.name).join(' · ')} action={<VegToggle />}>
-          {glance && <div style={{ marginBottom: 8 }}><VegToggle /></div>}
+        <section className="sec">
+          <SecH title="Where to eat"><VegToggle /></SecH>
           {shown.length ? <ul className="sheet">{shown.map(p => <EatItem key={p.id} p={p} />)}</ul>
             : <p className="empty">Nothing veg-friendly listed for this day.</p>}
-        </Part>
+        </section>
       )}
     </>
   );

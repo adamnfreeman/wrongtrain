@@ -6,6 +6,8 @@ import { shortDate } from '../model/time';
 import { PACKS } from '../phrases';
 import { useApp, type Tab } from './ctx';
 import { useWaitingForMe } from './requests';
+import { RouteList } from './day';
+import { SecH } from './bits';
 
 /** Sections that open from Trip rather than the bottom bar (none now: every section has a tab). */
 export const UNDER_TRIP: Tab[] = [];
@@ -46,6 +48,7 @@ export function TripHub() {
         <li><button onClick={() => edit({ kind: 'trip' })}><b>Trip settings</b><span>Name, dates, destinations</span></button></li>
         <li><button onClick={() => selectTrip(null)}><b>All trips</b><span>{t.sample ? 'Leave the sample, plan your own' : 'Switch trip, or plan a new one'}</span></button></li>
       </ul>
+      {!ui.q && days.length > 0 && <section className="sec"><SecH title="The whole route" /><RouteList /></section>}
     </>
   );
 }

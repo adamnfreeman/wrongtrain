@@ -32,7 +32,6 @@ async function open(setup) {
   const { ctx, page } = await open(c => c.route(/supabase\.co/, r => r.abort('internetdisconnected')));
   await page.goto('http://localhost:8094/');
   await page.click('text=Explore a sample trip');
-  await page.click('summary:has-text("Something nearby")'); // it starts folded
   await page.waitForSelector('#nearby');
   await page.click('#nearby >> button:has-text("Food")');
   await page.waitForSelector('#nearby .sheet li', { timeout: 10000 });
@@ -76,7 +75,6 @@ async function open(setup) {
     return t;
   }, [session]);
   await page.reload();
-  await page.click('summary:has-text("Something nearby")'); // it starts folded
   await page.waitForSelector('#nearby');
   await page.click('#nearby >> button:has-text("Food")');
   await page.waitForSelector('#nearby .sheet li', { timeout: 10000 });
