@@ -146,6 +146,20 @@ Next:
 14. **Tapping a tab** (asked for Oct 16): the tapped button slides to the centre of the bottom
    bar, and the pages swipe quickly across to that page (now they glide slowly or jump).
    `TripApp` in `src/App.tsx`, the pager and bar scroll code.
+15. **Three levels of say, picked when you create the trip** (Adam's idea, Oct 16). Ask on the
+   new-trip and planner screens, in plain, funny words, then let the owner change it per person
+   in Trip settings:
+   1. "My friends are chill and know what they're doing": no approvals, anyone changes anything.
+   2. "Some of these people shouldn't be allowed near the hotels": they can add ideas, places
+      and notes, but can't remove things or change the itinerary (days, times, travel, stays)
+      without the owner's OK.
+   3. "My mother-in-law is trying to run this trip and nobody wants her to": zero control; they
+      can look and leave notes, nothing else.
+   Most of the machinery exists: the trip rule (Open / Approve changes / Approve everything in
+   `src/model/rules.ts`) and roles (organizer / editor / viewer). The new parts: the choice at
+   creation, these words, and a level per person (today the rule is per trip and only the role
+   is per person), kept in agreement with `change_needs_approval` in `schema.sql`. Default is
+   level 1, per item 13.
 
 ## Working together
 
