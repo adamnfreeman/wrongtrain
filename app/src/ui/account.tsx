@@ -5,6 +5,8 @@ import { getState, setMe, useStore } from '../model/store';
 import { createInvite, deleteAccount, errText, joinTrip, leaveTrip, members, removeMember, setMyName, shareTrip, signOut, sendCode, useSync, verifyCode, type Member } from '../sync/engine';
 import { DeleteButton, Sheet, Text } from './form';
 import { shareBase } from '../native';
+import { ROLES } from '../model/rules';
+import { RoleControl, RuleSetting } from './requests';
 
 /* ---------- sign in ---------- */
 
@@ -58,6 +60,9 @@ export function SignInSheet({ close, then, why }: { close: () => void; then?: ()
 
 export function JoinSheet({ close, initial = '' }: { close: () => void; initial?: string }) {
   const sync = useSync();
+  const { me } = useStore();
+  const [name, setName] = useState(me);
+  const needName = !!sync.session && !me;
   const [code, setCode] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
@@ -65,13 +70,15 @@ export function JoinSheet({ close, initial = '' }: { close: () => void; initial?
   const join = async () => {
     if (!sync.session) return setSignIn(true);
     setBusy(true); setMsg('');
+    if (name.trim() && name.trim() !== me) setMe(name);
     try { await joinTrip(code); close(); } catch (e) { setMsg(errText(e)); setBusy(false); }
   };
   if (signIn) return <SignInSheet close={() => setSignIn(false)} then={join} why="Sign in to join the trip. Everyone on it sees the same plan, ticks and notes." />;
   return (
-    <Sheet title="Join a trip" onCancel={close} onSave={join} saveLabel={busy ? '…' : 'Join'} canSave={!busy && code.replace(/\s/g, '').length >= 6}>
+    <Sheet title="Join a trip" onCancel={close} onSave={join} saveLabel={busy ? '…' : 'Join'} canSave={!busy && code.replace(/\s/g, '').length >= 6 && (!needName || !!name.trim())}>
       <Text label="Invite code" value={code} onChange={v => setCode(v.toUpperCase())} placeholder="e.g. K7PQ2MXA" autoFocus
         hint="Ask someone on the trip for a code: Trip settings, then Invite people." />
+      {needName && <Text label="Your name" value={name} onChange={setName} placeholder="As the group knows you" hint="Shown to everyone on the trip, on your notes, ticks and requests." />}
       {!sync.session && <p className="fhint">You'll sign in with your email next.</p>}
       {msg && <p className="geomsg bad" role="alert">{msg}</p>}
     </Sheet>
@@ -90,6 +97,8 @@ export function Sharing({ trip, onLeft }: { trip: Trip; onLeft: () => void }) {
   const [code, setCode] = useState('');
   const [people, setPeople] = useState<Member[] | null>(null);
   const uid = sync.session?.user.id;
+  const { me } = useStore();
+  const [name, setName] = useState(me);
 
   useEffect(() => {
     if (!isShared || !uid) return;
@@ -100,6 +109,7 @@ export function Sharing({ trip, onLeft }: { trip: Trip; onLeft: () => void }) {
 
   const share = async () => {
     if (!sync.session) return setSignIn(true);
+    if (!getState().me) { if (!name.trim()) return setMsg('Add your name first, so everyone knows who you are.'); setMe(name); }
     setBusy(true); setMsg('');
     try { await shareTrip(trip.id); setCode(await createInvite(trip.id)); } catch (e) { setMsg(errText(e)); }
     setBusy(false);
@@ -120,7 +130,8 @@ export function Sharing({ trip, onLeft }: { trip: Trip; onLeft: () => void }) {
     <div>
       {!isShared ? (
         <>
-          <p className="fhint" style={{ marginTop: 0 }}>Only on this phone right now. Share it and everyone you invite can see it, change it, tick things off and leave notes, live.</p>
+          <p className="fhint" style={{ marginTop: 0 }}>Only on this phone right now. Share it and everyone you invite can see it, add ideas, tick things off and leave notes, live. You decide who can change the plan.</p>
+          {sync.session && !me && <Text label="Your name" value={name} onChange={setName} placeholder="As the group knows you" hint="Shown to everyone on the trip." />}
           <div className="chips"><button type="button" className="chipbtn go" disabled={busy} onClick={share}>{busy ? 'Sharing…' : 'Share with the group'}</button></div>
         </>
       ) : (
@@ -132,17 +143,20 @@ export function Sharing({ trip, onLeft }: { trip: Trip; onLeft: () => void }) {
                 <li key={p.user_id}>
                   <div className="item-h">
                     <span className="item-n">{p.name || 'Someone'}{p.user_id === uid ? ' (you)' : ''}</span>
-                    {p.role === 'owner' && <span className="pill">Owner</span>}
                     <span className="grow" />
+                    <RoleControl trip={trip} p={p} owner={owner && p.user_id !== uid} onError={setMsg}
+                      onChange={role => setPeople(people.map(x => (x.user_id === p.user_id ? { ...x, role } : x)))} />
                     {owner && p.user_id !== uid && <button type="button" className="linkbtn" onClick={async () => {
                       if (!confirm(`Take ${p.name || 'them'} off the trip?`)) return;
                       try { await removeMember(trip.id, p.user_id); setPeople(people.filter(x => x.user_id !== p.user_id)); } catch (e) { setMsg(errText(e)); }
                     }}>Remove</button>}
                   </div>
+                  {owner && p.role !== 'owner' && <div className="meta"><span>{ROLES.find(r => r.value === p.role)?.hint}</span></div>}
                 </li>
               ))}
             </ul>
           )}
+          <RuleSetting trip={trip} />
           <div className="chips"><button type="button" className="chipbtn go" disabled={busy || !sync.session} onClick={invite}>{busy ? 'Making a code…' : 'Invite people'}</button></div>
           {!sync.session && <p className="fhint">Sign in again to invite people. Your changes are kept on this phone meanwhile.</p>}
         </>

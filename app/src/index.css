@@ -284,3 +284,12 @@ select.input { background-image: linear-gradient(45deg, transparent 50%, var(--m
 .invite { margin-top: 14px; padding: 14px; background: var(--card); border: 1px solid var(--rule); border-radius: 12px; text-align: center }
 .code { font: 700 34px/1.2 var(--f-data); letter-spacing: .12em; margin: 8px 0 }
 .chipbtn:disabled { opacity: .5; cursor: default }
+
+/* requests for the owner's OK (ui/requests.tsx) */
+.tabn { position: absolute; top: 4px; left: calc(50% + 5px); min-width: 17px; height: 17px; padding: 0 5px; border-radius: 9px; background: var(--no); color: var(--card); font: 700 11px/17px var(--f-body); text-align: center }
+.req .reqlines { margin: 2px 0 0; padding-left: 18px; font-size: 15px }
+.req .reqlines li { margin: 2px 0 }
+.roleselect { width: auto; padding: 5px 8px; font-size: 14px }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(72px + env(safe-area-inset-bottom, 0px)); z-index: 1100; width: min(560px, calc(100% - 32px));
+  background: var(--ink); color: var(--bg); border-radius: 12px; padding: 11px 14px; font: 600 14.5px/1.35 var(--f-body); box-shadow: 0 6px 24px rgba(0, 0, 0, .18); cursor: pointer }
+.toast.bad { background: var(--no-bg); color: var(--no); border: 1px solid var(--no) }

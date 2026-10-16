@@ -4,8 +4,9 @@
 import type { Trip } from '../model/types';
 import type { SyncInfo } from '../model/store';
 import { merge3, same } from '../model/merge';
+import type { Rule } from '../model/rules';
 
-export interface Remote { id: string; data: Trip; version: number }
+export interface Remote { id: string; data: Trip; version: number; rule?: Rule }
 
 export interface Outcome {
   trip: Trip;

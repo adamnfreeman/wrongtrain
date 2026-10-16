@@ -5,6 +5,7 @@ import { lineOf, lineOfDest, runs, cityOf, mapsLink } from '../model/trip';
 import { longDate, shortDate, stamp } from '../model/time';
 import { onToday } from '../model/next';
 import { addNote, toggleNote } from '../model/store';
+import { Requests } from './requests';
 import { Empty, Fold, Pill, SecH, Txt, line } from './bits';
 import { Board, DayBody, DayStrip, EatItem, LegItem, RouteList, TodoItem, VegToggle, vegOk } from './day';
 import { NextCard } from './next';
@@ -194,6 +195,7 @@ export function Prep() {
   return (
     <>
       <h1 className="page-h">To do</h1>
+      <Requests trip={t} />
       <Notes />
       <p className="lede" style={{ marginTop: 22 }}>Tap a box to tick it off for everyone on the trip.</p>
       {t.todoGroups.map(g => {

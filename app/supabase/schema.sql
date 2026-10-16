@@ -9,8 +9,10 @@
 --
 -- Who can do what is enforced here, in the database, not in the app:
 --   - only people on a trip can read it or change it
---   - only the trip's owner can delete it or remove other people
+--   - only the trip's owner can delete it, remove other people, change roles or set the trip rule
 --   - joining needs an invite code from someone already on the trip
+--   - under the trip rule (open, approve or all), changes that need the owner's OK are refused
+--     by save_trip and go in as requests instead, which an owner or organizer approves or denies
 
 -- ---------- tables ----------
 
@@ -22,16 +24,43 @@ create table if not exists public.trips (
   updated_at  timestamptz not null default now(),
   updated_by  uuid references auth.users (id) on delete set null
 );
+-- open: anyone changes anything; approve: additions go in, removals and plan changes are requests;
+-- all: every change but a note is a request. See src/model/rules.ts.
+alter table public.trips add column if not exists rule text not null default 'approve';
+alter table public.trips drop constraint if exists trips_rule_check;
+alter table public.trips add constraint trips_rule_check check (rule in ('open', 'approve', 'all'));
 
 create table if not exists public.trip_members (
   trip_id    text not null references public.trips (id) on delete cascade,
   user_id    uuid not null references auth.users (id) on delete cascade,
   name       text not null default '',
-  role       text not null default 'editor' check (role in ('owner', 'editor')),
+  role       text not null default 'editor',
   joined_at  timestamptz not null default now(),
   primary key (trip_id, user_id)
 );
 create index if not exists trip_members_user on public.trip_members (user_id);
+-- owner: one per trip; organizer: changes anything and decides requests; editor: follows the
+-- trip rule; viewer: reads and leaves notes
+alter table public.trip_members drop constraint if exists trip_members_role_check;
+alter table public.trip_members add constraint trip_members_role_check check (role in ('owner', 'organizer', 'editor', 'viewer'));
+
+-- Changes waiting for an owner or organizer. before and after hold only the parts of the trip
+-- the change touches; the app replays them on top of the trip as it is when approved.
+create table if not exists public.trip_requests (
+  id           uuid primary key default gen_random_uuid(),
+  trip_id      text not null references public.trips (id) on delete cascade,
+  author       uuid references auth.users (id) on delete set null,
+  author_name  text not null default '',
+  summary      text[] not null default '{}',
+  before       jsonb not null,
+  after        jsonb not null,
+  status       text not null default 'pending' check (status in ('pending', 'approved', 'denied', 'withdrawn')),
+  reason       text,
+  decided_by   uuid references auth.users (id) on delete set null,
+  decided_at   timestamptz,
+  created_at   timestamptz not null default now()
+);
+create index if not exists trip_requests_trip on public.trip_requests (trip_id, created_at);
 
 create table if not exists public.invites (
   code        text primary key,
@@ -46,6 +75,7 @@ create table if not exists public.invites (
 alter table public.trips enable row level security;
 alter table public.trip_members enable row level security;
 alter table public.invites enable row level security;
+alter table public.trip_requests enable row level security;
 
 -- membership check that the rules below can use without looking themselves up recursively
 create or replace function public.is_member(t text) returns boolean
@@ -63,6 +93,51 @@ create policy "members see who is on the trip" on public.trip_members for select
 drop policy if exists "members update their own name" on public.trip_members;
 create policy "members update their own name" on public.trip_members for update
   using (user_id = auth.uid()) with check (user_id = auth.uid());
+-- ... and only the name: roles change through set_member_role
+revoke update on public.trip_members from anon, authenticated;
+grant update (name) on public.trip_members to authenticated;
+
+drop policy if exists "members read requests" on public.trip_requests;
+create policy "members read requests" on public.trip_requests for select using (public.is_member(trip_id));
+-- requests are written only through the functions below
+
+-- your role on a trip, or null when you are not on it
+create or replace function public.my_role(t text) returns text
+language sql stable security definer set search_path = public as $$
+  select role from trip_members where trip_id = t and user_id = auth.uid();
+$$;
+
+-- Whether going from old_data to new_data needs an owner's OK, for someone with this role under this rule.
+-- Mirrors needsApproval and verdict in src/model/rules.ts: keep the two in step.
+create or replace function public.change_needs_approval(old_data jsonb, new_data jsonb, trip_rule text, member_role text)
+returns boolean language plpgsql immutable set search_path = public as $$
+declare k text; free text[]; r text := trip_rule;
+begin
+  if member_role in ('owner', 'organizer') then return false; end if;
+  if member_role = 'viewer' then r := 'all'; end if;
+  if r = 'open' then return false; end if;
+  free := case when r = 'all' then array['notes'] else array['notes', 'todos', 'todoGroups', 'places'] end;
+  -- anything outside the free parts changed
+  for k in select jsonb_object_keys(old_data) union select jsonb_object_keys(new_data) loop
+    if k = 'updatedAt' or k = any(free) then continue; end if;
+    if (old_data -> k) is distinct from (new_data -> k) then return true; end if;
+  end loop;
+  -- something in a free list disappeared
+  if exists (select 1 from jsonb_array_elements(coalesce(old_data -> 'notes', '[]')) o
+             where not exists (select 1 from jsonb_array_elements(coalesce(new_data -> 'notes', '[]')) n where n ->> 'id' = o ->> 'id')) then return true; end if;
+  if r = 'all' then return false; end if;
+  if exists (select 1 from jsonb_array_elements(coalesce(old_data -> 'todos', '[]')) o
+             where not exists (select 1 from jsonb_array_elements(coalesce(new_data -> 'todos', '[]')) n where n ->> 'id' = o ->> 'id')) then return true; end if;
+  if exists (select 1 from jsonb_array_elements(coalesce(old_data -> 'places', '[]')) o
+             where not exists (select 1 from jsonb_array_elements(coalesce(new_data -> 'places', '[]')) n where n ->> 'id' = o ->> 'id')) then return true; end if;
+  if exists (select 1 from jsonb_array_elements_text(coalesce(old_data -> 'todoGroups', '[]')) g
+             where not (coalesce(new_data -> 'todoGroups', '[]') ? g)) then return true; end if;
+  -- a place put on a day or taken off one (new places count as having been on none)
+  return exists (
+    select 1 from jsonb_array_elements(coalesce(new_data -> 'places', '[]')) n
+    left join lateral (select o from jsonb_array_elements(coalesce(old_data -> 'places', '[]')) o where o ->> 'id' = n ->> 'id' limit 1) w on true
+    where coalesce(n -> 'dayIds', '[]') is distinct from coalesce(w.o -> 'dayIds', '[]'));
+end $$;
 
 -- invites are read only through join_trip, never listed
 
@@ -80,15 +155,86 @@ end $$;
 
 -- Saves a trip if nobody else has saved since base_version. Returns the new version,
 -- or -1 when someone got there first (the app then merges and tries again).
+-- Refuses ('needs approval') a change the trip rule says must be requested instead.
 create or replace function public.save_trip(trip_id text, trip_data jsonb, base_version bigint)
 returns bigint language plpgsql security definer set search_path = public as $$
-declare v bigint;
+declare v bigint; cur trips%rowtype; m text := my_role(trip_id);
 begin
-  if not is_member(trip_id) then raise exception 'not on this trip'; end if;
+  if m is null then raise exception 'not on this trip'; end if;
+  select * into cur from trips t where t.id = trip_id for update;
+  if cur.version <> base_version then return -1; end if;
+  if change_needs_approval(cur.data, trip_data, cur.rule, m) then raise exception 'needs approval'; end if;
   update trips set data = trip_data, version = version + 1, updated_at = now(), updated_by = auth.uid()
-    where id = trip_id and version = base_version
+    where id = trip_id
     returning version into v;
-  return coalesce(v, -1);
+  return v;
+end $$;
+
+-- ---------- requests ----------
+
+-- Asks for a change. Viewers cannot; everyone else on the trip can.
+create or replace function public.request_change(trip_id text, before jsonb, after jsonb, summary text[])
+returns uuid language plpgsql security definer set search_path = public as $$
+declare m text := my_role(trip_id); r uuid;
+begin
+  if m is null then raise exception 'not on this trip'; end if;
+  if m = 'viewer' then raise exception 'viewers cannot change this trip'; end if;
+  if octet_length(before::text) + octet_length(after::text) > 1000000 then raise exception 'change too large'; end if;
+  insert into trip_requests (trip_id, author, author_name, summary, before, after)
+    values (trip_id, auth.uid(), coalesce((select name from trip_members where trip_members.trip_id = request_change.trip_id and user_id = auth.uid()), ''),
+            coalesce(summary[1:20], '{}'), before, after)
+    returning id into r;
+  return r;
+end $$;
+
+-- An owner or organizer approves a request, saving the trip with the change made (the app does
+-- the merging), or denies it. Returns the new version, -1 when someone saved first (merge and try
+-- again), or 0 for a denial.
+create or replace function public.decide_request(request_id uuid, approve boolean, reason text, trip_data jsonb, base_version bigint)
+returns bigint language plpgsql security definer set search_path = public as $$
+declare q trip_requests%rowtype; v bigint;
+begin
+  select * into q from trip_requests where id = request_id for update;
+  if q.id is null or coalesce(my_role(q.trip_id), '') not in ('owner', 'organizer') then raise exception 'only the owner or an organizer can do that'; end if;
+  if q.status <> 'pending' then raise exception 'already decided'; end if;
+  if approve then
+    update trips set data = trip_data, version = version + 1, updated_at = now(), updated_by = auth.uid()
+      where id = q.trip_id and version = base_version
+      returning version into v;
+    if v is null then return -1; end if;
+  end if;
+  update trip_requests set status = case when approve then 'approved' else 'denied' end,
+    reason = nullif(trim(decide_request.reason), ''), decided_by = auth.uid(), decided_at = now()
+    where id = request_id;
+  return coalesce(v, 0);
+end $$;
+
+-- The person who asked can take a request back while it is waiting.
+create or replace function public.withdraw_request(request_id uuid)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  update trip_requests set status = 'withdrawn', decided_at = now()
+    where id = request_id and author = auth.uid() and status = 'pending';
+  if not found then raise exception 'not your request, or already decided'; end if;
+end $$;
+
+-- ---------- the owner's controls ----------
+
+create or replace function public.set_trip_rule(trip_id text, rule text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if my_role(trip_id) is distinct from 'owner' then raise exception 'only the owner can do that'; end if;
+  update trips t set rule = set_trip_rule.rule where t.id = trip_id;
+end $$;
+
+create or replace function public.set_member_role(trip_id text, member uuid, role text)
+returns void language plpgsql security definer set search_path = public as $$
+declare t text := trip_id;
+begin
+  if my_role(t) is distinct from 'owner' then raise exception 'only the owner can do that'; end if;
+  if role not in ('organizer', 'editor', 'viewer') then raise exception 'unknown role'; end if;
+  update trip_members m set role = set_member_role.role where m.trip_id = t and m.user_id = member and m.role <> 'owner';
+  if not found then raise exception 'not someone you can change'; end if;
 end $$;
 
 -- A short code someone can type to join, valid for 30 days. Letters that cannot be misread.
@@ -133,7 +279,7 @@ begin
     delete from trips where id = t; return;
   end if;
   if (select owner from trips where id = t) = auth.uid() then
-    select m.user_id into next_owner from trip_members m where m.trip_id = t order by m.joined_at limit 1;
+    select m.user_id into next_owner from trip_members m where m.trip_id = t order by m.role = 'organizer' desc, m.joined_at limit 1;
     update trips set owner = next_owner where id = t;
     update trip_members m set role = 'owner' where m.trip_id = t and m.user_id = next_owner;
   end if;
@@ -163,14 +309,24 @@ begin
 end $$;
 
 revoke all on function public.share_trip(text, jsonb, text), public.save_trip(text, jsonb, bigint), public.create_invite(text),
-  public.join_trip(text, text), public.leave_trip(text), public.remove_member(text, uuid), public.delete_account() from public, anon;
+  public.join_trip(text, text), public.leave_trip(text), public.remove_member(text, uuid), public.delete_account(),
+  public.request_change(text, jsonb, jsonb, text[]), public.decide_request(uuid, boolean, text, jsonb, bigint),
+  public.withdraw_request(uuid), public.set_trip_rule(text, text), public.set_member_role(text, uuid, text),
+  public.my_role(text) from public, anon;
 grant execute on function public.share_trip(text, jsonb, text), public.save_trip(text, jsonb, bigint), public.create_invite(text),
-  public.join_trip(text, text), public.leave_trip(text), public.remove_member(text, uuid), public.delete_account() to authenticated;
+  public.join_trip(text, text), public.leave_trip(text), public.remove_member(text, uuid), public.delete_account(),
+  public.request_change(text, jsonb, jsonb, text[]), public.decide_request(uuid, boolean, text, jsonb, bigint),
+  public.withdraw_request(uuid), public.set_trip_rule(text, text), public.set_member_role(text, uuid, text),
+  public.my_role(text) to authenticated;
 
 -- ---------- live updates ----------
 
 -- phones listen for changes to trips they are on (the read rule above still applies)
 do $$ begin
   alter publication supabase_realtime add table public.trips;
+exception when duplicate_object then null;
+end $$;
+do $$ begin
+  alter publication supabase_realtime add table public.trip_requests;
 exception when duplicate_object then null;
 end $$;

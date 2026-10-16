@@ -5,6 +5,7 @@
    engine (sync/engine.ts) hears about every change through onTripChange and sends it on. */
 import { useSyncExternalStore } from 'react';
 import type { Trip } from './types';
+import type { Role, Rule } from './rules';
 import { addDays, daysBetween, todayIn } from './time';
 import { newId } from './trip';
 import { makeSample } from './sample';
@@ -18,6 +19,9 @@ export interface SyncInfo {
   base: Trip;
   /** Changed here since the last save reached the server. */
   dirty: boolean;
+  /** The trip's rule and your role on it, as last heard from the server (see rules.ts). */
+  rule?: Rule;
+  role?: Role;
 }
 
 interface State {
@@ -51,6 +55,10 @@ let changeHook: ((tripId: string) => void) | null = null;
 /** The sync engine registers here to hear about every change to a trip. */
 export const onTripChange = (f: (tripId: string) => void) => { changeHook = f; };
 
+let gateHook: ((tripId: string, before: Trip, after: Trip) => boolean) | null = null;
+/** The sync engine registers here to hold back changes to a shared trip that need the owner's OK. */
+export const onTripGate = (f: (tripId: string, before: Trip, after: Trip) => boolean) => { gateHook = f; };
+
 /** Low-level write for the sync engine: trips and sync records together. */
 export function setSynced(trips: Trip[], sync: Record<string, SyncInfo>, activeId = state.activeId) {
   set({ trips, sync, activeId });
@@ -80,9 +88,14 @@ function keepSampleCurrent(t: Trip): Trip {
   return { ...t, days: t.days.map(d => ({ ...d, date: addDays(d.date, shift) })) };
 }
 
-/** Applies a change to one trip and saves it. Every edit goes through here. */
+/** Applies a change to one trip and saves it. Every edit goes through here. On a shared trip, a
+    change that needs the owner's OK is not made here; it goes off as a request instead. */
 export function patchTrip(id: string, f: (t: Trip) => Trip) {
-  set({ trips: state.trips.map(t => (t.id === id ? { ...f(t), updatedAt: new Date().toISOString() } : t)) });
+  const before = state.trips.find(t => t.id === id);
+  if (!before) return;
+  const after = { ...f(before), updatedAt: new Date().toISOString() };
+  if (gateHook && !gateHook(id, before, after)) return;
+  set({ trips: state.trips.map(t => (t.id === id ? after : t)) });
   changeHook?.(id);
 }
 

@@ -22,8 +22,13 @@ on a Mac.
 - Trips are plain JSON (`src/model/types.ts`), saved in localStorage and, in the iOS app, also
   in Preferences (`src/native.ts`).
 - Every change is a pure function in `src/model/edit.ts`. Days are always consecutive dates.
-- Shared trips sync through Supabase: `supabase/schema.sql` (already run on the project),
-  `src/sync/engine.ts`, three-way merge in `src/model/merge.ts`.
+- Shared trips sync through Supabase: `supabase/schema.sql`, `src/sync/engine.ts`, three-way
+  merge in `src/model/merge.ts`. After changing `schema.sql`, paste it into the Supabase SQL
+  Editor and run it (safe to run again).
+- Approvals: the owner sets a rule per trip (open / approve changes, the default / approve
+  everything) and roles (organizer, editor, viewer). Edits that need the owner's OK become
+  requests, approved or denied on the To do tab. `src/model/rules.ts` and
+  `change_needs_approval` in `schema.sql` must agree.
 - Supabase project: `https://wklwpihkpiuniazhidjz.supabase.co`. The publishable key in
   `src/sync/config.ts` is public by design. Never put the secret/service_role key anywhere.
 - Sign-in is an emailed 6-digit code. Email goes through Gmail SMTP (adam@thefreemans.io for
@@ -51,12 +56,15 @@ Touch nothing else on `main`. GitHub Pages updates within a couple of minutes.
 ## Where things stand (Oct 16, 2026)
 
 Done: trip model, sample trip, all screens, trip editor, sharing (invite codes, live sync,
-offline queue), email sign-in, iOS project with icon and launch screen.
+offline queue), email sign-in, iOS project with icon and launch screen, first build running on
+the iPhone, owner approvals (trip rule, roles, requests and the approval list).
 
 Next:
-1. **First build on the Mac.** Xcode is installed. Follow `app/IOS.md`: Node.js, clone,
-   `npm install`, `npm run ios`, sign with the personal team, run on the iPhone. Nothing has
-   been built for iOS yet, so expect first-build fixes.
+1. **Run the updated `schema.sql` in Supabase** for approvals (roles, trip rule, requests).
+   Do this before installing or publishing this version: it reads the new `rule` column, so
+   shared trips stop syncing until the database has it. Builds signed with the
+   personal team work on the iPhone; build from Xcode (`npm run ios`, then Run), since building
+   into `ios/App/build` inside the iCloud-synced Desktop fails code signing.
 2. **Map tiles.** The map uses OpenStreetMap's tile server, which does not allow app use and
    may block requests from the iOS web view. Switch to MapTiler (waiting on an API key); the
    tile URL is in `src/ui/map.tsx` and `src/ui/form.tsx`.

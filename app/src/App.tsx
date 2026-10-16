@@ -13,6 +13,7 @@ import { CopySampleSheet, DayEditor, LegEditor, NewTripSheet, PlaceEditor, TodoE
 import { makeSample } from './model/sample';
 import { AccountLine, JoinSheet, SyncLine, joinCodeFromLink } from './ui/account';
 import { setMyName } from './sync/engine';
+import { Toast, useWaitingForMe } from './ui/requests';
 
 export default function App() {
   const { trips, activeId, me } = useStore();
@@ -28,6 +29,7 @@ export default function App() {
     <>
       {trip ? <TripApp key={trip.id} trip={trip} me={me} /> : <Welcome trips={trips} />}
       {join && <JoinSheet initial={join} close={() => setJoin('')} />}
+      <Toast />
     </>
   );
 }
@@ -128,6 +130,7 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
   }, [ids]);
 
   const q = ui.q.trim(), searching = q.length > 1;
+  const waiting = useWaitingForMe(trip.id);
   const View = { today: Today, days: Days, transit: Transit, places: Places, map: MapView, phrases: Phrases, prep: Prep }[ui.tab];
 
   return (
@@ -156,6 +159,7 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
           {TABS.map(t => (
             <button key={t} className="tab" aria-current={ui.tab === t ? 'page' : undefined} onClick={() => go(t)}>
               <svg viewBox="0 0 24 24" aria-hidden="true">{ICONS[t].icon}</svg>{ICONS[t].label}
+              {t === 'prep' && waiting > 0 && <span className="tabn" aria-label={`${waiting} waiting for your OK`}>{waiting}</span>}
             </button>
           ))}
         </div>
