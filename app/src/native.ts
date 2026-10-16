@@ -10,7 +10,7 @@ export const shareBase = () => (isNative ? WEB_URL : location.origin + location.
 /* Trips live in the web view's localStorage, which iOS may clear when the phone runs low on space.
    In the app, every save is also written to the app's own storage (UserDefaults), and copied back
    at start-up if localStorage has lost it. */
-const BACKUP_KEYS = ['wrongtrain', 'wt-auth'];
+const BACKUP_KEYS = ['wrongtrain', 'wt-auth', 'wt-private-docs'];
 
 export async function restoreBackup() {
   if (!isNative) return;

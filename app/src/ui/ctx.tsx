@@ -4,7 +4,7 @@ import type { Now, TripIndex } from '../model/trip';
 import type { Geo } from './geo';
 import type { Edit } from './editors';
 
-export const TABS = ['today', 'days', 'transit', 'places', 'map', 'phrases', 'prep'] as const;
+export const TABS = ['today', 'days', 'transit', 'places', 'map', 'phrases', 'wallet', 'prep'] as const;
 export type Tab = (typeof TABS)[number];
 
 export interface UI {

@@ -18,7 +18,9 @@ export type Edit =
   | { kind: 'day'; id: string }
   | { kind: 'leg'; id?: string; dayId?: string }
   | { kind: 'place'; id?: string; as?: PlaceKind; dayId?: string; destinationId?: string }
-  | { kind: 'todo'; id?: string; group?: string };
+  | { kind: 'todo'; id?: string; group?: string }
+  | { kind: 'doc'; id?: string; for?: { kind: 'plan' | 'leg'; id: string } }
+  | { kind: 'expense'; id?: string };
 
 interface Props { trip: Trip; close: () => void; onDayChange?: (id: string) => void }
 

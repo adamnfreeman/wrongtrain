@@ -27,6 +27,17 @@ export interface Trip {
   guides: Guide[];
   /** Phrase pack to show on the Phrases tab, by language code ("ja"). */
   phrasePack?: string;
+  /** Tickets, bookings and other papers everyone on the trip can open. Private ones (IDs) are
+      kept only on your phone, apart from the trip (see sync/files.ts). */
+  docs?: Doc[];
+  /** Money paid for the group, and who owes what (model/money.ts). */
+  expenses?: Expense[];
+  /** Paying someone back. */
+  settlements?: Settlement[];
+  /** Currency balances are shown in, e.g. "USD". Defaults to the first expense's. */
+  currency?: string;
+  /** Venmo usernames, by traveller name, for "Pay with Venmo". */
+  venmo?: Record<string, string>;
   /** Set on the built-in sample, which may pretend you are on the trip right now. */
   sample?: boolean;
   createdAt: string;
@@ -165,4 +176,54 @@ export interface Guide {
   group: string;
   title: string;
   items: { title: string; body: string }[];
+}
+
+/* ---------- wallet ---------- */
+
+export type DocKind = 'id' | 'ticket' | 'booking' | 'insurance' | 'other';
+
+/** A file kept on the phone and, unless private, in the trip's storage. path is where, in both. */
+export interface FileRef { path: string; name: string; type: string; size: number }
+
+export interface Doc {
+  id: ID;
+  title: string;
+  kind: DocKind;
+  file?: FileRef;
+  link?: string;
+  notes?: string;
+  addedBy?: string;
+  at: string;
+  /** Only on this phone, never uploaded. Private docs are not part of the trip. */
+  private?: boolean;
+  /** What it is for, so it shows there on the timeline: a plan item or a travel leg. */
+  for?: { kind: 'plan' | 'leg'; id: ID };
+}
+
+export interface Expense {
+  id: ID;
+  what: string;
+  /** In currency, e.g. 42.5 */
+  amount: number;
+  currency: string;
+  /** How many of the trip's currency one unit of this currency was worth when entered. 1 when the same. */
+  rate: number;
+  /** Traveller names. */
+  paidBy: string;
+  /** Who shares it. Without amounts it is split evenly; with them, each pays their amount (in currency). */
+  split: { who: string; amount?: number }[];
+  at: string;
+  dayId?: ID;
+  receipt?: FileRef;
+  addedBy?: string;
+}
+
+export interface Settlement {
+  id: ID;
+  from: string;
+  to: string;
+  /** In the trip's currency. */
+  amount: number;
+  at: string;
+  via?: 'venmo' | 'cash' | 'other';
 }

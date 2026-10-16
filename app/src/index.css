@@ -300,3 +300,25 @@ select.input { background-image: linear-gradient(45deg, transparent 50%, var(--m
 .toast.bad { background: var(--no-bg); color: var(--no); border: 1px solid var(--no) }
 .tripbar { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; min-height: 32px }
 .tripbar .tripname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 15px var(--f-display); text-align: right }
+
+/* wallet (ui/wallet.tsx) */
+.filepick { display: inline-block; cursor: pointer; color: var(--ink) }
+.row2 { display: grid; grid-template-columns: 1fr 110px; gap: 10px }
+.splitrow { display: flex; align-items: center; gap: 10px }
+.splitrow .fcheck { flex: 1 }
+.splitamt { width: 100px; padding: 6px 8px }
+.doclinks .linkbtn { font-size: 14px }
+.doclinks .bad { color: var(--no) }
+
+/* photos (ui/photos.tsx) */
+.pgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 8px }
+.pthumb { position: relative; aspect-ratio: 1; padding: 0; border: 0; border-radius: 6px; overflow: hidden; background: var(--chip); cursor: pointer }
+.pthumb img { width: 100%; height: 100%; object-fit: cover; display: block }
+.pwait { position: absolute; left: 4px; bottom: 4px; font: 600 10px var(--f-body); font-style: normal; background: var(--ink); color: var(--bg); padding: 1px 5px; border-radius: 6px }
+.pview { position: fixed; inset: 0; z-index: 1200; background: #000; color: #fff; display: flex; flex-direction: column; padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px) }
+.pview .linkbtn { color: #9cc4ff }
+.pview .linkbtn.bad { color: #ff9a93 }
+.pview-bar, .pview-foot { display: flex; align-items: center; gap: 12px; padding: 10px 16px; font-size: 14px }
+.pview-bar span { flex: 1; text-align: center; color: #bbb }
+.pview-img { flex: 1; display: grid; place-items: center; overflow: hidden }
+.pview-img img { max-width: 100%; max-height: 100%; object-fit: contain }

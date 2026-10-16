@@ -26,6 +26,12 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>WrongTrain uses the camera to photograph tickets, documents, receipts and trip photos.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>WrongTrain lets you pick photos and scans to add to your trip.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>WrongTrain saves trip photos to your library when you ask.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>WrongTrain uses your location to show where you are on the trip map and how long it takes to reach your next stop. It never leaves your phone.</string>
 	<key>UIApplicationSceneManifest</key>

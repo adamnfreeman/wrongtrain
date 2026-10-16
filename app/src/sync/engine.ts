@@ -296,6 +296,13 @@ export async function pullAll() {
     listen();
     await flush();
     await fetchRequests();
+    /* files: send any added with no signal, and fetch the group's so they open offline */
+    void import('./files').then(f => {
+      const paths = getState().trips.filter(t => getState().sync[t.id])
+        .flatMap(t => [...(t.docs || []).map(d => d.file?.path), ...(t.expenses || []).map(e => e.receipt?.path)])
+        .filter((x): x is string => !!x);
+      return f.sendWaiting().then(() => f.fetchMissing(paths));
+    }).catch(() => {});
   } catch (e) { setStatus({ lastError: errText(e) }); }
 }
 

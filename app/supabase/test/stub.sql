@@ -15,3 +15,14 @@ grant execute on function auth.uid() to anon, authenticated;
 alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
 alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
 create publication supabase_realtime;
+
+-- Supabase Storage, as far as schema.sql uses it
+create schema storage;
+create table storage.buckets (id text primary key, name text, public boolean, file_size_limit bigint);
+create table storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text, name text, owner_id text);
+alter table storage.objects enable row level security;
+create function storage.foldername(name text) returns text[] language sql immutable as $$
+  select (string_to_array(name, '/'))[1:array_length(string_to_array(name, '/'), 1) - 1]
+$$;
+grant usage on schema storage to anon, authenticated;
+grant all on storage.objects to authenticated;

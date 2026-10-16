@@ -12,6 +12,7 @@ import { Empty, Fold, Pill, SecH, Txt, line } from './bits';
 import { Board, DayBody, DayStrip, EatItem, LegItem, RouteList, TodoItem, VegToggle, vegOk } from './day';
 import { NextCard } from './next';
 import { Nearby } from './nearby';
+import { DayPhotos } from './photos';
 import { useApp } from './ctx';
 
 /* ---------- Today ---------- */
@@ -27,6 +28,7 @@ export function Today() {
         <NextCard />
         <Nearby />
         <DayBody d={now.cur} />
+        <DayPhotos d={now.cur} />
         <section className="sec"><SecH title="The whole route" /><RouteList /></section>
       </>
     );
@@ -88,6 +90,7 @@ export function Days() {
       <DayStrip cur={d} />
       <Board d={d} />
       <DayBody d={d} />
+      <DayPhotos d={d} />
     </div>
   );
 }

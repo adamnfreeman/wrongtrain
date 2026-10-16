@@ -2,7 +2,8 @@
 
    The owner picks a rule for the trip:
    - open: everyone changes everything directly
-   - approve (the default): anyone can add ideas, places, to-dos and notes and tick things off;
+   - approve (the default): anyone can add ideas, places, to-dos, notes, documents and expenses
+     and tick things off;
      removing anything, or changing the plan itself (days, times, travel, stays, which day a
      place is on, the trip's name, dates and destinations), becomes a request
    - all: every change by someone else is a request, except leaving a note
@@ -33,7 +34,7 @@ export const ROLES: { value: Exclude<Role, 'owner'>; label: string; hint: string
 export const canDecide = (role: Role) => role === 'owner' || role === 'organizer';
 
 /** Parts of a trip anyone may add to under the approve rule. Everything else is the plan. */
-const OPEN_KEYS = ['notes', 'todos', 'todoGroups', 'places'] as const;
+const OPEN_KEYS = ['notes', 'todos', 'todoGroups', 'places', 'docs', 'expenses', 'settlements', 'venmo'] as const;
 
 type Verdict = 'ok' | 'request' | 'blocked';
 
@@ -56,6 +57,7 @@ export function needsApproval(before: Trip, after: Trip, rule: Rule): boolean {
   if (lost(before.notes, after.notes)) return true;
   if (rule === 'all') return false;
   if (lost(before.todos, after.todos) || lost(before.places, after.places)) return true;
+  if (lost(before.docs, after.docs) || lost(before.expenses, after.expenses) || lost(before.settlements, after.settlements)) return true;
   if ((before.todoGroups || []).some(g => !(after.todoGroups || []).includes(g))) return true;
   /* putting a place on a day, or taking it off one, changes the plan */
   const was = new Map((before.places || []).map(p => [p.id, p.dayIds || []]));

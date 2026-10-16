@@ -40,6 +40,13 @@ on a Mac.
   now; wrongtrain.lol is being added to Google Workspace). The email templates contain only
   the code, no link.
 
+- Wallet tab: documents (`src/ui/wallet.tsx`; shared ones in `trip.docs`, private IDs only on
+  the phone in `src/model/privateDocs.ts`) and money (`src/model/money.ts`: expenses, balances,
+  settling up, Venmo links). Photos are under each day (`src/ui/photos.tsx`, rows in
+  `trip_photos`). Files are kept on the phone and, for shared trips, in the private `trip-files`
+  bucket under the trip's id (`src/sync/files.ts`); private paths start `private/` and are
+  never uploaded.
+
 ## Commands (in `app/`)
 
 ```
@@ -84,7 +91,9 @@ Next:
 6. **"Something nearby"** (built Oct 16) on Today: pick a mood, get 5 places from OpenStreetMap
    (Overpass), chosen by Claude on shared trips (`suggest-nearby`), else the nearest. The public
    Overpass server will not do for many users: move to a paid places API or our own server.
-7. Later: Sign in with Apple (needs the developer account), universal links so invite links
+7. **Share my location / friend finder** (asked for Oct 16): see where everyone on the trip
+   is, by choice and for a set time.
+8. Later: Sign in with Apple (needs the developer account), universal links so invite links
    open the app, a city list for guessing time zones (Kyoto, Florence and similar don't match
    an IANA zone name), editing the "Before you go" guides.
 

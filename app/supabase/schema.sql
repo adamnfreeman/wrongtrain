@@ -116,7 +116,7 @@ begin
   if member_role in ('owner', 'organizer') then return false; end if;
   if member_role = 'viewer' then r := 'all'; end if;
   if r = 'open' then return false; end if;
-  free := case when r = 'all' then array['notes'] else array['notes', 'todos', 'todoGroups', 'places'] end;
+  free := case when r = 'all' then array['notes'] else array['notes', 'todos', 'todoGroups', 'places', 'docs', 'expenses', 'settlements', 'venmo'] end;
   -- anything outside the free parts changed
   for k in select jsonb_object_keys(old_data) union select jsonb_object_keys(new_data) loop
     if k = 'updatedAt' or k = any(free) then continue; end if;
@@ -128,8 +128,8 @@ begin
   if r = 'all' then return false; end if;
   if exists (select 1 from jsonb_array_elements(coalesce(old_data -> 'todos', '[]')) o
              where not exists (select 1 from jsonb_array_elements(coalesce(new_data -> 'todos', '[]')) n where n ->> 'id' = o ->> 'id')) then return true; end if;
-  if exists (select 1 from jsonb_array_elements(coalesce(old_data -> 'places', '[]')) o
-             where not exists (select 1 from jsonb_array_elements(coalesce(new_data -> 'places', '[]')) n where n ->> 'id' = o ->> 'id')) then return true; end if;
+  if exists (select 1 from unnest(array['places', 'docs', 'expenses', 'settlements']) l, jsonb_array_elements(coalesce(old_data -> l, '[]')) o
+             where not exists (select 1 from jsonb_array_elements(coalesce(new_data -> l, '[]')) n where n ->> 'id' = o ->> 'id')) then return true; end if;
   if exists (select 1 from jsonb_array_elements_text(coalesce(old_data -> 'todoGroups', '[]')) g
              where not (coalesce(new_data -> 'todoGroups', '[]') ? g)) then return true; end if;
   -- a place put on a day or taken off one (new places count as having been on none)
@@ -380,6 +380,69 @@ revoke all on function public.ai_allowance(text), public.claim_ai_use(text, uuid
 grant execute on function public.ai_allowance(text), public.claim_ai_use(text, uuid, text), public.refund_ai_use(uuid)
   to service_role;
 
+-- ---------- files and photos ----------
+
+-- Scans, tickets, receipts and photos, stored under the trip's id ("<trip id>/<file>"). Private
+-- bucket: only people on the trip can read or add; the person who added a file, or the owner or
+-- an organizer, can remove it. Private documents (IDs) never come here; they stay on the phone.
+insert into storage.buckets (id, name, public, file_size_limit)
+  values ('trip-files', 'trip-files', false, 26214400)
+  on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit;
+
+drop policy if exists "trip members read trip files" on storage.objects;
+create policy "trip members read trip files" on storage.objects for select to authenticated
+  using (bucket_id = 'trip-files' and public.is_member((storage.foldername(name))[1]));
+drop policy if exists "trip members add trip files" on storage.objects;
+create policy "trip members add trip files" on storage.objects for insert to authenticated
+  with check (bucket_id = 'trip-files' and public.is_member((storage.foldername(name))[1]));
+drop policy if exists "uploader or organizer removes trip files" on storage.objects;
+create policy "uploader or organizer removes trip files" on storage.objects for delete to authenticated
+  using (bucket_id = 'trip-files' and (owner_id = auth.uid()::text
+    or coalesce(public.my_role((storage.foldername(name))[1]), '') in ('owner', 'organizer')));
+
+-- The trip's photos: many, so they live here rather than in the trip itself.
+create table if not exists public.trip_photos (
+  id           uuid primary key default gen_random_uuid(),
+  trip_id      text not null references public.trips (id) on delete cascade,
+  user_id      uuid default auth.uid() references auth.users (id) on delete set null,
+  author_name  text not null default '',
+  path         text not null,
+  thumb        text not null,
+  -- when it was taken, on the camera's clock (local time where it was taken)
+  taken_at     timestamp,
+  day_id       text,
+  width        integer,
+  height       integer,
+  caption      text,
+  created_at   timestamptz not null default now()
+);
+create index if not exists trip_photos_trip on public.trip_photos (trip_id, taken_at);
+alter table public.trip_photos enable row level security;
+
+drop policy if exists "members see photos" on public.trip_photos;
+create policy "members see photos" on public.trip_photos for select using (public.is_member(trip_id));
+drop policy if exists "members add photos" on public.trip_photos;
+create policy "members add photos" on public.trip_photos for insert to authenticated
+  with check (public.is_member(trip_id) and user_id = auth.uid() and path like trip_id || '/%' and thumb like trip_id || '/%');
+drop policy if exists "who added it, or an organizer, removes a photo" on public.trip_photos;
+create policy "who added it, or an organizer, removes a photo" on public.trip_photos for delete to authenticated
+  using (user_id = auth.uid() or coalesce(public.my_role(trip_id), '') in ('owner', 'organizer'));
+revoke update on public.trip_photos from anon, authenticated;
+grant update (caption, day_id) on public.trip_photos to authenticated;
+drop policy if exists "who added it captions a photo" on public.trip_photos;
+create policy "who added it captions a photo" on public.trip_photos for update to authenticated
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+-- the name shown is the one on the trip, not whatever the phone sends
+create or replace function public.photo_author() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  new.author_name := coalesce((select name from trip_members where trip_id = new.trip_id and user_id = auth.uid()), '');
+  return new;
+end $$;
+drop trigger if exists photo_author on public.trip_photos;
+create trigger photo_author before insert on public.trip_photos for each row execute function public.photo_author();
+
 -- ---------- live updates ----------
 
 -- phones listen for changes to trips they are on (the read rule above still applies)
@@ -389,5 +452,9 @@ exception when duplicate_object then null;
 end $$;
 do $$ begin
   alter publication supabase_realtime add table public.trip_requests;
+exception when duplicate_object then null;
+end $$;
+do $$ begin
+  alter publication supabase_realtime add table public.trip_photos;
 exception when duplicate_object then null;
 end $$;

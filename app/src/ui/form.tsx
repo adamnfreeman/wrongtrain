@@ -44,15 +44,16 @@ export function Field({ label, hint, children, id }: { label: string; hint?: Rea
 
 export function Text({ label, value, onChange, hint, placeholder, multiline, type = 'text', autoFocus }: {
   label: string; value: string; onChange: (v: string) => void; hint?: ReactNode; placeholder?: string; multiline?: boolean;
-  type?: 'text' | 'date' | 'time' | 'url' | 'number'; autoFocus?: boolean;
+  /** decimal: money and rates, with the keypad that has a decimal point */
+  type?: 'text' | 'date' | 'time' | 'url' | 'number' | 'decimal'; autoFocus?: boolean;
 }) {
   const id = useId();
   return (
     <Field label={label} hint={hint} id={id}>
       {multiline
         ? <textarea id={id} className="input area" rows={3} value={value} placeholder={placeholder} onChange={e => onChange(e.target.value)} autoFocus={autoFocus} />
-        : <input id={id} className="input" type={type} value={value} placeholder={placeholder} onChange={e => onChange(e.target.value)} autoFocus={autoFocus}
-            inputMode={type === 'number' ? 'numeric' : undefined} />}
+        : <input id={id} className="input" type={type === 'decimal' ? 'text' : type} value={value} placeholder={placeholder} onChange={e => onChange(e.target.value)} autoFocus={autoFocus}
+            inputMode={type === 'number' ? 'numeric' : type === 'decimal' ? 'decimal' : undefined} />}
     </Field>
   );
 }

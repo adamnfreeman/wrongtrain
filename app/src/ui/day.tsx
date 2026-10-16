@@ -1,6 +1,7 @@
 /* A day: its station board, plan, getting around, and where to eat. Plus the route list and the
    list items other screens reuse (legs, food, to-dos). */
 import type { Bullet, Day, Leg, Place, Todo } from '../model/types';
+import { DocLinks } from './wallet';
 import { cityOf, codeOf, lineOf, mapsLink, stayLine } from '../model/trip';
 import { dayOfMonth, fmtHM, fmtT, longDate, shortDate } from '../model/time';
 import { anchorsFor } from '../model/next';
@@ -72,6 +73,7 @@ export function DayBody({ d }: { d: Day }) {
                   <Txt text={p.text} />
                   {p.sub?.length ? <ul className="sub">{p.sub.map((s, j) => <li key={j}><Txt text={s} /></li>)}</ul> : null}
                   {place && place.kind !== 'stay' && <div className="meta"><Ext href={mapsLink(ix, place)}>{place.name} in Maps</Ext></div>}
+                  <DocLinks kind="plan" id={p.id} />
                 </li>
               );
             })}
@@ -156,7 +158,8 @@ export function LegItem({ l }: { l: Leg }) {
       {(l.depart || l.arrive) && <div className="meta">{l.depart && <span>Leaves <span className="tm">{fmtHM(l.depart)}</span></span>}{l.arrive && <span>Arrives <span className="tm">{fmtHM(l.arrive)}</span></span>}</div>}
       {l.tickets && <><span className="lbl">Tickets</span><Txt text={l.tickets} className="item-d" /></>}
       {l.details && <><span className="lbl">Details</span><Txt text={l.details} className="item-d" /></>}
-      <div className="meta"><button className="linkbtn" onClick={() => edit({ kind: 'leg', id: l.id })}>Edit</button></div>
+      <DocLinks kind="leg" id={l.id} />
+      <div className="meta"><button className="linkbtn" onClick={() => edit({ kind: 'leg', id: l.id })}>Edit</button><button className="linkbtn" onClick={() => edit({ kind: 'doc', for: { kind: 'leg', id: l.id } })}>+ Ticket</button></div>
     </li>
   );
 }

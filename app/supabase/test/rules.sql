@@ -170,3 +170,35 @@ select pg_temp.ok(not exists (select 1 from auth.users where email = 'ben@exampl
 select pg_temp.ok(not exists (select 1 from trips where id = 't1'), 'and a trip left with nobody on it is deleted');
 select pg_temp.ok(exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'trips'), 'trips are published for live updates');
 select pg_temp.ok(exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'trip_requests'), '... and so are requests');
+
+-- documents, expenses, files and photos, on a new trip: Ana owns it, Cat joins as an editor
+select pg_temp.act('ana');
+select public.share_trip('t3', '{"name":"Japan"}', 'Ana');
+create temp table code3 as select public.create_invite('t3') as c;
+grant select on code3 to authenticated;
+select pg_temp.act('cat');
+select public.join_trip((select c from code3), 'Cat');
+create function pg_temp.d3() returns jsonb language sql as $$ select data from trips where id = 't3' $$;
+create function pg_temp.save3(j jsonb) returns bigint language sql as $$ select public.save_trip('t3', j, (select version from trips where id = 't3')) $$;
+select pg_temp.ok(pg_temp.save3(pg_temp.d3() || '{"docs":[{"id":"d1","title":"JR Pass"}],"expenses":[{"id":"e1","amount":30}],"settlements":[{"id":"s1"}],"venmo":{"Cat":"cat-c"}}') > 0, 'an editor adds a ticket, an expense, a payment and her Venmo name directly');
+select pg_temp.ok(pg_temp.fails($$select pg_temp.save3(pg_temp.d3() || '{"docs":[]}')$$), '... but removing a ticket needs approval');
+select pg_temp.ok(pg_temp.fails($$select pg_temp.save3(pg_temp.d3() || '{"expenses":[]}')$$), '... and so does removing an expense');
+select pg_temp.ok(pg_temp.fails($$select pg_temp.save3(pg_temp.d3() || '{"currency":"JPY"}')$$), '... or changing the trip''s currency');
+
+insert into storage.objects (bucket_id, name, owner_id) values ('trip-files', 't3/scan.jpg', auth.uid()::text);
+select pg_temp.ok((select count(*) from storage.objects where name = 't3/scan.jpg') = 1, 'someone on the trip can store a file under it and read it back');
+select pg_temp.ok(pg_temp.fails($$insert into storage.objects (bucket_id, name, owner_id) values ('trip-files', 'nope/x.jpg', auth.uid()::text)$$), '... but not under a trip they are not on');
+insert into trip_photos (trip_id, path, thumb, taken_at) values ('t3', 't3/p1.jpg', 't3/p1.t.jpg', '2026-11-02 14:00');
+select pg_temp.ok((select author_name from trip_photos where path = 't3/p1.jpg') = 'Cat', 'a photo added shows the name she has on the trip');
+select pg_temp.ok(pg_temp.fails($$insert into trip_photos (trip_id, path, thumb) values ('t3', 'other/p.jpg', 'other/p.t.jpg')$$), 'a photo must be stored under its trip');
+select pg_temp.ok(pg_temp.fails($$update trip_photos set path = 't3/other.jpg'$$), 'a photo''s file cannot be swapped');
+
+select pg_temp.act('');
+select pg_temp.ok((select count(*) from storage.objects where bucket_id = 'trip-files') = 0, 'signed out, no trip files can be seen');
+select pg_temp.act('ana');
+select pg_temp.ok((select count(*) from trip_photos) = 1 and (select count(*) from storage.objects where name like 't3/%') = 1, 'the owner sees the trip''s photos and files');
+delete from trip_photos where path = 't3/p1.jpg';
+delete from storage.objects where name = 't3/scan.jpg';
+select pg_temp.ok((select count(*) from trip_photos) = 0 and (select count(*) from storage.objects where name like 't3/%') = 0, '... and can remove ones others added');
+reset role;
+select pg_temp.ok(exists (select 1 from storage.buckets where id = 'trip-files' and not public), 'the files bucket is private');

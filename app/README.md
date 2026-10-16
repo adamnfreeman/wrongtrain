@@ -54,6 +54,9 @@ screenshots land in `e2e/out/`.
   Days always stay consecutive: inserting or deleting a day re-dates the ones after it.
 - `src/ui/editors.tsx` – the edit sheets: new trip, trip settings, day, leg, place, to-do.
 - `src/model/rules.ts` – who may change what on a shared trip, and requests for the rest.
+- `src/ui/wallet.tsx` – the Wallet tab: tickets, bookings and private IDs; expenses, receipts,
+  balances and Venmo. `src/model/money.ts` does the sums. `src/ui/photos.tsx` – each day's photos.
+- `src/sync/files.ts` – files kept on the phone (offline) and in the trip's private storage.
 - `src/ui/nearby.tsx`, `src/sync/nearby.ts` – "Something nearby" on Today: a mood, then five places
   from OpenStreetMap, picked by Claude (`supabase/functions/suggest-nearby`) on shared trips.
 - `src/model/filing.ts`, `src/sync/filing.ts` – group notes filed by Claude, and Undo.
