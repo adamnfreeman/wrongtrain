@@ -53,7 +53,7 @@ check(await page.locator('.pill:has-text("Private")').count() === 1, '... and ma
 await page.screenshot({ path: `${OUT}/w-1-docs.png` });
 
 /* money: who is going, and who I am */
-await page.click('.tab:has-text("Trip")').then(() => page.click('.rows button:has-text("Trip settings")'));
+await page.click('.tab:has-text("Trip")').then(() => page.click('.hubrows button:has-text("Trip settings")'));
 await sheet.getByLabel("Who's going").fill('Adam, Ben, Cat');
 await sheet.getByText('Save', { exact: true }).click();
 await page.click('.tab:has-text("Trip")'); await page.fill('#me', 'Adam'); await page.locator('#me').blur();

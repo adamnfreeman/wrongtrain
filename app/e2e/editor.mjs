@@ -35,8 +35,8 @@ check(/6 days: 5 nights away/.test(hint), 'counts the days: 6 days for 5 nights'
 await shot('1-new-trip');
 await sheet.getByText('Create').click();
 await page.waitForSelector('.board h1');
-check(/days to go/.test(await page.textContent('.board h1')), 'new trip opens on Today with a countdown');
-check(/Italy in May/.test(await page.textContent('.board .kicker')), 'trip name on the board');
+check(/days to go/.test(await page.textContent('#view .board h1')), 'new trip opens on Today with a countdown');
+check(/Italy in May/.test(await page.textContent('#view .board .kicker')), 'trip name on the board');
 
 /* plan day 1 */
 await page.click('.tab:has-text("Days")');
@@ -60,7 +60,7 @@ await sheet.getByText('Save', { exact: true }).click();
 await sheet.waitFor({ state: 'detached' });
 let v = await view();
 check(v.includes('Colosseum, timed entry') && v.includes('Be on time for'), 'day shows the plan and the fixed time');
-check((await page.textContent('.board-sub')).includes('Hotel near Termini'), 'new stay shows on the board');
+check((await page.textContent('#view .board-sub')).includes('Hotel near Termini'), 'new stay shows on the board');
 await shot('3-day');
 
 /* a place with a pasted pin, on day 1 */
@@ -104,7 +104,7 @@ await page.click('[aria-label="Tick off: Book Colosseum tickets"]');
 check(await page.locator('[aria-label="Untick: Book Colosseum tickets"]').count() === 1, 'new to-do can be ticked');
 
 /* settings: rename, add a day at the end */
-await page.click('.tab:has-text("Trip")').then(() => page.click('.rows button:has-text("Trip settings")'));
+await page.click('.tab:has-text("Trip")').then(() => page.click('.hubrows button:has-text("Trip settings")'));
 await sheet.waitFor();
 await sheet.getByLabel('Trip name').fill('Rome and Florence');
 await shot('5-settings');
@@ -124,7 +124,7 @@ check(await page.locator('.dbox').count() === 6, 'day deleted (6 days)');
 await page.reload();
 await page.waitForSelector('.tab');
 await page.click('.tab:has-text("Today")');
-check(/Rome and Florence/.test(await page.textContent('.board .kicker')), 'new name kept after reload');
+check(/Rome and Florence/.test(await page.textContent('#view .board .kicker')), 'new name kept after reload');
 await page.click('.tab:has-text("Trip")').then(() => page.click('.tile:has-text("Transit")'));
 v = await view();
 check(v.includes('Rome → Florence'), 'leg kept after reload');
@@ -135,16 +135,16 @@ await page.locator('.dbox').first().click(); await wait(900);
 check((await view()).includes('Colosseum, timed entry'), 'day 1 plan kept after reload');
 
 /* start from the sample */
-await page.click('.tab:has-text("Trip")').then(() => page.click('.rows button:has-text("All trips")'));
+await page.click('.tab:has-text("Trip")').then(() => page.click('.hubrows button:has-text("All trips")'));
 await page.click('text=Start from the sample');
 await sheet.waitFor();
 await sheet.getByLabel('First day').fill('2027-10-01');
 await sheet.getByText('Create').click();
 await page.waitForSelector('.board h1');
-check(/Our Japan trip/.test(await page.textContent('.board .kicker')), 'copy of the sample opens');
+check(/Our Japan trip/.test(await page.textContent('#view .board .kicker')), 'copy of the sample opens');
 await page.click('.tab:has-text("Days")');
-check((await page.textContent('.board .kicker')).includes('Oct 1'), 'copy starts on the chosen date');
-await page.click('.tab:has-text("Trip")').then(() => page.click('.rows button:has-text("All trips")'));
+check((await page.textContent('#view .board .kicker')).includes('Oct 1'), 'copy starts on the chosen date');
+await page.click('.tab:has-text("Trip")').then(() => page.click('.hubrows button:has-text("All trips")'));
 check((await page.locator('.gate .sheet li').count()) === 2, 'welcome lists both trips');
 await shot('6-welcome-trips');
 

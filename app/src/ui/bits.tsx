@@ -1,5 +1,6 @@
 /* Small pieces every screen uses. */
 import { type CSSProperties, type ReactNode, useState } from 'react';
+import { pref, setPref } from '../model/store';
 import type { LineKey } from '../model/trip';
 
 /** Inline style that sets the line colour for a block and everything inside it. */
@@ -54,3 +55,15 @@ export function Fold({ title, count, note, children, open }: { title: string; co
 }
 
 export const Empty = ({ children }: { children: ReactNode }) => <p className="empty">{children}</p>;
+
+/** A section of Today that folds away: a header with a one-line summary, open or closed as you
+    left it last time. */
+export function Glance({ id, title, sum, children, open: start = false }: { id: string; title: string; sum?: ReactNode; children: ReactNode; open?: boolean }) {
+  const [open, setOpen] = useState(() => pref('glance-' + id, start));
+  return (
+    <details className="glance" open={open} onToggle={e => { const o = (e.currentTarget as HTMLDetailsElement).open; if (o !== open) { setOpen(o); setPref('glance-' + id, o); } }}>
+      <summary><span className="g-t">{title}</span>{sum != null && <span className="g-s">{sum}</span>}<i className="g-c" aria-hidden="true" /></summary>
+      <div className="g-b">{children}</div>
+    </details>
+  );
+}

@@ -26,10 +26,10 @@ export function Today() {
       <>
         <Board d={now.cur} compact />
         <NextCard />
-        <Nearby />
-        <DayBody d={now.cur} />
-        <DayPhotos d={now.cur} />
-        <section className="sec"><SecH title="The whole route" /><RouteList /></section>
+        <div className="glances">
+          <DayBody d={now.cur} glance />
+          <Nearby />
+        </div>
       </>
     );
   }
@@ -60,7 +60,6 @@ export function Today() {
       )}
       {now.phase === 'before' && <NextCard />}
       <Nearby />
-      <section className="sec"><SecH title="The route" /><RouteList /></section>
     </>
   );
 }
@@ -77,6 +76,7 @@ export function Days() {
       <Board d={d} />
       <DayBody d={d} />
       <DayPhotos d={d} />
+      <section className="sec"><SecH title="The whole route" /><RouteList /></section>
     </div>
   );
 }

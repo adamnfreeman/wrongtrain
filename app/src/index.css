@@ -379,21 +379,25 @@ select.input { background-image: linear-gradient(45deg, transparent 50%, var(--m
 .tile b { font: 700 16px var(--f-display); display: flex; align-items: center; gap: 8px }
 .tile span { font-size: 13px; color: var(--muted); line-height: 1.35 }
 .tile-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent) }
-.rows { list-style: none; margin: 14px 0 0; padding: 0; display: grid }
-.rows li + li { border-top: 1px solid var(--rule) }
-.rows button { appearance: none; border: 0; background: none; color: var(--ink); width: 100%; text-align: left; padding: 13px 2px; display: grid; gap: 2px; cursor: pointer }
-.rows b { font: 600 15.5px var(--f-body) }
-.rows span { font-size: 13px; color: var(--muted) }
+.hubrows { list-style: none; margin: 14px 0 0; padding: 0; display: grid }
+.hubrows li + li { border-top: 1px solid var(--rule) }
+.hubrows button { appearance: none; border: 0; background: none; color: var(--ink); width: 100%; text-align: left; padding: 13px 2px; display: grid; gap: 2px; cursor: pointer }
+.hubrows b { font: 600 15.5px var(--f-body) }
+.hubrows span { font-size: 13px; color: var(--muted) }
 .backlink { margin: 2px 0 6px; font-size: 15px }
 
 /* the day slider on Days (ui/day.tsx): a box per day on a line, the open one in the middle,
    each sized by --s (set while it moves) like the Dock on a Mac */
-.dslider { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); margin-inline: -16px; margin-bottom: 8px;
-  overflow-x: auto; overflow-y: hidden; overscroll-behavior: contain; touch-action: pan-x; scrollbar-width: none;
-  scroll-snap-type: x mandatory; padding: 14px 0 26px }
+.dslider { position: sticky; top: 0; z-index: 10; background: var(--bg); margin-inline: -16px;
+  /* flush with the top of the screen: back over the page's top padding, and clear of the clock */
+  margin-top: calc(-14px - env(safe-area-inset-top, 0px)); margin-bottom: 10px;
+  padding: calc(env(safe-area-inset-top, 0px) + 4px) 0 16px;
+  overflow-x: auto; overflow-y: hidden; overscroll-behavior: contain; touch-action: pan-x; scrollbar-width: none; scroll-snap-type: x mandatory;
+  /* no hard edge: the page fades in underneath */
+  box-shadow: 0 12px 14px -4px var(--bg) }
 .dslider::-webkit-scrollbar { display: none }
 .dslider-in { padding-inline: calc(50% - 24px); width: max-content }
-.dtrack { position: relative; display: flex; align-items: center; gap: 14px; height: 64px }
+.dtrack { position: relative; display: flex; align-items: center; gap: 14px; height: 62px }
 .dline { position: absolute; left: 24px; right: 24px; top: 50%; height: 3px; transform: translateY(-50%); border-radius: 2px }
 .dbox { --s: .86; position: relative; z-index: 1; flex: none; scroll-snap-align: center; appearance: none; width: 48px; height: 56px; border-radius: 12px; cursor: pointer;
   border: 2px solid var(--line); background: color-mix(in srgb, var(--line) 16%, var(--bg)); color: var(--ink);
@@ -421,9 +425,42 @@ select.input { background-image: linear-gradient(45deg, transparent 50%, var(--m
 .tabs-in .tab[aria-current="page"]::before { left: 26%; right: 26% }
 @media (prefers-reduced-motion: reduce) { .tabs-in .tab { transform: none } }
 
-/* a page changing slides in from the side you are moving towards (App.tsx) */
-#view.slide-next { animation: slide-next .22s ease-out }
-#view.slide-prev { animation: slide-prev .22s ease-out }
-@keyframes slide-next { from { opacity: .25; transform: translateX(28px) } to { opacity: 1; transform: none } }
-@keyframes slide-prev { from { opacity: .25; transform: translateX(-28px) } to { opacity: 1; transform: none } }
-@media (prefers-reduced-motion: reduce) { #view.slide-next, #view.slide-prev { animation: none } }
+/* one long sheet (App.tsx): every page side by side; the sheet slides sideways, each page scrolls
+   up and down by itself */
+.pager { position: fixed; inset: 0; display: flex; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain; scrollbar-width: none; -webkit-overflow-scrolling: touch }
+.pager::-webkit-scrollbar { display: none }
+.pane { flex: 0 0 100%; height: 100%; overflow-x: hidden; overflow-y: auto; overscroll-behavior-y: contain; scroll-snap-align: start; scroll-snap-stop: always;
+  padding-top: env(safe-area-inset-top, 0px); -webkit-overflow-scrolling: touch }
+
+/* the floating label above the bar while the sheet moves (App.tsx) */
+.tabpeek { position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); z-index: 1001; transform: translate(-50%, 8px);
+  display: flex; align-items: center; gap: 8px; padding: 9px 16px 9px 12px; border-radius: 999px; background: var(--ink); color: var(--bg);
+  font: 700 17px var(--f-display); box-shadow: 0 8px 28px rgba(0, 0, 0, .35); opacity: 0; pointer-events: none;
+  transition: opacity .18s ease, transform .18s ease }
+.tabpeek.on { opacity: 1; transform: translate(-50%, 0) }
+.tabpeek svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round }
+@media (prefers-reduced-motion: reduce) { .tabpeek { transition: none } }
+
+/* depth while the sheet moves (set from App.tsx only while a page is off-centre) */
+.pane > .wrap { transform-origin: 50% 30% }
+/* a page that lands: its blocks rise into place, one after another */
+.wrap.arrive > * { animation: rise .34s cubic-bezier(.2, .7, .2, 1) both }
+.wrap.arrive > :nth-child(2) { animation-delay: .04s }
+.wrap.arrive > :nth-child(3) { animation-delay: .08s }
+.wrap.arrive > :nth-child(n+4) { animation-delay: .12s }
+@keyframes rise { from { opacity: .7; transform: translateY(10px) } to { opacity: 1; transform: none } }
+@media (prefers-reduced-motion: reduce) { .wrap.arrive > * { animation: none } }
+
+/* Today's foldable sections (Glance in ui/bits.tsx) */
+details.glance { border-top: 1px solid var(--rule) }
+details.glance:last-of-type { border-bottom: 1px solid var(--rule) }
+details.glance > summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: 1fr auto; grid-template-areas: "t c" "s c"; align-items: center; column-gap: 12px; padding: 14px 2px }
+details.glance > summary::-webkit-details-marker { display: none }
+.g-t { grid-area: t; font: 700 16px/1.25 var(--f-display) }
+.g-s { grid-area: s; font-size: 13.5px; color: var(--muted); margin-top: 2px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.g-c { grid-area: c; width: 9px; height: 9px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); transition: transform .2s ease; margin-right: 4px }
+details.glance[open] > summary .g-c { transform: rotate(-135deg) }
+.g-b { padding-bottom: 14px }
+.g-b > .sec:first-child, .g-b > section:first-child { margin-top: 0 }
+@media (prefers-reduced-motion: reduce) { .g-c { transition: none } }

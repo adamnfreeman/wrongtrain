@@ -112,7 +112,10 @@ Next:
    real transit directions; step-by-step station guidance; "get me home" options; affiliate links.
 8. **Share my location / friend finder** (asked for Oct 16): see where everyone on the trip
    is, by choice and for a set time.
-9. Later: Sign in with Apple (needs the developer account), universal links so invite links
+9. **Wallet and Phrases extras** (asked for Oct 16): a currency calculator (type an amount in
+   either currency; rates already come from Frankfurter for Money); more phrase languages
+   (packs in `src/phrases`); starring phrases so favourites sit at the top, and reordering them.
+10. Later: Sign in with Apple (needs the developer account), universal links so invite links
    open the app, a city list for guessing time zones (Kyoto, Florence and similar don't match
    an IANA zone name), editing the "Before you go" guides.
 

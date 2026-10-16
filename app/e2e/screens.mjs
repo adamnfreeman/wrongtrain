@@ -78,30 +78,30 @@ for (const scheme of ['light', 'dark']) {
     await page.waitForFunction(() => /Day 3 of 10/.test(document.querySelector('.board .kicker')?.textContent || ''), null, { timeout: 4000 }).catch(() => {});
     const k = await page.textContent('.board .kicker');
     check(/Day 3 of 10/.test(k), 'tapping the next day on the slider moves to day 3 (' + k + ')');
-    const swipe = (from, to) => page.evaluate(([a, b]) => {
-      const el = document.querySelector('.board'), mk = x => new Touch({ identifier: 1, target: el, clientX: x, clientY: 400 });
-      el.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, touches: [mk(a)], changedTouches: [mk(a)] }));
-      el.dispatchEvent(new TouchEvent('touchend', { bubbles: true, touches: [], changedTouches: [mk(b)] }));
-    }, [from, to]);
-    await swipe(300, 80);
-    check(await page.locator('.tab[aria-current="page"]:has-text("Map")').count() === 1, 'swiping left on Days goes to the next tab, Map');
-    await open('Days'); await swipe(80, 300);
-    check(await page.locator('.tab[aria-current="page"]:has-text("Today")').count() === 1, '... and swiping right goes back to Today');
-    /* scrolling the bottom bar opens the tab that reaches the middle, without a tap */
-    await wait(700);
+    /* drag the sheet one page along, as a finger would, and let it settle */
+    const drag = by => page.evaluate(b => { const g = document.querySelector('.pager'); g.scrollTo({ left: g.scrollLeft + b * g.clientWidth }); }, by);
+    await drag(1); await wait(600);
+    check(await page.locator('.tab[aria-current="page"]:has-text("Map")').count() === 1, 'dragging the sheet left from Days lands on the next page, Map');
+    await drag(-2); await wait(600);
+    check(await page.locator('.tab[aria-current="page"]:has-text("Today")').count() === 1, '... and dragging it back lands on Today');
+    /* dragging the bottom bar takes the sheet with it, and wherever it stops is the open page */
+    await wait(500);
     await page.evaluate(() => {
       const row = document.querySelector('.tabs-in');
       row.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, touches: [new Touch({ identifier: 2, target: row, clientX: 200, clientY: 800 })] }));
       row.scrollLeft += 68 * 3;
-      row.dispatchEvent(new TouchEvent('touchend', { bubbles: true, touches: [], changedTouches: [new Touch({ identifier: 2, target: row, clientX: 20, clientY: 800 })] }));
     });
-    await wait(500);
-    check(await page.locator('.tab[aria-current="page"]:has-text("Wallet")').count() === 1, 'scrolling the bottom bar three along opens Wallet, no tap needed');
+    await wait(150);
+    const sheetAt = await page.evaluate(() => { const g = document.querySelector('.pager'); return Math.round(g.scrollLeft / g.clientWidth * 10) / 10; });
+    check(sheetAt === 3, `the sheet follows the bar as it is dragged (page ${sheetAt})`);
+    await page.evaluate(() => { const row = document.querySelector('.tabs-in'); row.dispatchEvent(new TouchEvent('touchend', { bubbles: true, touches: [], changedTouches: [new Touch({ identifier: 2, target: row, clientX: 20, clientY: 800 })] })); });
+    await wait(700);
+    check(await page.locator('.tab[aria-current="page"]:has-text("Wallet")').count() === 1, '... and where it stops, three along, Wallet is open');
     await open('Places');
-    await page.click('text=Veg-friendly only');
+    await page.click('#view >> text=Veg-friendly only');
     const nonVeg = await page.locator('#results .pill:has-text("Not veg")').count();
     check(nonVeg === 0, 'veg filter hides non-veg places');
-    await page.click('text=Things to do');
+    await page.click('#view >> text=Things to do');
     check(await page.locator('#results details').count() > 0, 'Things to do lists places by destination');
   }
   check(errors.length === 0, `${scheme}: no script errors` + (errors.length ? ': ' + errors.join(' | ') : ''));

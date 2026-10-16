@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { anchorsFor, liveCtx, previewCtx, stopsFor, type Ctx, type Stop } from '../model/next';
 import { dirLink, fmtDist, mapsLink, metres, pinGroup, travel, KIND_LABEL } from '../model/trip';
 import { fmtDur, fmtT, longDate } from '../model/time';
-import { Ext, Pill, SecH, Txt, pinColor } from './bits';
+import { Ext, Glance, Pill, SecH, Txt, pinColor } from './bits';
 import { useApp } from './ctx';
 
 const about = (tr: { min: number; how: string }) => `about ${fmtDur(tr.min)} ${tr.how}`;
@@ -83,7 +83,7 @@ export function NextCard() {
           <p className={'geomsg' + (geo.bad ? ' bad' : '')}>{geo.bad ? geo.msg : 'Turn on location to see when to leave and what is nearby.'}</p>
         </>
       )}
-      <h3 className="sub-h">{c.pos ? 'Where to next?' : 'On today\'s list'}</h3>
+      <Glance id="next-stops" title={c.pos ? 'Where to next?' : 'On today\'s list'} sum={stops.length ? stops.slice(0, 3).map(x => x.p.name).join(' · ') : 'Nothing close by right now'}>
       {stops.length ? (
         <>
           {c.pos && <p className="lede2">Go to <b>{stops[0].p.name}</b>, {fmtDist(stops[0].dist!)} away ({about(stops[0].tr!)}).
@@ -93,9 +93,10 @@ export function NextCard() {
       ) : (
         <p className="lede2">{next && c.pos ? <>No time for a detour. Head for <b>{next.place?.name || next.name}</b>.</> : c.pos ? 'Nothing on the map is close by and open right now.' : 'Nothing on the map is on today\'s list.'}</p>
       )}
+      </Glance>
       {(up.length > 0 || allDay.length > 0 || tfirst) && (
+        <Glance id="coming-up" title="Coming up" sum={[...allDay.map(a => a.name), ...up.map(a => `${fmtT(a.at!)} ${a.name}`)].slice(0, 3).join(' · ') || (tfirst ? `Tomorrow ${fmtT(tfirst.at!)} ${tfirst.name}` : '')}>
         <>
-          <h3 className="sub-h">Coming up</h3>
           <ul className="sheet">
             {allDay.map((a, i) => <li key={'a' + i}><div className="kick">All day</div><div className="item-h"><span className="item-n">{a.name}</span></div></li>)}
             {up.map((a, i) => (
@@ -107,6 +108,7 @@ export function NextCard() {
             {tfirst && <li><div className="kick">Tomorrow · {fmtT(tfirst.at!)}</div><div className="item-h"><span className="item-n">{tfirst.name}</span></div><Txt text={tfirst.what} className="item-d" /></li>}
           </ul>
         </>
+        </Glance>
       )}
       <p className="geomsg">Travel times are rough guesses from straight-line distance. Check Directions before relying on one.</p>
     </section>

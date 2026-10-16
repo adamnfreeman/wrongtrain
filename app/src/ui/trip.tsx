@@ -41,7 +41,7 @@ export function TripHub() {
           </button>
         ))}
       </div>}
-      <ul className="rows">
+      <ul className="hubrows">
         <li><button onClick={() => edit({ kind: 'trip' })}><b>{shared ? 'People and sharing' : 'Share with the group'}</b><span>{shared ? 'Invite, roles, who can change the plan' : 'Plan it together, live'}</span></button></li>
         <li><button onClick={() => edit({ kind: 'trip' })}><b>Trip settings</b><span>Name, dates, destinations</span></button></li>
         <li><button onClick={() => selectTrip(null)}><b>All trips</b><span>{t.sample ? 'Leave the sample, plan your own' : 'Switch trip, or plan a new one'}</span></button></li>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { startTransition, useCallback, useEffect, useMemo, useState } from 'react';
 import { openSample, pref, resetSample, selectTrip, setMe, setPref, useStore } from './model/store';
 import { indexTrip, whereNow } from './model/trip';
 import type { Trip } from './model/types';
@@ -17,8 +17,8 @@ import { setMyName } from './sync/engine';
 import { Toast, useWaitingForMe } from './ui/requests';
 import { ThemeSwitch } from './ui/theme';
 import { PlannerSheet } from './ui/planner';
-import { BackToTrip, TripHub, UNDER_TRIP } from './ui/trip';
-import { centre, offCentre, useDock } from './ui/dock';
+import { TripHub } from './ui/trip';
+import { useDock } from './ui/dock';
 import { useRef } from 'react';
 
 export default function App() {
@@ -126,9 +126,10 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
     if ('veg' in p) setPref('veg', p.veg);
     setUi(u => ({ ...u, ...p }));
   }, []);
+  /* a new day, or a tab opened by a tap or a link, starts at the top of its page */
+  const toTop = useRef<Tab | null>(null);
   const go = useCallback((tab: Tab, day?: string) => {
-    setUi(u => ({ ...u, tab, day: day || u.day, q: '' }));
-    window.scrollTo(0, 0);
+    setUi(u => { if (u.tab !== tab || (day && day !== u.day)) toTop.current = tab; return { ...u, tab, day: day || u.day, q: '' }; });
   }, []);
   const [editing, edit] = useState<Edit | null>(null);
   const close = useCallback(() => edit(null), []);
@@ -149,83 +150,115 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
 
   const q = ui.q.trim(), searching = q.length > 1;
   const waiting = useWaitingForMe(trip.id);
-  const View = { today: Today, days: Days, transit: Transit, places: Places, map: MapView, phrases: Phrases, wallet: Wallet, trip: TripHub, prep: Prep }[ui.tab];
-  /* swipe sideways anywhere on the screen to move between tabs; not on the map itself, which drags,
-     nor on rows that scroll sideways (the day slider, the tab bar) */
+  const PAGES = { today: Today, days: Days, transit: Transit, places: Places, map: MapView, phrases: Phrases, wallet: Wallet, trip: TripHub, prep: Prep };
+  /* ---------- one long sheet: every page side by side, sliding with your finger ----------
+     The pager scrolls sideways (the phone's own scrolling, so it tracks the finger and coasts);
+     each page scrolls up and down by itself. The bottom bar and the pager move together: drag
+     either and the other follows. Wherever the pager comes to rest is the open tab. */
   const tabNow = useRef(ui.tab); tabNow.current = ui.tab;
-  useEffect(() => {
-    const main = MAIN_TABS as readonly string[];
-    let start: { x: number; y: number } | null = null;
-    const down = (e: TouchEvent) => {
-      const el = e.target as HTMLElement;
-      start = el.closest('[data-noswipe], input, textarea, select, .sheet-wrap, .leaflet-container, .tabs, .pview') ? null : { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    };
-    const up = (e: TouchEvent) => {
-      const s = start; start = null;
-      if (!s || document.body.classList.contains('sheet-open')) return;
-      const t1 = e.changedTouches[0], dx = t1.clientX - s.x, dy = t1.clientY - s.y;
-      if (Math.abs(dx) < 70 || Math.abs(dy) > Math.abs(dx) * 0.6) return;
-      const next = main[main.indexOf(tabNow.current) + (dx < 0 ? 1 : -1)];
-      if (next) go(next as Tab);
-    };
-    window.addEventListener('touchstart', down, { passive: true });
-    window.addEventListener('touchend', up, { passive: true });
-    return () => { window.removeEventListener('touchstart', down); window.removeEventListener('touchend', up); };
-  }, [go]);
-  /* the bottom bar scrolls like the day slider, with the open tab in the middle */
-  const bar = useRef<HTMLDivElement>(null);
-  useDock(bar, '.tab', { radius: 110, small: 0.82, big: 1.12 });
-  /* scrolling the bar yourself opens whichever tab reaches the middle, as it gets there */
-  const fromBar = useRef(false);
-  useEffect(() => {
-    const row = bar.current; if (!row) return;
-    let mine = false, touching = false, frame = 0, rest = 0;
-    const pick = () => {
-      frame = 0;
-      let best: HTMLElement | null = null, dist = Infinity;
-      row.querySelectorAll<HTMLElement>('.tab').forEach(el => { const d = Math.abs(offCentre(row, el)); if (d < dist) { dist = d; best = el; } });
-      const t = (best as HTMLElement | null)?.dataset.tab as Tab | undefined;
-      if (t && t !== tabNow.current) { fromBar.current = true; go(t); }
-    };
-    const start = () => { mine = true; touching = true; clearTimeout(rest); };
-    const end = () => { touching = false; };
-    const onScroll = () => {
-      if (!mine) return;  /* the bar moving itself to centre a tab */
-      if (!frame) frame = requestAnimationFrame(pick);
-      clearTimeout(rest);
-      rest = window.setTimeout(() => { if (!touching) mine = false; }, 180);
-    };
-    row.addEventListener('touchstart', start, { passive: true });
-    row.addEventListener('touchend', end, { passive: true });
-    row.addEventListener('wheel', start, { passive: true });
-    row.addEventListener('scroll', onScroll, { passive: true });
-    return () => {
-      row.removeEventListener('touchstart', start); row.removeEventListener('touchend', end);
-      row.removeEventListener('wheel', start); row.removeEventListener('scroll', onScroll);
-      cancelAnimationFrame(frame); clearTimeout(rest);
-    };
-  }, [go]);
-  /* otherwise (a tap, a swipe on the page, a link) the bar slides the open tab to the middle */
-  const barReady = useRef(false);
-  useEffect(() => {
-    if (fromBar.current) { fromBar.current = false; return; }
-    centre(bar.current, bar.current?.querySelector<HTMLElement>('.tab[aria-current="page"]'), barReady.current);
-    barReady.current = true;
-  }, [ui.tab]);
-  /* the page slides in from the side you are moving towards */
-  const lastTab = useRef(ui.tab);
   const order = MAIN_TABS as readonly string[];
-  const dir = order.indexOf(ui.tab) >= order.indexOf(lastTab.current) ? 'next' : 'prev';
-  useEffect(() => { lastTab.current = ui.tab; }, [ui.tab]);
+  const pager = useRef<HTMLDivElement>(null);
+  const bar = useRef<HTMLDivElement>(null);
+  const TAB_W = 68;
+  useDock(bar, '.tab', { radius: 110, small: 0.82, big: 1.12 });
+  /* the open page first, the rest just after, so none is blank when slid past */
+  const [all, setAll] = useState(false);
+  useEffect(() => { const t = window.setTimeout(() => setAll(true), 350); return () => clearTimeout(t); }, []);
+  const barDragging = useRef(false), settledBy = useRef<'pager' | null>(null);
+  /* a page that lands: its content rises gently into place */
+  const arrive = (t: string) => {
+    const page = pager.current?.querySelector<HTMLElement>(`.pane[data-tab="${t}"] > .wrap`);
+    if (!page || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    page.classList.remove('arrive'); void page.offsetWidth; page.classList.add('arrive');
+  };
+  /* a label above the bar, clear of the thumb, naming the page you will land on while things move */
+  const peek = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const pg = pager.current, row = bar.current; if (!pg || !row) return;
+    let frame = 0, rest = 0, barRest = 0, peekOff = 0;
+    const width = () => pg.clientWidth || 1;
+    /* pager moves: the bar follows, and when it stops, that page is the open tab */
+    const onPager = () => {
+      if (!frame) frame = requestAnimationFrame(() => {
+        frame = 0;
+        if (!barDragging.current) row.scrollLeft = (pg.scrollLeft / width()) * TAB_W;
+        const t = order[Math.min(order.length - 1, Math.max(0, Math.round(pg.scrollLeft / width())))];
+        const el = peek.current, src = row.querySelector<HTMLElement>(`.tab[data-tab="${t}"]`);
+        if (el && src && el.dataset.tab !== t) { el.dataset.tab = t; el.innerHTML = src.querySelector('svg')!.outerHTML + `<span>${ICONS[t as keyof typeof ICONS].label}</span>`; }
+        /* light up the tab for the page in view straight away, not once the sheet has stopped */
+        row.querySelectorAll<HTMLElement>('.tab').forEach(b => { if (b.dataset.tab === t) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
+        el?.classList.add('on');
+        /* depth: a page shrinks and dims a little as it slides away from the middle */
+        const w = width();
+        pg.querySelectorAll<HTMLElement>('.pane').forEach((page, i) => {
+          const off = Math.min(1, Math.abs(i * w - pg.scrollLeft) / w), inner = page.firstElementChild as HTMLElement;
+          /* set only while off-centre: a transform on a page would trap its full-screen pop-ups */
+          if (off > 0.002) { inner.style.transform = `scale(${(1 - off * 0.06).toFixed(4)})`; inner.style.opacity = (1 - off * 0.45).toFixed(3); }
+          else { inner.style.transform = ''; inner.style.opacity = ''; }
+        });
+      });
+      clearTimeout(rest); clearTimeout(peekOff);
+      peekOff = window.setTimeout(() => peek.current?.classList.remove('on'), 350);
+      rest = window.setTimeout(() => {
+        const t = order[Math.round(pg.scrollLeft / width())] as Tab | undefined;
+        if (t && t !== tabNow.current) {
+          settledBy.current = 'pager';
+          arrive(t);
+          /* redraw in the background, so landing does not stutter */
+          startTransition(() => setUi(u => ({ ...u, tab: t, q: '' })));
+        }
+      }, 120);
+    };
+    /* bar dragged: the pager follows it */
+    const barStart = () => { barDragging.current = true; clearTimeout(barRest); };
+    const barEnd = () => { clearTimeout(barRest); barRest = window.setTimeout(() => { barDragging.current = false; }, 400); };
+    const onBar = () => {
+      if (!barDragging.current) return;
+      pg.scrollLeft = (row.scrollLeft / TAB_W) * width();
+      clearTimeout(barRest); barRest = window.setTimeout(() => { barDragging.current = false; }, 400);
+    };
+    pg.addEventListener('scroll', onPager, { passive: true });
+    row.addEventListener('touchstart', barStart, { passive: true });
+    row.addEventListener('touchend', barEnd, { passive: true });
+    row.addEventListener('wheel', barStart, { passive: true });
+    row.addEventListener('scroll', onBar, { passive: true });
+    return () => {
+      pg.removeEventListener('scroll', onPager); row.removeEventListener('touchstart', barStart);
+      row.removeEventListener('touchend', barEnd); row.removeEventListener('wheel', barStart); row.removeEventListener('scroll', onBar);
+      cancelAnimationFrame(frame); clearTimeout(rest); clearTimeout(barRest); clearTimeout(peekOff);
+    };
+  }, [order]);
+  /* a tab opened any other way (a tap, a link): glide the pager there */
+  const pagerReady = useRef(false);
+  useEffect(() => {
+    const pg = pager.current; if (!pg) return;
+    const page = pg.querySelector<HTMLElement>(`.pane[data-tab="${ui.tab}"]`);
+    if (toTop.current === ui.tab && page) { page.scrollTop = 0; toTop.current = null; }
+    if (settledBy.current === 'pager') { settledBy.current = null; return; }
+    const left = order.indexOf(ui.tab) * pg.clientWidth;
+    if (Math.abs(pg.scrollLeft - left) > 2) pg.scrollTo({ left, behavior: pagerReady.current ? 'smooth' : 'auto' });
+    else if (pagerReady.current) arrive(ui.tab);
+    pagerReady.current = true;
+  }, [ui.tab, ui.day, order]);
 
   return (
     <AppCtx.Provider value={{ ix, now, ui, set, go, geo, me, edit }}>
-      <div className="wrap">
-        {(UNDER_TRIP as string[]).includes(ui.tab) && <BackToTrip />}
-        <div id="view" key={ui.tab} className={'slide-' + (lastTab.current === ui.tab ? 'none' : dir)}>
-          <View />
-          {ui.tab === 'trip' && (searching ? <Search q={q} /> : <Footer trip={trip} me={me} />)}
-        </div>
+      <div className="pager" ref={pager}>
+        {MAIN_TABS.map(t => {
+          const Page = PAGES[t];
+          return (
+            <section key={t} className="pane" data-tab={t} aria-hidden={t !== ui.tab}>
+              <div className="wrap" id={t === ui.tab ? 'view' : undefined}>
+                {(all || t === ui.tab) && <>
+                  <Page />
+                  {t === 'trip' && (searching ? <Search q={q} /> : <Footer trip={trip} me={me} />)}
+                </>}
+              </div>
+            </section>
+          );
+        })}
+      </div>
+      <div className="sheets">
         {editing?.kind === 'trip' && <TripSettings trip={trip} close={close} />}
         {editing?.kind === 'day' && <DayEditor trip={trip} id={editing.id} close={close} onDayChange={id => go('days', id)} />}
         {editing?.kind === 'leg' && <LegEditor trip={trip} id={editing.id} dayId={editing.dayId} close={close} />}
@@ -234,10 +267,11 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
         {editing?.kind === 'doc' && <DocEditor trip={trip} id={editing.id} forRef={editing.for} close={close} />}
         {editing?.kind === 'expense' && <ExpenseEditor trip={trip} id={editing.id} close={close} />}
       </div>
+      <div className="tabpeek" ref={peek} aria-hidden="true" />
       <nav className="tabs" aria-label="Sections">
         <div className="tabs-in" ref={bar}>
           {MAIN_TABS.map(t => (
-            <button key={t} data-tab={t} className="tab" aria-current={ui.tab === t || (t === 'trip' && (UNDER_TRIP as string[]).includes(ui.tab)) ? 'page' : undefined} onClick={() => go(t)}>
+            <button key={t} data-tab={t} className="tab" aria-current={ui.tab === t ? 'page' : undefined} onClick={() => go(t)}>
               <svg viewBox="0 0 24 24" aria-hidden="true">{ICONS[t].icon}</svg>{ICONS[t].label}
               {t === 'prep' && waiting > 0 && <span className="tabn" aria-label={`${waiting} waiting for your OK`}>{waiting}</span>}
             </button>
