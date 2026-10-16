@@ -161,11 +161,15 @@ Next:
    is per person), kept in agreement with `change_needs_approval` in `schema.sql`. Default is
    level 1, per item 13.
 16. **A "Right now" page** (Adam's idea, Oct 16; to be fleshed out). Exactly what you need at
-   this moment and nothing else, in big bold type, everything large and obvious: what's next,
-   and when a flight, train or bus is coming up soon, the transit details (which train, platform,
-   seats, leave-by time, the ticket). Builds on "How much time do I have?" on Today
-   (`src/ui/next.tsx`, `src/model/next.ts`) and the day's legs. Open questions: its own tab, or
-   what Today becomes during the trip; what it shows when nothing is soon.
+   this moment and nothing else, in big bold type, everything large and obvious. It is not
+   always there: it shows up only within a window before something where details help, and
+   goes away after. For example a train (platform, car, seats, which train), a flight (gate,
+   terminal, flight number), a bus, or the next booking or meeting (its address, how to get
+   there, when to leave). It shows whatever useful details the trip has for that thing, and
+   the ticket when there is one. Builds on "How much time do I have?" on Today
+   (`src/ui/next.tsx`, `src/model/next.ts`), the day's legs and plan items. To settle: how long
+   the window is for each kind of thing, and how it appears (taking over Today, a banner, or
+   opening by itself).
 
 ## Working together
 
