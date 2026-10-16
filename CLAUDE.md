@@ -160,6 +160,12 @@ Next:
    creation, these words, and a level per person (today the rule is per trip and only the role
    is per person), kept in agreement with `change_needs_approval` in `schema.sql`. Default is
    level 1, per item 13.
+16. **A "Right now" page** (Adam's idea, Oct 16; to be fleshed out). Exactly what you need at
+   this moment and nothing else, in big bold type, everything large and obvious: what's next,
+   and when a flight, train or bus is coming up soon, the transit details (which train, platform,
+   seats, leave-by time, the ticket). Builds on "How much time do I have?" on Today
+   (`src/ui/next.tsx`, `src/model/next.ts`) and the day's legs. Open questions: its own tab, or
+   what Today becomes during the trip; what it shows when nothing is soon.
 
 ## Working together
 
