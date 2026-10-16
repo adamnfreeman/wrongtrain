@@ -39,7 +39,7 @@ await ctx.route(/supabase\.co/, async r => {
   if (/functions\/v1\/plan-trip/.test(u)) {
     const b = JSON.parse(r.request().postData());
     steps.push(b.step + (b.index != null ? b.index : ''));
-    if (b.step === 'outline') return json({ plan_id: 'plan1', left: 4, outline });
+    if (b.step === 'outline') { await wait(1500); return json({ plan_id: 'plan1', left: 4, outline }); }
     if (b.step === 'research') return json({ notes: `Notes for ${b.outline.stops[b.index].city}` });
     if (b.step === 'build') {
       const o = b.outline, before = o.stops.slice(0, b.index).reduce((n, s) => n + s.nights, 0);
@@ -75,8 +75,13 @@ await sheet.locator('button:has-text("$$$$")').first().click();
 await sheet.locator('button:has-text("Food")').first().click();
 await sheet.locator('button:has-text("A neighbourhood and a list")').click();
 await sheet.locator('button:has-text("Vegetarian")').click();
+await sheet.locator('button:has-text("Nerdy")').click();
 await page.screenshot({ path: `${OUT}/p-1-style.png` });
 await next();
+await page.waitForSelector('.planning', { timeout: 3000 }).catch(() => {});
+const icons = await page.locator('.planning-row').first().textContent().catch(() => '');
+check(/🗾/.test(icons) && /🎮|👾/.test(await page.locator('.planning-rows').textContent().catch(() => '')), 'a full-screen planning screen shows Japan and the chosen vibe');
+await page.screenshot({ path: `${OUT}/p-0-planning.png` });
 await sheet.locator('text=Japan in spring').waitFor({ timeout: 10000 });
 check(steps[0] === 'outline', 'asks for an outline first');
 check((await sheet.locator('.item-n').allTextContents()).join() === 'Osaka,Kyoto,Tokyo', 'shows the cities in order');

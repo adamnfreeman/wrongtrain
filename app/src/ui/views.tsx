@@ -240,9 +240,9 @@ function Notes() {
   const [msg, setMsg] = useState<{ text: string; bad: boolean } | null>(null);
   const t = ix.trip, claude = canFile(t.id, !!session), shared = !!getState().sync[t.id];
   /* why Claude is not filing notes here, so a note that just sits there is not a mystery */
-  const why = claude ? '' : t.sample ? 'Claude files notes on your own shared trips, not the sample.'
-    : !shared ? 'To have Claude file notes into the trip, share it: Trip settings, then Share with the group.'
-    : !session ? 'Sign in to have Claude file notes into the trip.' : '';
+  const why = claude ? '' : t.sample ? 'Notes are filed into the trip automatically on your own shared trips, not the sample.'
+    : !shared ? 'To have notes filed into the trip automatically, share it: Trip settings, then Share with the group.'
+    : !session ? 'Sign in to have notes filed into the trip automatically.' : '';
   const all = t.notes.slice().reverse();
   /* a note Claude just filed stays in view, with what was filed, until you tap OK */
   const open = all.filter(n => !n.done || filings[n.id]), done = all.filter(n => n.done && !filings[n.id]);
@@ -258,8 +258,8 @@ function Notes() {
         <div className="kick">{n.author} · {stamp(n.at)}</div><p className="item-d">{n.text}</p>
         {filings[n.id] ? <Filed tripId={t.id} noteId={n.id} f={filings[n.id]} />
           : <>
-            {n.filed && <p className="filed">Claude: {n.filed}</p>}
-            {claude && !n.done && <div className="meta"><button className="linkbtn" onClick={() => void fileNote(t.id, n.id)}>{n.filed ? 'Ask Claude again' : 'File with Claude'}</button></div>}
+            {n.filed && <p className="filed">{n.filed}</p>}
+            {claude && !n.done && <div className="meta"><button className="linkbtn" onClick={() => void fileNote(t.id, n.id)}>{n.filed ? 'File it again' : 'File it into the trip'}</button></div>}
           </>}
       </div>
     </li>
@@ -268,7 +268,7 @@ function Notes() {
     <section className="blk" id="gnotes">
       <SecH title="Group notes"><span className="kicker">{open.filter(n => !n.done).length} open</span></SecH>
       <p className="note">{claude
-        ? 'Leave a note with something to add: somewhere to eat, a sight, a shop, something to book or pack. Claude files it into the trip for everyone. Changes to plans already made wait for the owner.'
+        ? 'Leave a note with something to add: somewhere to eat, a sight, a shop, something to book or pack. WrongTrain files it into the trip for everyone. Changes to plans already made wait for the owner.'
         : 'Ideas, questions and things to add, for everyone on the trip to see.'}{why && <> {why}</>}</p>
       <textarea className="search notebox" id="gnote" rows={3} maxLength={600} value={draft} onChange={e => setDraft(e.target.value)}
         placeholder={claude ? 'For example: add the ramen place near the hotel to Nov 3' : 'For example: can we fit in a sentō one evening?'} aria-label="Your note" />
@@ -283,7 +283,7 @@ function Notes() {
 /** What Claude just did with a note: still working, what it filed (with Undo), or what went wrong. */
 function Filed({ tripId, noteId, f }: { tripId: string; noteId: string; f: NoteFiling }) {
   const reply = useApp().ix.trip.notes.find(n => n.id === noteId)?.filed;
-  if (f.state === 'busy') return <p className="filed" role="status">Claude is filing this…</p>;
+  if (f.state === 'busy') return <p className="filed" role="status">Filing this into the trip…</p>;
   if (f.state === 'error') return (
     <div className="filed bad" role="status">
       {f.message}
@@ -293,7 +293,7 @@ function Filed({ tripId, noteId, f }: { tripId: string; noteId: string; f: NoteF
   const nothing = !f.added.length && !f.planned.length;
   return (
     <div className="filed" role="status">
-      {reply && <p>Claude: {reply}</p>}
+      {reply && <p>{reply}</p>}
       {!nothing && (
         <ul>
           {f.added.map((l, i) => <li key={'a' + i}>{l}</li>)}

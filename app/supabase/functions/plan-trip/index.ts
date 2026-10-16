@@ -137,7 +137,9 @@ Deno.serve(async req => {
     return reply(400, { error: 'input', message: 'Unknown step.' });
   } catch (e) {
     console.error('plan-trip failed', body.step, e);
+    const detail = e instanceof Anthropic.APIError ? `${e.status} ${JSON.stringify(e.error)}` : String((e as Error)?.stack || e);
+    await admin.from('function_errors').insert({ fn: 'plan-trip', step: body.step || null, message: detail.slice(0, 4000) }).then(() => {}, () => {});
     const busy = e instanceof Anthropic.RateLimitError;
-    return reply(busy ? 429 : 502, { error: 'claude', message: busy ? 'Busy right now. Try again in a minute.' : 'Claude could not plan that just now. Try again.' });
+    return reply(busy ? 429 : 502, { error: 'claude', message: busy ? 'Busy right now. Try again in a minute.' : 'Could not plan that just now. Try again.' });
   }
 });

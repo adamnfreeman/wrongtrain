@@ -6,18 +6,18 @@ import { addTrip, getState } from '../model/store';
 import { planToTrip } from '../model/planner';
 import { longDate } from '../model/time';
 import {
-  DAY_STYLES, DIETS, PACES, STYLES, blankAnswers, dollars, stopDates,
+  DAY_STYLES, DIETS, PACES, STYLES, VIBES, blankAnswers, dollars, stopDates,
   type Answers, type Outline,
 } from '../../supabase/functions/_shared/planner.ts';
 import { fillStop, loadDraft, makeOutline, saveDraft, type Draft, type StopState } from '../sync/planner';
-import { useSync } from '../sync/engine';
+import { isSignedIn } from '../sync/engine';
 import { SignInSheet } from './account';
+import { PlanningScreen } from './planning';
 import { Sheet, Text } from './form';
 
 type Step = 'where' | 'who' | 'style' | 'outline' | 'fill';
 
 export function PlannerSheet({ close }: { close: () => void }) {
-  const sync = useSync();
   const [draft, setDraftState] = useState<Draft>(() => loadDraft() || { answers: { ...blankAnswers(), travelers: [{ name: getState().me, from: '' }] } });
   const [step, setStep] = useState<Step>(() => (draft.stops ? 'fill' : draft.outline ? 'outline' : 'where'));
   const [busy, setBusy] = useState(false);
@@ -28,7 +28,7 @@ export function PlannerSheet({ close }: { close: () => void }) {
   const a = draft.answers, up = (p: Partial<Answers>) => set({ ...draft, answers: { ...a, ...p } });
 
   const plan = async () => {
-    if (!sync.session) return setSignIn(true);
+    if (!isSignedIn()) return setSignIn(true);
     setBusy(true); setMsg('');
     try {
       const r = await makeOutline(a);
@@ -61,7 +61,7 @@ export function PlannerSheet({ close }: { close: () => void }) {
     addTrip(t); saveDraft(null); close();
   };
 
-  if (signIn) return <SignInSheet close={() => setSignIn(false)} then={() => void plan()} why="Sign in so Claude can plan your trip. Planning is free for your first few trips." />;
+  if (signIn) return <SignInSheet close={() => setSignIn(false)} then={() => void plan()} why="Sign in so WrongTrain can plan your trip. Planning is free for your first few trips." />;
 
   const next: Record<Step, { label: string; go: () => void; ok: boolean }> = {
     where: { label: 'Next', go: () => setStep('who'), ok: !!a.where.trim() },
@@ -78,8 +78,13 @@ export function PlannerSheet({ close }: { close: () => void }) {
       {step === 'where' && <Where a={a} up={up} />}
       {step === 'who' && <Who a={a} up={up} />}
       {step === 'style' && <Style a={a} up={up} />}
-      {step === 'style' && busy && <p className="geomsg" role="status">Working out where to go and for how long… This takes about half a minute.</p>}
+      {step === 'style' && busy && <PlanningScreen answers={a} />}
       {step === 'outline' && draft.outline && <OutlineView o={draft.outline} days={a.days} left={draft.left} onChange={o => set({ ...draft, outline: o, stops: undefined })} />}
+      {step === 'fill' && draft.outline && states.some(s => s === 'research' || s === 'build' || s === 'waiting') && <PlanningScreen answers={a} title={draft.outline.title}>
+        <ul className="planning-progress">{draft.outline.stops.map((c, i) => (
+          <li key={i} className={states[i]}><b>{c.city}</b> {states[i] === 'done' ? 'ready' : states[i] === 'failed' ? 'did not work' : states[i] === 'research' ? 'finding hotels, food and sights' : states[i] === 'build' ? 'planning the days' : 'waiting'}</li>
+        ))}</ul>
+      </PlanningScreen>}
       {step === 'fill' && draft.outline && <Filling o={draft.outline} states={states} onRetry={() => void fill(draft)} />}
       {msg && <p className="geomsg bad" role="alert">{msg}</p>}
       {step === 'where' && draft.outline && <p className="fhint">You have a plan in progress. <button type="button" className="linkbtn" onClick={() => setStep(draft.stops ? 'fill' : 'outline')}>Carry on with it</button> or <button type="button" className="linkbtn" onClick={() => { saveDraft(null); setDraftState({ answers: blankAnswers() }); }}>start again</button>.</p>}
@@ -141,6 +146,14 @@ function Style({ a, up }: Q) {
         <p className="fhint">{['Shoestring: hostels and street food', 'Careful: simple hotels, cheap eats', 'Comfortable: good hotels, a few nice meals', 'Treat yourselves: nice hotels and restaurants', 'The best: luxury hotels, top restaurants'][a.budget - 1]}</p>
       </div>
       <div className="field">
+        <span className="flabel">The vibe</span>
+        <div className="chips" style={{ marginTop: 0 }}>{VIBES.map(v => (
+          <button key={v} type="button" className="chipbtn plain" aria-pressed={(a.vibes || []).includes(v)}
+            onClick={() => { const cur = a.vibes || []; up({ vibes: cur.includes(v) ? cur.filter(x => x !== v) : [...cur, v].slice(-3) }); }}>{v}</button>
+        ))}</div>
+        <p className="fhint">Pick up to three.</p>
+      </div>
+      <div className="field">
         <span className="flabel">What you're into</span>
         <div className="chips" style={{ marginTop: 0 }}>{STYLES.map(s => (
           <button key={s} type="button" className="chipbtn plain" aria-pressed={a.styles.includes(s)} onClick={() => up({ styles: toggle(a.styles, s) })}>{s}</button>
@@ -198,7 +211,7 @@ function OutlineView({ o, days, left, onChange }: { o: Outline; days: number; le
       </ul>
       <p className={'fhint' + (nights !== days - 1 ? ' warn' : '')}>{nights} nights{nights !== days - 1 ? `, for a ${days}-day trip (${days - 1} nights). Fine if you meant to change it.` : '.'}</p>
       {o.tips.length > 0 && <><h3 className="fsec">Sort out early</h3><ul className="tips">{o.tips.map((t, i) => <li key={i}>{t}</li>)}</ul></>}
-      <p className="fhint">Next, Claude looks up current hotels, food and sights for each place and plans the days. It takes a minute or two.{left != null ? ` ${left} more free ${left === 1 ? 'plan' : 'plans'} this month.` : ''}</p>
+      <p className="fhint">Next, WrongTrain looks up current hotels, food and sights for each place and plans the days. It takes a minute or two.{left != null ? ` ${left} more free ${left === 1 ? 'plan' : 'plans'} this month.` : ''}</p>
     </>
   );
 }

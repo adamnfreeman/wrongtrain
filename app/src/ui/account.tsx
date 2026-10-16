@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import type { Trip } from '../model/types';
 import { getState, setMe, useStore } from '../model/store';
-import { createInvite, deleteAccount, errText, joinTrip, leaveTrip, members, removeMember, setMyName, shareTrip, signOut, sendCode, useSync, verifyCode, type Member } from '../sync/engine';
+import { createInvite, deleteAccount, errText, joinTrip, leaveTrip, members, removeMember, setMyName, shareTrip, signOut, sendCode, useSync, verifyCode, type Member, isSignedIn } from '../sync/engine';
 import { DeleteButton, Sheet, Text } from './form';
 import { shareBase } from '../native';
 import { ROLES } from '../model/rules';
@@ -68,7 +68,7 @@ export function JoinSheet({ close, initial = '' }: { close: () => void; initial?
   const [msg, setMsg] = useState('');
   const [signIn, setSignIn] = useState(false);
   const join = async () => {
-    if (!sync.session) return setSignIn(true);
+    if (!isSignedIn()) return setSignIn(true);
     setBusy(true); setMsg('');
     if (name.trim() && name.trim() !== me) setMe(name);
     try { await joinTrip(code); close(); } catch (e) { setMsg(errText(e)); setBusy(false); }
@@ -108,7 +108,7 @@ export function Sharing({ trip, onLeft }: { trip: Trip; onLeft: () => void }) {
   }, [isShared, uid, trip.id]);
 
   const share = async () => {
-    if (!sync.session) return setSignIn(true);
+    if (!isSignedIn()) return setSignIn(true);
     if (!getState().me) { if (!name.trim()) return setMsg('Add your name first, so everyone knows who you are.'); setMe(name); }
     setBusy(true); setMsg('');
     try { await shareTrip(trip.id); setCode(await createInvite(trip.id)); } catch (e) { setMsg(errText(e)); }

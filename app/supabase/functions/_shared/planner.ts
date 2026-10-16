@@ -12,12 +12,15 @@
 
 /* ---------- the questions ---------- */
 
-export const STYLES = ['Sightseeing', 'Food', 'Culture & history', 'Art & museums', 'Nature & outdoors', 'Nightlife', 'Shopping', 'Relaxing', 'Adventure', 'Family-friendly'] as const;
+export const STYLES = ['Sightseeing', 'Food', 'Culture & history', 'Art & museums', 'Nature & outdoors', 'Nightlife', 'Shopping', 'Relaxing', 'Adventure', 'Wellness & spas'] as const;
 export const PACES = [
   { value: 'packed', label: 'Packed', hint: 'See as much as we can' },
   { value: 'balanced', label: 'Balanced', hint: 'A few things a day, time to wander' },
   { value: 'slow', label: 'Slow', hint: 'One or two things a day' },
 ] as const;
+/** The feel of the trip; up to three. */
+export const VIBES = ['Chill', 'Foodie', 'Party', 'Romantic', 'Artsy', 'Luxe', 'Off the beaten path', 'Nerdy', 'Outdoorsy'] as const;
+
 /** How the group likes its days. Loose days get a neighbourhood and a list to pick from, not times. */
 export const DAY_STYLES = [
   { value: 'timed', label: 'Planned to the hour', hint: 'What next, and at what time' },
@@ -40,6 +43,7 @@ export interface Answers {
   /** 1 to 5, like $ to $$$$$ */
   budget: number;
   styles: string[];
+  vibes: string[];
   pace: (typeof PACES)[number]['value'];
   dayStyle: (typeof DAY_STYLES)[number]['value'];
   diets: string[];
@@ -47,7 +51,7 @@ export interface Answers {
 }
 
 export const blankAnswers = (): Answers => ({
-  where: '', mustSee: '', start: '', whenNote: '', days: 10, travelers: [{ name: '', from: '' }], budget: 3, styles: [], pace: 'balanced', dayStyle: 'mix', diets: [], notes: '',
+  where: '', mustSee: '', start: '', whenNote: '', days: 10, travelers: [{ name: '', from: '' }], budget: 3, styles: [], vibes: [], pace: 'balanced', dayStyle: 'mix', diets: [], notes: '',
 });
 
 export const dollars = (n: number) => '$'.repeat(Math.min(5, Math.max(1, Math.round(n))));
@@ -61,6 +65,7 @@ function answersText(a: Answers): string {
     `Length: ${a.days} days, door to door`,
     `People: ${Math.max(1, who.length)}${who.length ? ' – ' + who.map(t => `${t.name.trim() || 'someone'}${t.from.trim() ? ` from ${t.from.trim()}` : ''}`).join('; ') : ''}`,
     `Budget: ${dollars(a.budget)} out of $$$$$`,
+    a.vibes?.length && `Vibe: ${a.vibes.join(', ')}`,
     a.styles.length && `Into: ${a.styles.join(', ')}`,
     `Pace: ${a.pace}`,
     `Days: ${a.dayStyle === 'timed' ? 'planned to the hour' : a.dayStyle === 'loose' ? 'loose: a neighbourhood and a list of things to pick from' : 'a mix of planned-to-the-hour days and loose neighbourhood days'}`,
@@ -110,7 +115,7 @@ export const OUTLINE_SCHEMA = obj({
 
 export const OUTLINE_SYSTEM = `You are WrongTrain's trip planner. A group has told you where they want to go and how they like to travel, and most of them have never been. Your job is the first, big decision: which places to base themselves in, for how many nights each, in what order, and how to get between them.
 
-Plan like a friend who knows the country well and listens: specific to what they said, not a generic tour. Fit the number of days door to door, counting the first and last days as travel. Favour fewer, well-chosen bases over rushing; a day trip from a base is better than a one-night stop. Order the stops so travel between them is simple and the route ends near the airport home. Take everyone's starting points into account when suggesting where to fly in and out.
+Plan like a friend who knows the country well and listens: specific to what they said, not a generic tour. They are adults travelling without children, and would rather not be around them: no family resorts or kids' attractions, late nights are fine, and if somewhere is overrun by families in the school holidays, say so. Fit the number of days door to door, counting the first and last days as travel. Favour fewer, well-chosen bases over rushing; a day trip from a base is better than a one-night stop. Order the stops so travel between them is simple and the route ends near the airport home. Think about what is on during their dates: a big festival, parade or celebration somewhere on or near the route is worth timing a stop around (say so in that stop's why), and national holidays that bring crowds or closures are worth a tip. Take everyone's starting points into account when suggesting where to fly in and out.
 
 - title: a short name for the trip, e.g. "Japan in spring".
 - summary: two or three plain sentences on the shape of the trip and why.
@@ -150,10 +155,13 @@ export function addDaysIso(iso: string, n: number): string {
 
 export const RESEARCH_SYSTEM = `You are WrongTrain's trip planner, researching one stop of a trip a group is planning. Use web search to find what is good and open now, not what was true years ago. Check that hotels and restaurants still exist.
 
+They are adults travelling without children, and would rather avoid places full of kids. Prefer adults-only hotels or ones without a family focus (no kids' clubs, water parks or family resorts); for food and drink, places with a grown-up feel; skip attractions aimed at children; and note quieter times to visit popular sights.
+
 Find, for this group's budget, tastes and food needs:
 - Hotels: three good options at different prices (one at their budget, one cheaper, one nicer), close enough to each other that people at different hotels can meet up easily. Name the area and why it suits.
 - Food: about eight places across the stay, a mix of quick and sit-down, with what to order. If anyone has food needs (e.g. vegetarian), make sure several fit them and say which.
 - Sights and things to do: about eight, matched to their interests, with any that need booking ahead and roughly how long each takes. Include one or two day trips if the stay is long enough.
+- Events on their exact dates: search for festivals, parades, religious celebrations, concerts, big sports matches, markets and public holidays in and near this place while they are there. These are often the best memories of a trip, so look properly; give the date, time and place, and whether tickets are needed. Note crowds or closures they cause.
 - Getting around: how to get from the station or airport to the hotel area, and any pass worth buying.
 
 Then sketch a day-by-day plan for the stay at their pace, grouping things that are near each other. The arrival day is lighter. Follow how they like their days:
@@ -192,7 +200,7 @@ export const BUILD_SYSTEM = `You turn a trip planner's research notes for one st
 
 - hotels: the options from the notes. price is 1 to 5 like $ to $$$$$. Set pick to true on exactly one: the best fit for the group's budget. link is the official website from the notes, or null.
 - places: the food, cafes, sights, areas and shops from the notes (not the hotels). key is a short id like "p1". notes is one or two plain sentences: what it is, what to order or see, and anything to know. veg is true when it suits vegetarians. bookAhead is true when it needs booking or tickets in advance. link is the official website from the notes, or null.
-- days: one for each date given, in order, each with a short title ("Fushimi Inari and Gion"), a one-line summary, and the plan: items with 24-hour "HH:MM" times where the notes give rough times (else null), short text, the placeKey of the place it is at (or null), and fixed true only for things booked for a set time. For a loose day, title it with the neighbourhood ("Shinjuku, at your own pace"), say in the summary to pick as you go, and give the coffee place first, then about ten options, all with time null.
+- days: one for each date given, in order, each with a short title ("Fushimi Inari and Gion"), a one-line summary, and the plan: items with 24-hour "HH:MM" times where the notes give rough times (else null), short text, the placeKey of the place it is at (or null), and fixed true only for things booked for a set time. Put each event from the notes in the plan on its date (as a place of kind event, with its time if known, and fixed true if it is ticketed), and plan the rest of that day around it. For a loose day, title it with the neighbourhood ("Shinjuku, at your own pace"), say in the summary to pick as you go, and give the coffee place first, then about ten options, all with time null.
 - around: up to four short tips on getting around this stop (from the station to the hotel, passes).
 - todos: up to five things to book or arrange before the trip for this stop ("Book teamLab Planets tickets").`;
 

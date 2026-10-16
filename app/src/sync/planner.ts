@@ -25,7 +25,7 @@ async function call<T>(body: Record<string, unknown>): Promise<T> {
   if (res && typeof res.json === 'function') { try { message = ((await res.clone().json()) as { message?: string }).message || ''; } catch { /* not JSON */ } }
   if (message) throw new Error(message);
   if (/failed to (send|fetch)|network/i.test((error as Error)?.message || '')) throw new Error('No connection. Try again when you have signal.');
-  throw new Error('Claude could not plan that just now. Try again.');
+  throw new Error('Could not plan that just now. Try again.');
 }
 
 export const makeOutline = (answers: Answers) => call<{ plan_id: string; left: number; outline: Outline }>({ step: 'outline', answers });

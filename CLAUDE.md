@@ -1,6 +1,8 @@
 # WrongTrain
 
-A group trip planner, heading for the iOS App Store. It began as the Japan 2026 page at
+A group trip planner, heading for the iOS App Store. Made for millennials travelling without kids
+(child-free is the default and a selling point): Claude's prompts assume adults who would rather
+avoid family resorts and kids' places. It began as the Japan 2026 page at
 wrongtrain.lol, a single HTML file reading the trip from a Google Sheet.
 
 ## Branches: be careful with `main`
@@ -97,7 +99,11 @@ Next:
    (Overpass), chosen by Claude on shared trips (`suggest-nearby`), else the nearest. The public
    Overpass server will not do for many users: move to a paid places API or our own server.
 7. **Planner, part 2 onwards** (see the vision in Oct 16 notes): per-person budgets and tastes
-   on a shared trip, personal plans alongside the group's, "who's where"; in-the-moment help
+   on a shared trip, personal plans alongside the group's, "who's where"; seeing a friend's
+   schedule and copying an event, hotel or place from their timeline into yours;
+   leading idea (not decided): one timeline where each item says who is in it (blank =
+   everyone), couples/pairs default to each other, "My timeline" is a filter, "Join this"
+   adds you to a friend's item, and each night's stay can differ per pair; in-the-moment help
    (more moods done; "who's playing tonight" needs event listings); leave-now notifications and
    real transit directions; step-by-step station guidance; "get me home" options; affiliate links.
 8. **Share my location / friend finder** (asked for Oct 16): see where everyone on the trip

@@ -80,7 +80,7 @@ export function Nearby() {
               );
             })}
           </ul>
-          <p className="geomsg">{found.by === 'claude' ? 'Picked by Claude from ' : 'From '}places on OpenStreetMap (© OpenStreetMap contributors). Check opening hours before you go.</p>
+          <p className="geomsg">{found.by === 'claude' ? 'Picked for you from ' : 'From '}places on OpenStreetMap (© OpenStreetMap contributors). Check opening hours before you go.</p>
         </>
       )}
     </section>

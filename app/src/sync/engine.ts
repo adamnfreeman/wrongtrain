@@ -65,6 +65,9 @@ export function useSync(): Status {
 
 const online = () => typeof navigator === 'undefined' || navigator.onLine !== false;
 const signedIn = () => !!status.session;
+/** Signed in right now. Use this, not a session read at render time, in anything that runs after
+    signing in: the screen's copy is from before, and would send you back to sign in again. */
+export const isSignedIn = signedIn;
 
 export function notify(text: string, bad = false) { setStatus({ notice: { text, bad, at: Date.now() } }); }
 export function clearNotice() { if (status.notice) setStatus({ notice: null }); }

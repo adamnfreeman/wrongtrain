@@ -46,9 +46,9 @@ export async function findNearby(tripId: string, mood: Mood, pos: { lat: number;
 
   const s = getState(), shared = !!s.sync[tripId];
   const { data: { session } } = await supabase.auth.getSession();
-  if (s.trips.find(t => t.id === tripId)?.sample) return nearest('On your own shared trips, Claude picks the best five and says why.');
-  if (!shared) return nearest('Share this trip and Claude picks the best five and says why.');
-  if (!session) return nearest('Sign in and Claude picks the best five and says why.');
+  if (s.trips.find(t => t.id === tripId)?.sample) return nearest('On your own shared trips, WrongTrain picks the best five and says why.');
+  if (!shared) return nearest('Share this trip and WrongTrain picks the best five and says why.');
+  if (!session) return nearest('Sign in and WrongTrain picks the best five and says why.');
 
   const localTime = new Date().toLocaleString('en-GB', { weekday: 'short', hour: '2-digit', minute: '2-digit' });
   const { data, error } = await supabase.functions.invoke<{ picks: Pick[]; left?: number }>('suggest-nearby', {
@@ -62,9 +62,9 @@ export async function findNearby(tripId: string, mood: Mood, pos: { lat: number;
 
 async function whyNot(e: unknown): Promise<string> {
   const res = (e as { context?: Response })?.context;
-  if (res?.status === 404) return 'Claude’s picks are not set up yet, so these are the nearest.';
+  if (res?.status === 404) return 'Picks are not set up yet, so these are the nearest.';
   if (res && typeof res.json === 'function') {
     try { const b = await res.clone().json() as { message?: string }; if (b?.message) return `${b.message} These are the nearest.`; } catch { /* not JSON */ }
   }
-  return 'Claude could not pick just now, so these are the nearest.';
+  return 'Could not pick just now, so these are the nearest.';
 }

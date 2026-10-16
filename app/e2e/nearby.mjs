@@ -38,7 +38,7 @@ async function open(setup) {
   check(/amenity.*restaurant/.test(overpassAsked) && /around:1000,35\.00370,135\.77880/.test(overpassAsked), 'asks OpenStreetMap for food around you');
   check(await page.locator('#nearby .sheet li').count() === 5, 'shows five places');
   check((await page.locator('#nearby .item-n').first().textContent()) === 'Place 1', '... nearest first');
-  check(await page.locator('#nearby >> text=Claude picks the best five').count() === 1, '... and says Claude picks on your own shared trips');
+  check(await page.locator('#nearby >> text=WrongTrain picks the best five').count() === 1, '... and says it picks the best on your own shared trips');
   check(/Restaurant · ramen · \d+ m · about \d+ min on foot/.test(await page.locator('#nearby .when').first().textContent()), 'each says what it is and how far');
   await page.locator('#nearby .sheet li').first().locator('text=Save to Ideas').click();
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('wrongtrain')).trips[0].places.find(p => p.name === 'Place 1'));
@@ -81,7 +81,7 @@ async function open(setup) {
   check(asked && asked.mood === 'food' && asked.trip_id === 'shared1' && asked.candidates.length === 12, 'sends the mood and the places found to Claude');
   check((await page.locator('#nearby .item-n').allTextContents()).join() === 'Place 5,Place 2', 'shows Claude’s picks, in its order');
   check(await page.locator('#nearby >> text=A quiet ramen counter, open now.').count() === 1, '... each with its line on why');
-  check(await page.locator('#nearby >> text=Picked by Claude').count() === 1, '... and says Claude picked them');
+  check(await page.locator('#nearby >> text=Picked for you').count() === 1, '... and says they were picked for you');
   await page.locator('#nearby').screenshot({ path: `${OUT}/n-2-claude.png` });
   await ctx.close();
 }

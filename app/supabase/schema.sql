@@ -423,6 +423,17 @@ $$;
 revoke all on function public.claim_plan(uuid), public.claim_plan_step(uuid, uuid, bigint, bigint), public.refund_plan(uuid) from public, anon, authenticated;
 grant execute on function public.claim_plan(uuid), public.claim_plan_step(uuid, uuid, bigint, bigint), public.refund_plan(uuid) to service_role;
 
+-- Why a function call failed, for whoever maintains the app (Edge Function logs are not
+-- reachable from the SQL tools). No policies: only the functions write here.
+create table if not exists public.function_errors (
+  id       bigserial primary key,
+  at       timestamptz not null default now(),
+  fn       text not null,
+  step     text,
+  message  text
+);
+alter table public.function_errors enable row level security;
+
 -- ---------- files and photos ----------
 
 -- Scans, tickets, receipts and photos, stored under the trip's id ("<trip id>/<file>"). Private

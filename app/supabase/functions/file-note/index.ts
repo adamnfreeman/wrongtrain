@@ -82,6 +82,8 @@ Deno.serve(async req => {
     await admin.rpc('refund_ai_use', { use_id: useId });
     const status = e instanceof Anthropic.RateLimitError ? 429 : 502;
     console.error('file-note failed', e);
-    return reply(status, { error: 'claude', message: status === 429 ? 'Busy right now. Try again in a minute.' : 'Claude could not file this note. Try again later.' });
+    const detail = e instanceof Anthropic.APIError ? `${e.status} ${JSON.stringify(e.error)}` : String((e as Error)?.stack || e);
+    await admin.from('function_errors').insert({ fn: 'file-note', message: detail.slice(0, 4000) }).then(() => {}, () => {});
+    return reply(status, { error: 'claude', message: status === 429 ? 'Busy right now. Try again in a minute.' : 'This note could not be filed. Try again later.' });
   }
 });

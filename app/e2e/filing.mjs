@@ -72,7 +72,7 @@ const fileAnswer = {
 
 /* an editor's note */
 await signInAs('editor');
-check(await page.locator('#gnotes >> text=Claude files it into the trip').count() === 1, 'the notes box says Claude files notes');
+check(await page.locator('#gnotes >> text=WrongTrain files it into the trip').count() === 1, 'the notes box says notes are filed for everyone');
 answer = fileAnswer;
 await page.fill('#gnote', 'Lunch at Time Out Market on day 2, and we need Viva Viagem cards');
 await page.click('text=Add note');
@@ -110,11 +110,11 @@ t = (await stored()).trips[0];
 check(!t.places.some(p => p.name === 'Time Out Market') && !t.todos.some(x => x.text === 'Buy a Viva Viagem card') && !t.todoGroups.includes('Tickets'), 'Undo takes the place, the to-do and its group back');
 check(!t.days.some(d => d.plan.some(i => i.text === 'Lunch at Time Out Market')), '... and the plan item');
 check(!t.notes.at(-1).done && !t.notes.at(-1).filed, '... and reopens the note');
-check(await page.locator('#gnotes >> text=File with Claude').count() === 1, 'an open note can be sent to Claude again');
+check(await page.locator('#gnotes >> text=File it into the trip').count() === 1, 'an open note can be filed again');
 
 /* the free allowance is used up */
 answer = { status: 402, body: { error: 'allowance', message: 'This trip has used its free filings. The note stays open for the owner.' } };
-await page.locator('#gnotes >> text=File with Claude').click();
+await page.locator('#gnotes >> text=File it into the trip').click();
 await page.waitForSelector('#gnotes .filed.bad', { timeout: 5000 }).catch(() => {});
 check(/used its free filings/.test(await page.locator('#gnotes .filed.bad').textContent().catch(() => '')), 'when the allowance is used up, it says so');
 check(!(await stored()).trips[0].notes.at(-1).done, '... and the note stays open');
@@ -128,7 +128,7 @@ await page.fill('#gnote', 'Can we go to Sintra?');
 await page.click('text=Add note');
 await wait(500);
 check(calls.length === 0, 'a viewer’s note is not sent to Claude');
-check(await page.locator('#gnotes >> text=File with Claude').count() === 0, '... and a viewer gets no button for it');
+check(await page.locator('#gnotes >> text=File it into the trip').count() === 0, '... and a viewer gets no button for it');
 
 check(errors.length === 0, 'no script errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
 await browser.close();

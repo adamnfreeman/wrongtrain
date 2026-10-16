@@ -60,7 +60,7 @@ Deno.serve(async req => {
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
   const { data: use, error: useErr } = await admin.rpc('claim_ai_use', { trip_id: tripId, user_id: who.user.id, kind: 'suggest-nearby' });
   if (useErr) {
-    if (/allowance used up/i.test(useErr.message)) return reply(402, { error: 'allowance', message: 'This trip has used its free Claude uses.' });
+    if (/allowance used up/i.test(useErr.message)) return reply(402, { error: 'allowance', message: 'This trip has used its free suggestions.' });
     return reply(500, { error: 'server', message: useErr.message });
   }
   const { id: useId, left } = use as { id: string; left: number };
@@ -86,6 +86,8 @@ Deno.serve(async req => {
     await admin.rpc('refund_ai_use', { use_id: useId });
     const status = e instanceof Anthropic.RateLimitError ? 429 : 502;
     console.error('suggest-nearby failed', e);
-    return reply(status, { error: 'claude', message: status === 429 ? 'Busy right now. Try again in a minute.' : 'Claude could not pick right now.' });
+    const detail = e instanceof Anthropic.APIError ? `${e.status} ${JSON.stringify(e.error)}` : String((e as Error)?.stack || e);
+    await admin.from('function_errors').insert({ fn: 'suggest-nearby', message: detail.slice(0, 4000) }).then(() => {}, () => {});
+    return reply(status, { error: 'claude', message: status === 429 ? 'Busy right now. Try again in a minute.' : 'Could not pick right now.' });
   }
 });

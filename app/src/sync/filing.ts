@@ -69,5 +69,5 @@ async function errorText(e: unknown): Promise<string> {
   }
   const m = (e as { message?: string })?.message || '';
   if (/failed to (send|fetch)|network/i.test(m)) return 'No connection. Try again when you have signal.';
-  return 'Claude could not file this note. Try again later.';
+  return 'This note could not be filed. Try again later.';
 }
