@@ -54,7 +54,9 @@ on a Mac.
 - "Plan a trip for me" (welcome screen, `src/ui/planner.tsx`): questions, then the `plan-trip`
   function (outline, then web research and a plan per city; `supabase/functions/_shared/planner.ts`),
   then `src/model/planner.ts` makes a normal trip. Plans are counted per person in `ai_plans`.
-- Appearance (like the phone / light / dark) at the bottom of every page (`src/ui/theme.tsx`).
+- Account & settings: the round button in the top corner of every page but Days (`AccountButton` in
+  `src/ui/account.tsx`). Sign in/out, your name, Appearance (`src/ui/theme.tsx`) and the build
+  number and time (set in `vite.config.ts`), so you can tell whether a phone has the latest.
 
 - Testing the planner cheaply: test mode in the app, `plan_cache`, and the `PLANNER_MODEL`
   (now `claude-haiku-5-5`) and `PLAN_TESTERS` secrets; see `app/supabase/functions/README.md`.

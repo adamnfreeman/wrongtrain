@@ -6,8 +6,8 @@ import L from 'leaflet';
 import { LINE_COLORS, type LineColor } from '../model/types';
 import { parseCoords } from '../model/edit';
 
-export function Sheet({ title, onCancel, onSave, saveLabel = 'Save', canSave = true, children, footer }: {
-  title: string; onCancel: () => void; onSave?: () => void; saveLabel?: string; canSave?: boolean; children: ReactNode; footer?: ReactNode;
+export function Sheet({ title, onCancel, onSave, saveLabel = 'Save', cancelLabel = 'Cancel', canSave = true, children, footer }: {
+  title: string; onCancel: () => void; onSave?: () => void; saveLabel?: string; cancelLabel?: string; canSave?: boolean; children: ReactNode; footer?: ReactNode;
 }) {
   useEffect(() => {
     const y = window.scrollY;
@@ -19,7 +19,7 @@ export function Sheet({ title, onCancel, onSave, saveLabel = 'Save', canSave = t
   return createPortal(
     <div className="sheet-wrap" role="dialog" aria-modal="true" aria-label={title}>
       <header className="sheet-bar">
-        <button className="linkbtn" onClick={onCancel}>Cancel</button>
+        <button className="linkbtn" onClick={onCancel}>{cancelLabel}</button>
         <h2>{title}</h2>
         {onSave ? <button className="linkbtn strong" disabled={!canSave} onClick={onSave}>{saveLabel}</button> : <span />}
       </header>

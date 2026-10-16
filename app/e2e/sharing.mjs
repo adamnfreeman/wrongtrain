@@ -21,7 +21,10 @@ const sheet = page.locator('.sheet-wrap').last();
 await page.goto('http://localhost:8092/');
 await page.waitForSelector('text=Explore a sample trip');
 check(await page.locator('text=Join a trip with a code').count() === 1, 'welcome offers joining with a code');
-check(await page.locator('.acct >> text=Sign in').count() === 1, 'welcome offers signing in');
+await page.click('.acctbtn');
+check(await page.locator('.sheet-wrap button:has-text("Sign in")').count() === 1, 'Account & settings offers signing in');
+check(/WrongTrain build \d+/.test(await page.textContent('.buildline')), 'Account & settings shows the build number');
+await page.click('.sheet-wrap >> text=Done');
 
 /* a trip of your own, then share it */
 await page.click('text=Plan it myself');
