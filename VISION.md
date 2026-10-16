@@ -17,6 +17,12 @@ options.
 
 ## What it should do
 
+- **Just say it, and it lands in the right place.** This is one of the main things about the app.
+  Anyone on the trip drops in a simple note, wish or piece of news ("muji, donqui and uniqlo",
+  "our flight home is JL 4 at 7:45 PM", the tattoo studio's directions) and WrongTrain spreads it
+  through the trip: places, days, travel, to-dos, the map. By default it all goes straight
+  through, with no waiting for the owner (Adam decided Oct 16); an owner who wants to approve
+  changes can switch that on per trip.
 - **Plan it for me, then I'll adjust.** Ask how many people are going, where each starts from,
   rough dates, budget ($ to $$$$$) and tastes. Then propose the split between cities
   (say 4 nights Osaka, 4 Kyoto, 5 Tokyo), hotels, food and sights.

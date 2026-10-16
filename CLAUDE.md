@@ -137,6 +137,15 @@ Next:
    (say to an @wrongtrain.lol one), keeping its trips. There are no passwords (sign-in is an
    emailed code), so this is the "change password" of WrongTrain. Supabase's `updateUser({ email })`
    sends a code to the new address to confirm it.
+13. **Notes go straight through** (decided Oct 16; see VISION.md). Two parts: (a) a new shared
+   trip starts on the Open rule, not Approve changes (`src/model/rules.ts`, `schema.sql`
+   default); (b) the ideas box (`supabase/functions/_shared/filing.ts`) files everything it
+   can place, including travel, bookings and times (legs, day plans, stays), instead of leaving
+   them for the owner. It only leaves a note open when it truly can't tell what or where; for a
+   chain with no city given ("muji, donqui, uniqlo") it picks the sensible spot and says so.
+14. **Tapping a tab** (asked for Oct 16): the tapped button slides to the centre of the bottom
+   bar, and the pages swipe quickly across to that page (now they glide slowly or jump).
+   `TripApp` in `src/App.tsx`, the pager and bar scroll code.
 
 ## Working together
 
