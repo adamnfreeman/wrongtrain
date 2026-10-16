@@ -29,7 +29,7 @@ const MODEL = 'claude-opus-5-5';
 /* if Claude declines, the API retries on a fallback model in the same call */
 const FALLBACK = { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' } as const;
 /* stop researching in time to answer within the Edge Function's limit */
-const RESEARCH_MS = 120_000;
+const RESEARCH_MS = 135_000;
 
 type Usage = { input_tokens: number; output_tokens: number };
 
@@ -58,7 +58,7 @@ async function research(prompt: string): Promise<{ notes: string; usage: Usage }
       const stream = anthropic.beta.messages.stream({
         model: MODEL, max_tokens: 32000, ...FALLBACK,
         output_config: { effort: 'medium' },
-        tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 6 }],
+        tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 4 }],
         system: RESEARCH_SYSTEM, messages,
       }, { signal: ctrl.signal });
       stream.on('text', t => { notes += t; });
@@ -70,7 +70,8 @@ async function research(prompt: string): Promise<{ notes: string; usage: Usage }
     }
   } catch (e) {
     /* out of time: keep what was written so far, if it is enough to plan with */
-    if (!(ctrl.signal.aborted && notes.length > 1500)) throw e;
+    if (!ctrl.signal.aborted) throw e;
+    if (notes.length < 300) throw new Error('research ran out of time before writing anything');
   } finally { clearTimeout(timer); }
   return { notes: notes.trim(), usage };
 }
@@ -119,7 +120,7 @@ Deno.serve(async req => {
 
     if (body.step === 'research') {
       const { notes, usage } = await research(researchPrompt(ask1));
-      if (notes.length < 200) throw new Error('too little found');
+      if (notes.length < 200) throw new Error(`too little found (${notes.length} characters)`);
       const { error } = await admin.rpc('claim_plan_step', { plan_id: body.plan_id, user_id: who.user.id, input_tokens: usage.input_tokens, output_tokens: usage.output_tokens });
       if (error) return reply(402, { error: 'allowance', message: 'This plan has done all it can. Start a new one.' });
       return reply(200, { notes });
@@ -137,7 +138,7 @@ Deno.serve(async req => {
     return reply(400, { error: 'input', message: 'Unknown step.' });
   } catch (e) {
     console.error('plan-trip failed', body.step, e);
-    const detail = e instanceof Anthropic.APIError ? `${e.status} ${JSON.stringify(e.error)}` : String((e as Error)?.stack || e);
+    const detail = e instanceof Anthropic.APIError && e.status ? `${e.status} ${JSON.stringify(e.error)}` : String((e as Error)?.stack || e);
     await admin.from('function_errors').insert({ fn: 'plan-trip', step: body.step || null, message: detail.slice(0, 4000) }).then(() => {}, () => {});
     const busy = e instanceof Anthropic.RateLimitError;
     return reply(busy ? 429 : 502, { error: 'claude', message: busy ? 'Busy right now. Try again in a minute.' : 'Could not plan that just now. Try again.' });

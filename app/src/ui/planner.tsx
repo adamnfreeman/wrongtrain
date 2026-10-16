@@ -38,7 +38,7 @@ export function PlannerSheet({ close }: { close: () => void }) {
     setBusy(false);
   };
 
-  /* fill in every stop, two at a time */
+  /* fill in every stop, three at a time */
   const fill = async (d: Draft) => {
     const o = d.outline!, results = d.stops ? [...d.stops] : o.stops.map(() => null);
     const st: StopState[] = results.map(r => (r ? 'done' : 'waiting'));
@@ -52,7 +52,7 @@ export function PlannerSheet({ close }: { close: () => void }) {
         } catch (e) { st[i] = 'failed'; setStates([...st]); setMsg((e as Error).message); }
       }
     };
-    await Promise.all([work(), work()]);
+    await Promise.all([work(), work(), work()]);
     set({ ...d, stops: [...results] });
   };
 
