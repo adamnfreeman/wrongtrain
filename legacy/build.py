@@ -79,6 +79,7 @@ HOSTED_CSS = """
 body.locked .wrap{padding-block:16px 40px}
 .daystrip,.catstrip{top:47px}
 </style>
+<script>if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
 </body>
 </html>
 """
@@ -103,6 +104,8 @@ def main():
     pack = HERE / "phrases-audio.json"
     if pack.exists():
         (site / "phrases-audio.json").write_bytes(pack.read_bytes())
+    # offline support: keeps the page, audio, map library and viewed tiles on the phone
+    (site / "sw.js").write_bytes((HERE / "sw.js").read_bytes())
 
     # private artifact: snapshot inside, no sign-in, cannot call out
     live = HERE / "live.json"
