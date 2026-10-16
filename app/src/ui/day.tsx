@@ -1,6 +1,7 @@
 /* A day: its station board, plan, getting around, and where to eat. Plus the route list and the
    list items other screens reuse (legs, food, to-dos). */
 import { useEffect, useRef } from 'react';
+import { centre, offCentre, useDock } from './dock';
 import type { Bullet, Day, Leg, Place, Todo } from '../model/types';
 import { DocLinks } from './wallet';
 import { cityOf, codeOf, lineOf, mapsLink, stayLine, destOf } from '../model/trip';
@@ -133,25 +134,23 @@ export function RouteList() {
 }
 
 /* the day strip along the top of Days */
-/** The days as a line: a box per day in its destination's colour, joined up. Drag it and the day
-    in the middle opens; tap a day to slide to it. */
+/** The days as a line: a box per day in its destination's colour, joined up. Drag it sideways and
+    the day in the middle opens; tap a day to slide to it. Like the Dock on a Mac, each day grows as
+    it nears the middle and shrinks towards the edges. */
 export function DaySlider({ cur }: { cur: Day }) {
   const { ix, go } = useApp();
   const ref = useRef<HTMLDivElement>(null);
   const days = ix.trip.days;
   /* keep the open day in the middle (instantly when it changes from elsewhere) */
-  useEffect(() => {
-    const st = ref.current, el = st?.querySelector<HTMLElement>(`[data-day="${cur.id}"]`);
-    if (st && el) st.scrollLeft = el.offsetLeft - st.clientWidth / 2 + el.clientWidth / 2;
-  }, [cur.id]);
+  useEffect(() => { centre(ref.current, ref.current?.querySelector<HTMLElement>(`[data-day="${cur.id}"]`)); }, [cur.id]);
+  useDock(ref, '[data-day]', { radius: 120, small: 0.86, big: 1.2, deps: [days.length] });
   /* when the slider comes to rest, open the day nearest the middle */
   useEffect(() => {
     const st = ref.current; if (!st) return;
     let t = 0;
     const settle = () => {
-      const mid = st.scrollLeft + st.clientWidth / 2;
       let best: HTMLElement | null = null, dist = Infinity;
-      st.querySelectorAll<HTMLElement>('[data-day]').forEach(el => { const c = Math.abs(el.offsetLeft + el.clientWidth / 2 - mid); if (c < dist) { dist = c; best = el; } });
+      st.querySelectorAll<HTMLElement>('[data-day]').forEach(el => { const c = Math.abs(offCentre(st, el)); if (c < dist) { dist = c; best = el; } });
       const id = (best as HTMLElement | null)?.dataset.day;
       if (id && id !== cur.id) go('days', id);
     };
@@ -161,20 +160,21 @@ export function DaySlider({ cur }: { cur: Day }) {
   }, [cur.id, go]);
   return (
     <div className="dslider" ref={ref} data-noswipe>
-      <div className="dslider-in">
+      <div className="dslider-in"><div className="dtrack">
+        {/* one line behind all the days, each stretch in the colour of the day it leaves from */}
+        <i className="dline" style={{ background: `linear-gradient(to right, ${days.slice(0, -1).map((x, i) => `var(--l-${lineOf(ix, x)}) ${i * 62}px ${(i + 1) * 62}px`).join(', ') || 'transparent 0 0'})` }} />
         {days.map((x, i) => {
           const prev = days[i - 1], newCity = !prev || prev.destinationId !== x.destinationId || prev.travel !== x.travel;
           return (
             <button key={x.id} data-day={x.id} className={'dbox' + (x.travel ? ' travel' : '')} style={line(lineOf(ix, x))}
               aria-current={x.id === cur.id} aria-label={`${longDate(x.date)}, ${cityOf(ix, x)}`}
               onClick={e => (e.currentTarget as HTMLElement).scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })}>
-              {i > 0 && <i className="dlink" style={line(lineOf(ix, prev))} />}
               <small>{longDate(x.date).slice(0, 3)}</small><b>{dayOfMonth(x.date)}</b>
               {newCity && <em>{x.travel ? 'Travel' : destOf(ix, x)?.name || ''}</em>}
             </button>
           );
         })}
-      </div>
+      </div></div>
     </div>
   );
 }

@@ -386,24 +386,44 @@ select.input { background-image: linear-gradient(45deg, transparent 50%, var(--m
 .rows span { font-size: 13px; color: var(--muted) }
 .backlink { margin: 2px 0 6px; font-size: 15px }
 
-/* the day slider on Days (ui/day.tsx): a box per day on a line, the open one in the middle */
-.dslider { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); margin-inline: -16px; overflow-x: auto; scrollbar-width: none;
-  scroll-snap-type: x mandatory; padding: 10px 0 14px; margin-bottom: 10px }
+/* the day slider on Days (ui/day.tsx): a box per day on a line, the open one in the middle,
+   each sized by --s (set while it moves) like the Dock on a Mac */
+.dslider { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); margin-inline: -16px; margin-bottom: 8px;
+  overflow-x: auto; overflow-y: hidden; overscroll-behavior: contain; touch-action: pan-x; scrollbar-width: none;
+  scroll-snap-type: x mandatory; padding: 14px 0 26px }
 .dslider::-webkit-scrollbar { display: none }
-.dslider-in { display: flex; gap: 14px; padding-inline: calc(50% - 24px); width: max-content }
-.dbox { position: relative; flex: none; scroll-snap-align: center; appearance: none; width: 48px; height: 56px; border-radius: 12px; cursor: pointer;
+.dslider-in { padding-inline: calc(50% - 24px); width: max-content }
+.dtrack { position: relative; display: flex; align-items: center; gap: 14px; height: 64px }
+.dline { position: absolute; left: 24px; right: 24px; top: 50%; height: 3px; transform: translateY(-50%); border-radius: 2px }
+.dbox { --s: .86; position: relative; z-index: 1; flex: none; scroll-snap-align: center; appearance: none; width: 48px; height: 56px; border-radius: 12px; cursor: pointer;
   border: 2px solid var(--line); background: color-mix(in srgb, var(--line) 16%, var(--bg)); color: var(--ink);
-  display: grid; align-content: center; justify-items: center; gap: 1px; padding: 0; transition: transform .15s ease }
+  display: grid; align-content: center; justify-items: center; gap: 1px; padding: 0;
+  transform: scale(var(--s)); transform-origin: 50% 50%; will-change: transform }
 .dbox small { font: 600 9.5px var(--f-body); letter-spacing: .06em; text-transform: uppercase; color: var(--muted) }
 .dbox b { font: 700 18px/1 var(--f-display); font-variant-numeric: tabular-nums }
 .dbox.travel { border-style: dashed }
-.dbox[aria-current="true"] { background: var(--line); color: var(--on-line); transform: scale(1.12) }
+.dbox[aria-current="true"] { background: var(--line); color: var(--on-line) }
 .dbox[aria-current="true"] small { color: inherit; opacity: .8 }
-.dlink { position: absolute; right: 100%; top: 50%; width: 16px; height: 3px; margin-right: -1px; background: var(--line); transform: translateY(-50%) }
 .dbox em { position: absolute; top: 100%; left: 0; margin-top: 4px; font: 600 10px var(--f-body); font-style: normal; color: var(--muted); white-space: nowrap }
-@media (prefers-reduced-motion: reduce) { .dbox { transition: none } }
+@media (prefers-reduced-motion: reduce) { .dbox { transform: none } .dbox[aria-current="true"] { transform: scale(1.1) } }
 
 /* Today's slim heading (Board compact) */
 .dayhead { margin: 6px 0 4px }
 .dayhead h1 { font: 700 30px/1.1 var(--f-display); letter-spacing: -.02em; margin: 4px 0 0; color: var(--ink) }
 .dayhead h1::before { content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--line); margin-right: 10px; vertical-align: middle }
+
+/* the bottom bar scrolls sideways like the day slider: the open tab in the middle, a Dock effect
+   from --s (ui/dock.ts), growing upwards */
+.tabs-in { display: flex; overflow-x: auto; overflow-y: hidden; overscroll-behavior: contain; touch-action: pan-x; scrollbar-width: none;
+  scroll-snap-type: x mandatory; padding-inline: calc(50% - 34px); max-width: none; gap: 0; padding-top: 8px }
+.tabs-in::-webkit-scrollbar { display: none }
+.tabs-in .tab { flex: none; width: 68px; scroll-snap-align: center; transform: scale(var(--s, 1)); transform-origin: 50% 100%; will-change: transform }
+.tabs-in .tab[aria-current="page"]::before { left: 26%; right: 26% }
+@media (prefers-reduced-motion: reduce) { .tabs-in .tab { transform: none } }
+
+/* a page changing slides in from the side you are moving towards (App.tsx) */
+#view.slide-next { animation: slide-next .22s ease-out }
+#view.slide-prev { animation: slide-prev .22s ease-out }
+@keyframes slide-next { from { opacity: .25; transform: translateX(28px) } to { opacity: 1; transform: none } }
+@keyframes slide-prev { from { opacity: .25; transform: translateX(-28px) } to { opacity: 1; transform: none } }
+@media (prefers-reduced-motion: reduce) { #view.slide-next, #view.slide-prev { animation: none } }

@@ -87,6 +87,16 @@ for (const scheme of ['light', 'dark']) {
     check(await page.locator('.tab[aria-current="page"]:has-text("Map")').count() === 1, 'swiping left on Days goes to the next tab, Map');
     await open('Days'); await swipe(80, 300);
     check(await page.locator('.tab[aria-current="page"]:has-text("Today")').count() === 1, '... and swiping right goes back to Today');
+    /* scrolling the bottom bar opens the tab that reaches the middle, without a tap */
+    await wait(700);
+    await page.evaluate(() => {
+      const row = document.querySelector('.tabs-in');
+      row.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, touches: [new Touch({ identifier: 2, target: row, clientX: 200, clientY: 800 })] }));
+      row.scrollLeft += 68 * 3;
+      row.dispatchEvent(new TouchEvent('touchend', { bubbles: true, touches: [], changedTouches: [new Touch({ identifier: 2, target: row, clientX: 20, clientY: 800 })] }));
+    });
+    await wait(500);
+    check(await page.locator('.tab[aria-current="page"]:has-text("Wallet")').count() === 1, 'scrolling the bottom bar three along opens Wallet, no tap needed');
     await open('Places');
     await page.click('text=Veg-friendly only');
     const nonVeg = await page.locator('#results .pill:has-text("Not veg")').count();

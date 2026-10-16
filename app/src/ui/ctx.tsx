@@ -5,8 +5,8 @@ import type { Geo } from './geo';
 import type { Edit } from './editors';
 
 export const TABS = ['today', 'days', 'map', 'wallet', 'trip', 'transit', 'places', 'phrases', 'prep'] as const;
-/** The tabs on the bottom bar, in order; the rest open from Trip. Swiping moves between these. */
-export const MAIN_TABS = ['today', 'days', 'map', 'wallet', 'trip'] as const;
+/** The tabs on the bottom bar, in order. Swiping moves between them. */
+export const MAIN_TABS = ['today', 'days', 'map', 'wallet', 'places', 'transit', 'phrases', 'prep', 'trip'] as const;
 export type Tab = (typeof TABS)[number];
 
 export interface UI {

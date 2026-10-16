@@ -18,6 +18,7 @@ import { Toast, useWaitingForMe } from './ui/requests';
 import { ThemeSwitch } from './ui/theme';
 import { PlannerSheet } from './ui/planner';
 import { BackToTrip, TripHub, UNDER_TRIP } from './ui/trip';
+import { centre, offCentre, useDock } from './ui/dock';
 import { useRef } from 'react';
 
 export default function App() {
@@ -96,6 +97,10 @@ const ICONS: Record<(typeof MAIN_TABS)[number], { label: string; icon: React.Rea
   today: { label: 'Today', icon: <><circle cx="12" cy="12" r="8.5" /><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none" /></> },
   days: { label: 'Days', icon: <><rect x="3.5" y="5" width="17" height="15.5" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></> },
   map: { label: 'Map', icon: <><path d="M12 21s7-6.2 7-11.5a7 7 0 0 0-14 0C5 14.8 12 21 12 21z" /><circle cx="12" cy="9.5" r="2.4" /></> },
+  places: { label: 'Places', icon: <path d="M12 3.6l2.6 5.2 5.8.9-4.2 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.2-4.1 5.8-.9z" /> },
+  transit: { label: 'Transit', icon: <><rect x="5" y="3" width="14" height="14" rx="3.5" /><path d="M5 10.5h14M9 20.5l1.5-3.5M15 20.5L13.5 17M9 13.8h.01M15 13.8h.01" /></> },
+  phrases: { label: 'Phrases', icon: <><path d="M4 5h16v11H10l-4.5 3.5V16H4z" /><path d="M8.5 9.5h7M8.5 12.5h4.5" /></> },
+  prep: { label: 'To do', icon: <path d="M4 7.5l2 2 3-3.5M4 15.5l2 2 3-3.5M12.5 8H20M12.5 16H20" /> },
   wallet: { label: 'Wallet', icon: <><rect x="3.5" y="6" width="17" height="13" rx="2.5" /><path d="M3.5 10h17M15 14.5h2.5" /></> },
   trip: { label: 'Trip', icon: <><circle cx="6" cy="6" r="1.6" /><circle cx="12" cy="6" r="1.6" /><circle cx="18" cy="6" r="1.6" /><circle cx="6" cy="12" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="18" cy="12" r="1.6" /><circle cx="6" cy="18" r="1.6" /><circle cx="12" cy="18" r="1.6" /><circle cx="18" cy="18" r="1.6" /></> },
 };
@@ -145,27 +150,79 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
   const q = ui.q.trim(), searching = q.length > 1;
   const waiting = useWaitingForMe(trip.id);
   const View = { today: Today, days: Days, transit: Transit, places: Places, map: MapView, phrases: Phrases, wallet: Wallet, trip: TripHub, prep: Prep }[ui.tab];
-  /* swipe sideways to move between the bottom-bar tabs; not on the map, which drags */
-  const touch = useRef<{ x: number; y: number; ok: boolean } | null>(null);
-  const main = MAIN_TABS as readonly string[];
-  const onTouchStart = (e: React.TouchEvent) => {
-    const el = e.target as HTMLElement, t0 = e.touches[0];
-    touch.current = { x: t0.clientX, y: t0.clientY, ok: main.includes(ui.tab) && ui.tab !== 'map' && !el.closest('[data-noswipe], input, textarea, select, .sheet-wrap, .leaflet-container') };
-  };
-  const onTouchEnd = (e: React.TouchEvent) => {
-    const s = touch.current; touch.current = null;
-    if (!s?.ok) return;
-    const t1 = e.changedTouches[0], dx = t1.clientX - s.x, dy = t1.clientY - s.y;
-    if (Math.abs(dx) < 70 || Math.abs(dy) > Math.abs(dx) * 0.6) return;
-    const next = main[main.indexOf(ui.tab) + (dx < 0 ? 1 : -1)];
-    if (next) go(next as Tab);
-  };
+  /* swipe sideways anywhere on the screen to move between tabs; not on the map itself, which drags,
+     nor on rows that scroll sideways (the day slider, the tab bar) */
+  const tabNow = useRef(ui.tab); tabNow.current = ui.tab;
+  useEffect(() => {
+    const main = MAIN_TABS as readonly string[];
+    let start: { x: number; y: number } | null = null;
+    const down = (e: TouchEvent) => {
+      const el = e.target as HTMLElement;
+      start = el.closest('[data-noswipe], input, textarea, select, .sheet-wrap, .leaflet-container, .tabs, .pview') ? null : { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    };
+    const up = (e: TouchEvent) => {
+      const s = start; start = null;
+      if (!s || document.body.classList.contains('sheet-open')) return;
+      const t1 = e.changedTouches[0], dx = t1.clientX - s.x, dy = t1.clientY - s.y;
+      if (Math.abs(dx) < 70 || Math.abs(dy) > Math.abs(dx) * 0.6) return;
+      const next = main[main.indexOf(tabNow.current) + (dx < 0 ? 1 : -1)];
+      if (next) go(next as Tab);
+    };
+    window.addEventListener('touchstart', down, { passive: true });
+    window.addEventListener('touchend', up, { passive: true });
+    return () => { window.removeEventListener('touchstart', down); window.removeEventListener('touchend', up); };
+  }, [go]);
+  /* the bottom bar scrolls like the day slider, with the open tab in the middle */
+  const bar = useRef<HTMLDivElement>(null);
+  useDock(bar, '.tab', { radius: 110, small: 0.82, big: 1.12 });
+  /* scrolling the bar yourself opens whichever tab reaches the middle, as it gets there */
+  const fromBar = useRef(false);
+  useEffect(() => {
+    const row = bar.current; if (!row) return;
+    let mine = false, touching = false, frame = 0, rest = 0;
+    const pick = () => {
+      frame = 0;
+      let best: HTMLElement | null = null, dist = Infinity;
+      row.querySelectorAll<HTMLElement>('.tab').forEach(el => { const d = Math.abs(offCentre(row, el)); if (d < dist) { dist = d; best = el; } });
+      const t = (best as HTMLElement | null)?.dataset.tab as Tab | undefined;
+      if (t && t !== tabNow.current) { fromBar.current = true; go(t); }
+    };
+    const start = () => { mine = true; touching = true; clearTimeout(rest); };
+    const end = () => { touching = false; };
+    const onScroll = () => {
+      if (!mine) return;  /* the bar moving itself to centre a tab */
+      if (!frame) frame = requestAnimationFrame(pick);
+      clearTimeout(rest);
+      rest = window.setTimeout(() => { if (!touching) mine = false; }, 180);
+    };
+    row.addEventListener('touchstart', start, { passive: true });
+    row.addEventListener('touchend', end, { passive: true });
+    row.addEventListener('wheel', start, { passive: true });
+    row.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      row.removeEventListener('touchstart', start); row.removeEventListener('touchend', end);
+      row.removeEventListener('wheel', start); row.removeEventListener('scroll', onScroll);
+      cancelAnimationFrame(frame); clearTimeout(rest);
+    };
+  }, [go]);
+  /* otherwise (a tap, a swipe on the page, a link) the bar slides the open tab to the middle */
+  const barReady = useRef(false);
+  useEffect(() => {
+    if (fromBar.current) { fromBar.current = false; return; }
+    centre(bar.current, bar.current?.querySelector<HTMLElement>('.tab[aria-current="page"]'), barReady.current);
+    barReady.current = true;
+  }, [ui.tab]);
+  /* the page slides in from the side you are moving towards */
+  const lastTab = useRef(ui.tab);
+  const order = MAIN_TABS as readonly string[];
+  const dir = order.indexOf(ui.tab) >= order.indexOf(lastTab.current) ? 'next' : 'prev';
+  useEffect(() => { lastTab.current = ui.tab; }, [ui.tab]);
 
   return (
     <AppCtx.Provider value={{ ix, now, ui, set, go, geo, me, edit }}>
-      <div className="wrap" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      <div className="wrap">
         {(UNDER_TRIP as string[]).includes(ui.tab) && <BackToTrip />}
-        <div id="view">
+        <div id="view" key={ui.tab} className={'slide-' + (lastTab.current === ui.tab ? 'none' : dir)}>
           <View />
           {ui.tab === 'trip' && (searching ? <Search q={q} /> : <Footer trip={trip} me={me} />)}
         </div>
@@ -178,11 +235,11 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
         {editing?.kind === 'expense' && <ExpenseEditor trip={trip} id={editing.id} close={close} />}
       </div>
       <nav className="tabs" aria-label="Sections">
-        <div className="tabs-in">
+        <div className="tabs-in" ref={bar}>
           {MAIN_TABS.map(t => (
-            <button key={t} className="tab" aria-current={ui.tab === t || (t === 'trip' && (UNDER_TRIP as string[]).includes(ui.tab)) ? 'page' : undefined} onClick={() => go(t)}>
+            <button key={t} data-tab={t} className="tab" aria-current={ui.tab === t || (t === 'trip' && (UNDER_TRIP as string[]).includes(ui.tab)) ? 'page' : undefined} onClick={() => go(t)}>
               <svg viewBox="0 0 24 24" aria-hidden="true">{ICONS[t].icon}</svg>{ICONS[t].label}
-              {t === 'trip' && waiting > 0 && <span className="tabn" aria-label={`${waiting} waiting for your OK`}>{waiting}</span>}
+              {t === 'prep' && waiting > 0 && <span className="tabn" aria-label={`${waiting} waiting for your OK`}>{waiting}</span>}
             </button>
           ))}
         </div>

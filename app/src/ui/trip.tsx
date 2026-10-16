@@ -7,8 +7,8 @@ import { PACKS } from '../phrases';
 import { useApp, type Tab } from './ctx';
 import { useWaitingForMe } from './requests';
 
-/** The sections reached from Trip; the bottom bar keeps Trip lit while one is open. */
-export const UNDER_TRIP: Tab[] = ['places', 'transit', 'phrases', 'prep'];
+/** Sections that open from Trip rather than the bottom bar (none now: every section has a tab). */
+export const UNDER_TRIP: Tab[] = [];
 
 export function TripHub() {
   const { ix, ui, set, go, edit } = useApp();
@@ -34,13 +34,13 @@ export function TripHub() {
           value={ui.q} onChange={e => set({ q: e.target.value })} onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} />
         {ui.q && <button className="sclear" onClick={() => set({ q: '' })}>Clear</button>}
       </div>
-      <div className="hub">
+      {!ui.q && <div className="hub">
         {tiles.map(x => (
           <button key={x.tab} className="tile" onClick={() => go(x.tab)}>
             <b>{x.name}{x.dot && <i className="tile-dot" aria-label="Needs you" />}</b><span>{x.what}</span>
           </button>
         ))}
-      </div>
+      </div>}
       <ul className="rows">
         <li><button onClick={() => edit({ kind: 'trip' })}><b>{shared ? 'People and sharing' : 'Share with the group'}</b><span>{shared ? 'Invite, roles, who can change the plan' : 'Plan it together, live'}</span></button></li>
         <li><button onClick={() => edit({ kind: 'trip' })}><b>Trip settings</b><span>Name, dates, destinations</span></button></li>
