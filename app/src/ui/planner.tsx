@@ -1,7 +1,7 @@
 /* "Plan it for me": a few questions, then Claude proposes the cities and nights, which you can
    change, then fills in each city (hotels, food, sights, the days) and it becomes a normal trip.
    See supabase/functions/_shared/planner.ts and src/model/planner.ts. */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { addTrip, getState } from '../model/store';
 import { planToTrip } from '../model/planner';
 import { longDate } from '../model/time';
@@ -38,8 +38,11 @@ export function PlannerSheet({ close }: { close: () => void }) {
     setBusy(false);
   };
 
-  /* fill in every stop, three at a time */
+  /* fill in every stop, three at a time; once at a time, however it is started */
+  const filling = useRef(false);
   const fill = async (d: Draft) => {
+    if (filling.current) return;
+    filling.current = true;
     const o = d.outline!, results = d.stops ? [...d.stops] : o.stops.map(() => null);
     const st: StopState[] = results.map(r => (r ? 'done' : 'waiting'));
     setStates([...st]); setStep('fill'); setMsg('');
@@ -54,7 +57,14 @@ export function PlannerSheet({ close }: { close: () => void }) {
     };
     await Promise.all([work(), work(), work()]);
     set({ ...d, stops: [...results] });
+    filling.current = false;
   };
+
+  /* reopened partway through (the app was closed or updated): carry on with what is left */
+  useEffect(() => {
+    if (step === 'fill' && draft.outline && draft.stops && draft.stops.some(x => !x)) void fill(draft);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const make = () => {
     const t = planToTrip(a, draft.outline!, draft.stops || []);

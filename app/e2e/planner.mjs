@@ -112,6 +112,17 @@ check(t.places.find(p => p.name === 'Tokyo Hostel').wishlist === true, '... with
 check(t.legs.length === 2 && t.legs[1].how === 'Shinkansen Nozomi', '... and the trains between cities, to book');
 check(!(await page.evaluate(() => localStorage.getItem('wt-plan-draft'))), 'the plan in progress is cleared once the trip is made');
 
+/* reopened partway (the app was closed while filling in): it carries on with what is left */
+{
+  const done = stopFor(['2027-04-01', '2027-04-02', '2027-04-03'], 'Osaka');
+  await page.evaluate(([o, d]) => localStorage.setItem('wt-plan-draft', JSON.stringify({ answers: { where: 'Japan', mustSee: '', start: '', whenNote: '', days: 13, travelers: [{ name: 'Adam', from: '' }], budget: 3, styles: [], vibes: [], pace: 'balanced', dayStyle: 'mix', diets: [], notes: '' }, planId: 'plan1', outline: o, stops: [d, null, null] })), [outline, done]);
+  steps.length = 0;
+  await page.click('text=‹ All trips');
+  await page.click('text=Plan a trip for me');
+  await sheet.locator('.pill:has-text("Done")').nth(2).waitFor({ timeout: 15000 }).catch(() => {});
+  check(steps.includes('research1') && steps.includes('research2') && !steps.includes('research0'), 'reopened partway, it fills in only the cities still to do');
+}
+
 check(errors.length === 0, 'no script errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
 await browser.close();
 srv.kill();
