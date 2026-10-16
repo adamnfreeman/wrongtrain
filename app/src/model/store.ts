@@ -10,6 +10,7 @@ import { addDays, daysBetween, todayIn } from './time';
 import { newId } from './trip';
 import { makeSample } from './sample';
 import { backupSoon } from '../native';
+import { updateFromFile } from './tripFile';
 
 /** What this phone knows about a shared trip's server copy. */
 export interface SyncInfo {
@@ -118,6 +119,15 @@ export const selectTrip = (id: string | null) => set({ activeId: id });
 /** Adds a new trip and opens it. */
 export function addTrip(t: Trip) {
   set({ trips: [...state.trips, t], activeId: t.id });
+}
+
+/** Opens a trip from a file (model/tripFile.ts). A trip already here is updated, through patchTrip
+    so a shared one sends the update to the group. */
+export function importTrip(t: Trip) {
+  const have = state.trips.find(x => x.id === t.id);
+  if (!have) return addTrip(t);
+  patchTrip(t.id, h => updateFromFile(h, t));
+  set({ activeId: t.id });
 }
 
 /** Removes a trip from this phone (a shared trip stays online for everyone else). */

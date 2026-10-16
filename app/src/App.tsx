@@ -1,5 +1,6 @@
 import { startTransition, useCallback, useEffect, useMemo, useState } from 'react';
-import { openSample, pref, resetSample, selectTrip, setPref, useStore } from './model/store';
+import { importTrip, openSample, pref, resetSample, selectTrip, setPref, useStore } from './model/store';
+import { readTripFile } from './model/tripFile';
 import { indexTrip, whereNow } from './model/trip';
 import type { Trip } from './model/types';
 import { shortDate } from './model/time';
@@ -67,6 +68,7 @@ function Welcome({ trips }: { trips: Trip[] }) {
         <button className="gobtn ghost" style={{ width: '100%' }} onClick={() => setSheet('new')}>Plan it myself</button>
         <p className="hint">The sample is a made-up ten days through Kyoto, Nara, Osaka and Tokyo, set so that today is day two. Like it? <button className="linkbtn" onClick={() => setSheet('copy')}>Start from the sample</button> and change it to suit you.</p>
         <button className="gobtn ghost" style={{ width: '100%' }} onClick={() => setSheet('join')}>Join a trip with a code</button>
+        <OpenTripFile trips={trips} />
         {sheet === 'plan' && <PlannerSheet close={() => setSheet(null)} />}
         {sheet === 'new' && <NewTripSheet close={() => setSheet(null)} />}
         {sheet === 'join' && <JoinSheet close={() => setSheet(null)} />}
@@ -86,6 +88,29 @@ function Welcome({ trips }: { trips: Trip[] }) {
         )}
       </div>
     </div>
+  );
+}
+
+/** Opens a trip saved as a file (model/tripFile.ts), such as the Japan sheet made into one. */
+function OpenTripFile({ trips }: { trips: Trip[] }) {
+  const input = useRef<HTMLInputElement>(null);
+  const [msg, setMsg] = useState('');
+  const open = async (f: File | undefined) => {
+    if (!f) return;
+    setMsg('');
+    try {
+      const t = readTripFile(await f.text());
+      if (trips.some(x => x.id === t.id) && !confirm(`Update "${t.name}" from this file? Ticks, notes and the wallet stay; the plan comes from the file.`)) return;
+      importTrip(t);
+    } catch (e) { setMsg(e instanceof Error ? e.message : String(e)); }
+    finally { if (input.current) input.current.value = ''; }
+  };
+  return (
+    <>
+      <button className="gobtn ghost" style={{ width: '100%' }} onClick={() => input.current?.click()}>Open a trip file</button>
+      <input ref={input} type="file" accept=".json,application/json" hidden aria-label="Trip file" onChange={e => void open(e.target.files?.[0])} />
+      {msg && <p className="fhint warn" role="alert">{msg}</p>}
+    </>
   );
 }
 

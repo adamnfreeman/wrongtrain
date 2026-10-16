@@ -1,0 +1,334 @@
+{
+"updated": "2026-10-16T21:00:00.000Z",
+"tabs": [
+{
+"title": "Itinerary",
+"rows": [
+[
+"Japan Trip"
+],
+[
+"Date",
+"City",
+"Stay",
+"Plan (at a glance)",
+"Full Details",
+"Day"
+],
+[
+"Wed Oct 28",
+"Kyoto",
+"BnA Alter Museum",
+"✨  Nintendo KYOTO, then teamLab Biovortex Kyoto, 5:00–5:30 PM",
+"→ Full Day Plan",
+"Day 3 of 14"
+],
+[
+"Thu Oct 29",
+"Kyoto",
+"BnA Alter Museum",
+"📸  Private Kyoto tour, 9:00 AM at Kitaoji Station",
+"→ Full Day Plan",
+"Day 4 of 14"
+],
+[
+"Fri Oct 30",
+"Kyoto → Nara → Osaka",
+"Hotel Morning Box (check-in 3:00 PM)",
+"🦌  Kintetsu to Nara at 11:25 AM (booked)",
+"→ Full Day Plan",
+"Day 5 of 14"
+]
+]
+},
+{
+"title": "To Do",
+"rows": [
+[
+"To do"
+],
+[
+"Tick things off."
+],
+[
+"BEFORE THE TRIP"
+],
+[
+"Done",
+"When",
+"Task",
+"Details",
+"Where"
+],
+[
+"FALSE",
+"2 weeks before",
+"Add Suica to Apple Wallet",
+"Covers trains",
+"Wallet app"
+],
+[
+"TRUE",
+"Now",
+"Book teamLab",
+"Done",
+"teamlab.art"
+]
+],
+"links": {
+"5,4": "https://teamlab.art"
+}
+},
+{
+"title": "Transportation",
+"rows": [
+[
+"Transportation"
+],
+[
+"Green = booked."
+],
+[
+"Date",
+"From → To",
+"How",
+"Status",
+"Buy ahead or there?",
+"Details / to fill in"
+],
+[
+"Before trip",
+"Phone → trains",
+"IC card in Apple Wallet",
+"To set up",
+"Before you fly",
+"Covers rides"
+],
+[
+"Fri Oct 30",
+"Kyoto → Kintetsu-Nara",
+"Kintetsu Limited Express, train 1107, 11:25–11:58 AM (Platform 2 at Kyoto)",
+"Booked",
+"Done.",
+"Car 2"
+],
+[
+"Fri Oct 30",
+"Bags: Kyoto → Osaka hotel (same day)",
+"Yamato same-day luggage delivery",
+"Drop by 10 AM",
+"Pay at counter",
+""
+]
+]
+},
+{
+"title": "Maps",
+"rows": [
+[
+"Maps"
+],
+[],
+[
+"KYOTO (Oct 27–30)"
+],
+[
+"Name",
+"Type",
+"Day / Notes",
+"Latitude",
+"Longitude",
+"Open in Google Maps"
+],
+[
+"BnA Alter Museum",
+"Hotel",
+"Oct 27–30, 3 nights",
+"35.0002257",
+"135.7683929",
+"Open in Google Maps"
+],
+[
+"teamLab Biovortex Kyoto",
+"Booked event",
+"Oct 28, 5:00–5:30 PM",
+"34.9837159",
+"135.7649368",
+"Open in Google Maps"
+],
+[],
+[
+"OSAKA (Oct 30–Nov 2)"
+],
+[
+"Name",
+"Type",
+"Day / Notes",
+"Latitude",
+"Longitude",
+"Open in Google Maps"
+],
+[
+"Hotel Morning Box",
+"Hotel",
+"Oct 30–Nov 2",
+"34.66",
+"135.50",
+"Open in Google Maps"
+]
+]
+},
+{
+"title": "Food",
+"rows": [
+[
+"Food"
+],
+[],
+[
+"Kyoto — Vegetarian"
+],
+[
+"Name",
+"Description",
+"Location",
+"Veg-Friendly?"
+],
+[
+"Shigetsu",
+"Shojin ryori",
+"Arashiyama",
+"Yes"
+]
+]
+},
+{
+"title": "Kyoto Ideas",
+"rows": [
+[
+"Kyoto"
+],
+[],
+[
+"Sights"
+],
+[
+"Name",
+"Description",
+"Notes"
+],
+[
+"Kinkaku-ji",
+"Golden Pavilion",
+"Busy"
+]
+]
+},
+{
+"title": "Oct 28",
+"rows": [
+[
+"Day 3 of 14  —  Wednesday, October 28, 2026"
+],
+[
+"Kyoto   ·   BnA Alter Museum"
+],
+[],
+[
+"TODAY'S PLAN"
+],
+[
+"•  Nintendo KYOTO. Opens 10:30 AM."
+],
+[
+"•  teamLab Biovortex Kyoto — 5:00–5:30 PM, timed entry, all 4 adults booked."
+],
+[],
+[
+"SHOPPING"
+],
+[
+"•  Pokémon Center Kyoto: 10 AM–8 PM."
+],
+[],
+[
+"RESTAURANT IDEAS"
+],
+[
+"Item",
+"Description",
+"Location",
+"Veg-Friendly?",
+"Hours"
+],
+[
+"Shigetsu",
+"Shojin ryori set menu",
+"Arashiyama",
+"Yes",
+"11 AM–2 PM"
+],
+[
+"Gion Duck Noodles",
+"Duck ramen",
+"Gion",
+"No",
+"11 AM–9:30 PM daily"
+],
+[],
+[
+"GETTING AROUND"
+],
+[
+"• Kyoto city bus ¥230 flat."
+]
+]
+},
+{
+"title": "Oct 29",
+"rows": [
+[
+"Day 4 of 14  —  Thursday, October 29, 2026"
+],
+[
+"Kyoto   ·   BnA Alter Museum"
+],
+[],
+[
+"TODAY'S PLAN"
+],
+[
+"•  Meet the private tour guide at Kitaoji Station at 9:00 AM (booked)."
+]
+]
+},
+{
+"title": "Oct 30",
+"rows": [
+[
+"Day 5 of 14  —  Friday, October 30, 2026"
+],
+[
+"Kyoto → Nara → Osaka   ·   Hotel Morning Box"
+],
+[],
+[
+"TODAY'S PLAN"
+],
+[
+"•  Kintetsu to Nara at 11:25 AM (booked)."
+],
+[
+"•  Train 1616 to Osaka-Namba, 4:03–4:41 PM (booked)."
+],
+[],
+[
+"GOOD TO KNOW"
+],
+[
+"•  Deer bow back."
+]
+]
+}
+]
+}
