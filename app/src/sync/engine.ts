@@ -16,7 +16,8 @@ import { receive, saved, type Remote } from './core';
 import { SUPABASE_KEY, SUPABASE_URL } from './config';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, storageKey: 'wt-auth' },
+  /* detectSessionInUrl: tapping the link in the sign-in email (instead of typing the code) still signs you in */
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'implicit', storageKey: 'wt-auth' },
 });
 
 /* ---------- status the screens can show ---------- */
@@ -147,7 +148,9 @@ function unlisten() { if (channel) { void supabase.removeChannel(channel); chann
 /* ---------- account ---------- */
 
 export async function sendCode(email: string) {
-  const { error } = await supabase.auth.signInWithOtp({ email: email.trim(), options: { shouldCreateUser: true } });
+  /* the email's link, if tapped, comes back to this app rather than to the project's default address */
+  const back = location.protocol.startsWith('http') ? location.origin + location.pathname : undefined;
+  const { error } = await supabase.auth.signInWithOtp({ email: email.trim(), options: { shouldCreateUser: true, ...(back ? { emailRedirectTo: back } : {}) } });
   if (error) throw error;
 }
 
@@ -231,7 +234,7 @@ export async function removeMember(id: string, member: string) {
 export function errText(e: unknown): string {
   const m = (e as { message?: string })?.message || String(e);
   if (/invite not found/i.test(m)) return 'That code did not work. Check it, or ask for a new one: codes last 30 days.';
-  if (/token has expired|invalid/i.test(m) && /otp|token/i.test(m)) return 'That code did not work. Codes expire after an hour; ask for a new one.';
+  if (/token has expired|invalid/i.test(m) && /otp|token/i.test(m)) return 'That code did not work. Each code works once: opening the link in the email uses it up, and codes expire after an hour. Tap "Use a different email" and send a new one.';
   if (/rate limit|security purposes/i.test(m)) return 'Too many codes sent. Wait a minute and try again.';
   if (/failed to fetch|network/i.test(m)) return 'No connection. Try again when you have signal.';
   return m;

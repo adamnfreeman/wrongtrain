@@ -117,6 +117,8 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
   const geo = useGeo(geoWanted);
 
   useEffect(() => {
+    /* leave a sign-in link's tokens in place until Supabase has read them */
+    if (/access_token|error_description/.test(location.hash)) return;
     try { history.replaceState(null, '', '#' + (ui.tab === 'days' ? ui.day : ui.tab)); } catch { /* ignore */ }
   }, [ui.tab, ui.day]);
   useEffect(() => {
