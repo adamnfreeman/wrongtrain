@@ -129,11 +129,15 @@ Next:
 Two people work on this at once: Adam (adam@thefreemans.io, the technical side) and Andrea
 (andrea@thefreemans.io, design). So that neither overwrites the other:
 
-- Never commit straight to `app`. Start a branch off `app` for each piece of work
-  (`andrea/…` or `adam/…`), and bring it in with a pull request into `app`.
-- Before starting, pull the latest `app`. Look and feel lives mostly in `src/index.css` and
-  `src/ui/`; tell the other person before a big change there.
+- They use four commands (`.claude/skills/`) and don't need to know git:
+  `/start <what>` begins a piece of work on its own branch, `/save` backs it up to GitHub,
+  `/catchup` brings in the other person's finished work, `/done` checks it and adds it to `app`.
+- Never commit straight to `app`; `/done` merges into it after the build and tests pass.
+- Look and feel lives mostly in `src/index.css` and `src/ui/`.
 - Design work needs only `npm run dev` in a browser; Xcode is only for putting it on a phone.
+- One-time setup on each Mac, so Claude can push. In Terminal: `gh auth login` (GitHub.com,
+  HTTPS, log in with a web browser, as your own GitHub account), then `gh auth setup-git`.
+  No `gh`? `brew install gh` first, or download it from cli.github.com.
 
 ## Conventions
 
