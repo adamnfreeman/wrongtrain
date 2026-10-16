@@ -2,6 +2,7 @@
 import { createContext, useContext } from 'react';
 import type { Now, TripIndex } from '../model/trip';
 import type { Geo } from './geo';
+import type { Edit } from './editors';
 
 export const TABS = ['today', 'days', 'transit', 'places', 'map', 'phrases', 'prep'] as const;
 export type Tab = (typeof TABS)[number];
@@ -29,6 +30,8 @@ export interface App {
   go: (tab: Tab, day?: string) => void;
   geo: Geo;
   me: string;
+  /** Opens an editor sheet. */
+  edit: (e: Edit) => void;
 }
 
 export const AppCtx = createContext<App | null>(null);

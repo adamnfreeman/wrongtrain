@@ -31,7 +31,7 @@ export function anchorsFor(ix: TripIndex, d: Day): Anchor[] {
     if (!p.fixed) return;
     const place = (p.placeId && ix.place.get(p.placeId)) || null;
     const by = p.timeKind === 'by';
-    out.push({ at: hm(p.time), lead: by || hm(p.time) == null ? 0 : 10, name: place?.name || p.text.split(/[.:—]/)[0],
+    out.push({ at: hm(p.time), lead: by || hm(p.time) == null ? 0 : 10, name: place?.name || p.text.split(/[.:—]/)[0].trim(),
       what: p.text, place, kind: by ? 'deadline' : 'event' });
   });
   return out.sort((a, b) => (a.at ?? -1) - (b.at ?? -1));

@@ -101,7 +101,7 @@ export function NextCard() {
             {up.map((a, i) => (
               <li key={'u' + i}>
                 <div className="kick">{fmtT(a.at!)}{a.at! - c.min > 0 ? ` · in ${fmtDur(a.at! - c.min)}` : ' · now'}</div>
-                <div className="item-h"><span className="item-n">{a.name}</span></div><Txt text={a.what} className="item-d" />
+                <div className="item-h"><span className="item-n">{a.name}</span></div>{a.what !== a.name && <Txt text={a.what} className="item-d" />}
               </li>
             ))}
             {tfirst && <li><div className="kick">Tomorrow · {fmtT(tfirst.at!)}</div><div className="item-h"><span className="item-n">{tfirst.name}</span></div><Txt text={tfirst.what} className="item-d" /></li>}

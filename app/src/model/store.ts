@@ -57,7 +57,8 @@ function keepSampleCurrent(t: Trip): Trip {
   return { ...t, days: t.days.map(d => ({ ...d, date: addDays(d.date, shift) })) };
 }
 
-function updateTrip(id: string, f: (t: Trip) => Trip) {
+/** Applies a change to one trip and saves it. Every edit goes through here. */
+export function patchTrip(id: string, f: (t: Trip) => Trip) {
   set({ trips: state.trips.map(t => (t.id === id ? { ...f(t), updatedAt: new Date().toISOString() } : t)) });
 }
 
@@ -77,6 +78,11 @@ export function resetSample() {
 
 export const selectTrip = (id: string | null) => set({ activeId: id });
 
+/** Adds a new trip and opens it. */
+export function addTrip(t: Trip) {
+  set({ trips: [...state.trips, t], activeId: t.id });
+}
+
 export function deleteTrip(id: string) {
   set({ trips: state.trips.filter(t => t.id !== id), activeId: state.activeId === id ? null : state.activeId });
 }
@@ -84,7 +90,7 @@ export function deleteTrip(id: string) {
 export const setMe = (me: string) => set({ me: me.trim() });
 
 export function toggleTodo(tripId: string, todoId: string) {
-  updateTrip(tripId, t => ({
+  patchTrip(tripId, t => ({
     ...t,
     todos: t.todos.map(x => (x.id === todoId ? { ...x, done: !x.done, doneBy: !x.done ? state.me || undefined : undefined } : x)),
   }));
@@ -93,7 +99,7 @@ export function toggleTodo(tripId: string, todoId: string) {
 export function addNote(tripId: string, text: string) {
   const clean = text.replace(/[ \t]+/g, ' ').trim().slice(0, 600);
   if (!clean) return false;
-  updateTrip(tripId, t => ({
+  patchTrip(tripId, t => ({
     ...t,
     notes: [...t.notes, { id: newId('n'), author: state.me || 'Me', text: clean, at: new Date().toISOString(), done: false }],
   }));
@@ -101,7 +107,7 @@ export function addNote(tripId: string, text: string) {
 }
 
 export function toggleNote(tripId: string, noteId: string) {
-  updateTrip(tripId, t => ({ ...t, notes: t.notes.map(n => (n.id === noteId ? { ...n, done: !n.done } : n)) }));
+  patchTrip(tripId, t => ({ ...t, notes: t.notes.map(n => (n.id === noteId ? { ...n, done: !n.done } : n)) }));
 }
 
 /* per-phone view preferences, kept apart from trip data */

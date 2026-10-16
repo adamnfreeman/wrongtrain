@@ -7,7 +7,12 @@ Trip planner for groups, heading for iOS with Capacitor. Work in progress on the
 npm install
 npm run dev     # local preview
 npm run build   # typecheck and production build into dist/
+npm test        # unit tests for the trip model and editing
+npm run e2e     # build, then drive every screen and the editor in headless Chromium
 ```
+
+The browser tests need Python 3 (for a local web server) and Playwright's Chromium;
+screenshots land in `e2e/out/`.
 
 ## Layout
 
@@ -17,4 +22,8 @@ npm run build   # typecheck and production build into dist/
 - `src/phrases/` – phrase packs by language. Japanese ships with recorded clips in
   `public/phrases/ja.json`; phrases without a clip use the phone's own voice.
 
-Trips are saved in localStorage on the phone. Group sync and the trip editor come next.
+- `src/model/edit.ts` – every change to a trip, as pure functions (tested in `edit.test.ts`).
+  Days always stay consecutive: inserting or deleting a day re-dates the ones after it.
+- `src/ui/editors.tsx` – the edit sheets: new trip, trip settings, day, leg, place, to-do.
+
+Trips are saved in localStorage on the phone. Group sync comes next.

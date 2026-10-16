@@ -9,7 +9,7 @@ import { Ext, Pill, Rich, SecH, Txt, line } from './bits';
 import { useApp } from './ctx';
 
 export function Board({ d }: { d: Day }) {
-  const { ix, go } = useApp();
+  const { ix, go, edit } = useApp();
   const i = ix.dayPos.get(d.id)!, days = ix.trip.days, p = days[i - 1], n = days[i + 1];
   const stay = d.stayId ? ix.place.get(d.stayId) : undefined;
   return (
@@ -20,6 +20,7 @@ export function Board({ d }: { d: Day }) {
         <p className="board-sub">
           {stayLine(ix, d)}{stay && <> · <Ext href={mapsLink(ix, stay)}>Map</Ext></>}
         </p>
+        <button className="editbtn" onClick={() => edit({ kind: 'day', id: d.id })}>Edit day</button>
       </div>
       <div className="band">
         <button className="band-btn" disabled={!p} onClick={() => p && go('days', p.id)}>
@@ -42,16 +43,26 @@ const Bullets = ({ items }: { items: Bullet[] }) => (
 );
 
 export function DayBody({ d }: { d: Day }) {
-  const { ix, ui, go } = useApp();
+  const { ix, ui, go, edit } = useApp();
   const legs = ix.trip.legs.filter(l => l.dayId === d.id);
   const eats = d.eatIds.map(id => ix.place.get(id)).filter((p): p is Place => !!p);
   const shown = eats.filter(p => vegOk(p, ui.veg));
   const fixed = anchorsFor(ix, d);
+  const empty = !d.plan.length && !legs.length && !d.around.length && !d.tips.length && !eats.length;
+  if (empty) return (
+    <section className="sec">
+      <p className="empty">Nothing planned for this day yet.</p>
+      <div className="chips" style={{ justifyContent: 'center' }}>
+        <button className="chipbtn go" onClick={() => edit({ kind: 'day', id: d.id })}>Plan this day</button>
+        <button className="chipbtn" onClick={() => edit({ kind: 'leg', dayId: d.id })}>+ Add a leg</button>
+      </div>
+    </section>
+  );
   return (
     <>
       {d.plan.length > 0 && (
         <section className="sec" style={line(lineOf(ix, d))}>
-          <SecH title="Plan" />
+          <SecH title="Plan"><button className="linkbtn" onClick={() => edit({ kind: 'day', id: d.id })}>Edit</button></SecH>
           <ol className="plan">
             {d.plan.map(p => {
               const place = p.placeId ? ix.place.get(p.placeId) : undefined;
@@ -75,7 +86,7 @@ export function DayBody({ d }: { d: Day }) {
               <li key={i}>
                 <div className="kick">{a.at == null ? 'All day' : fmtT(a.at) + (a.kind === 'deadline' ? ' at the latest' : '')}</div>
                 <div className="item-h"><span className="item-n">{a.name}</span></div>
-                <Txt text={a.what} className="item-d" />
+                {a.what !== a.name && <Txt text={a.what} className="item-d" />}
               </li>
             ))}
           </ul>
@@ -83,7 +94,7 @@ export function DayBody({ d }: { d: Day }) {
       )}
       {(legs.length > 0 || d.around.length > 0) && (
         <section className="sec">
-          <SecH title="Getting around"><button className="linkbtn" onClick={() => go('transit')}>All legs</button></SecH>
+          <SecH title="Getting around"><span><button className="linkbtn" onClick={() => edit({ kind: 'leg', dayId: d.id })}>+ Leg</button> · <button className="linkbtn" onClick={() => go('transit')}>All legs</button></span></SecH>
           {legs.length > 0 && <ul className="sheet">{legs.map(l => <LegItem key={l.id} l={l} />)}</ul>}
           {d.around.length > 0 && <div className="blk"><Bullets items={d.around} /></div>}
         </section>
@@ -110,7 +121,7 @@ export function RouteList() {
             <span className="badge"><i>{codeOf(ix, d)}</i><b>{String(i + 1).padStart(2, '0')}</b></span>
             <span>
               <span className="stop-h"><b>{longDate(d.date)}</b><span>{cityOf(ix, d)}</span>{now.cur?.id === d.id && <em className="here">Today</em>}</span>
-              <span className="stop-p"><Rich text={d.summary} /></span>
+              <span className="stop-p">{d.summary ? <Rich text={d.summary} /> : d.plan.length ? `${d.plan.length} planned` : 'Nothing planned yet'}</span>
             </span>
           </button>
         </li>
@@ -135,6 +146,7 @@ export function DayStrip({ cur }: { cur: Day }) {
 }
 
 export function LegItem({ l }: { l: Leg }) {
+  const { edit } = useApp();
   const sk = l.status === 'booked' ? 'ok' : l.status === 'todo' ? 'todo' : '';
   const label = l.statusText || (l.status === 'booked' ? 'Booked' : l.status === 'todo' ? 'To book' : 'Nothing to book');
   return (
@@ -144,6 +156,7 @@ export function LegItem({ l }: { l: Leg }) {
       {(l.depart || l.arrive) && <div className="meta">{l.depart && <span>Leaves <span className="tm">{fmtHM(l.depart)}</span></span>}{l.arrive && <span>Arrives <span className="tm">{fmtHM(l.arrive)}</span></span>}</div>}
       {l.tickets && <><span className="lbl">Tickets</span><Txt text={l.tickets} className="item-d" /></>}
       {l.details && <><span className="lbl">Details</span><Txt text={l.details} className="item-d" /></>}
+      <div className="meta"><button className="linkbtn" onClick={() => edit({ kind: 'leg', id: l.id })}>Edit</button></div>
     </li>
   );
 }
@@ -161,7 +174,7 @@ export function VegPill({ p }: { p: Place }) {
 }
 
 export function EatItem({ p }: { p: Place }) {
-  const { ix } = useApp();
+  const { ix, edit } = useApp();
   const hours = p.hours === '24h' ? 'Open 24 hours' : p.hours ? `${fmtHM(p.hours.open)}–${fmtHM(p.hours.close)}` : '';
   return (
     <li className={p.closed ? 'dim' : ''}>
@@ -172,6 +185,7 @@ export function EatItem({ p }: { p: Place }) {
         {hours && <span><Rich text={hours} /></span>}
         {p.dietNote && <span>{p.dietNote}</span>}
         {!p.closed && <Ext href={mapsLink(ix, p)}>Find in Maps</Ext>}
+        <button className="linkbtn" onClick={() => edit({ kind: 'place', id: p.id })}>Edit</button>
       </div>
     </li>
   );
@@ -185,7 +199,7 @@ export function VegToggle() {
 /* ---------- to-dos ---------- */
 
 export function TodoItem({ t, brief }: { t: Todo; brief?: boolean }) {
-  const { ix } = useApp();
+  const { ix, edit } = useApp();
   return (
     <li className={'todo' + (t.done ? ' done' : '')}>
       <button className="box" role="checkbox" aria-checked={t.done} aria-label={(t.done ? 'Untick: ' : 'Tick off: ') + t.text}
@@ -194,10 +208,11 @@ export function TodoItem({ t, brief }: { t: Todo; brief?: boolean }) {
         <div className="item-h"><span className="item-n">{t.text}</span></div>
         {t.when && <div className="when">{t.when}</div>}
         {!brief && <Txt text={t.details} className="item-d" />}
-        {!brief && (t.link || (t.done && t.doneBy)) && (
+        {!brief && (
           <div className="meta">
             {t.link && <Ext href={t.link}>Open link</Ext>}
             {t.done && t.doneBy && <span>Ticked by {t.doneBy}</span>}
+            <button className="linkbtn" onClick={() => edit({ kind: 'todo', id: t.id })}>Edit</button>
           </div>
         )}
       </div>

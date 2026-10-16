@@ -89,14 +89,15 @@ export function Days() {
 /* ---------- Transit ---------- */
 
 export function Transit() {
-  const { ix, go } = useApp();
+  const { ix, go, edit } = useApp();
   const legs = ix.trip.legs;
   const booked = legs.filter(l => l.status === 'booked').length, open = legs.filter(l => l.status === 'todo').length;
   const before = legs.filter(l => !l.dayId);
   return (
     <>
       <h1 className="page-h">Getting around</h1>
-      <p className="lede">{legs.length} legs. {booked} booked, {open} still need something.</p>
+      <p className="lede">{legs.length ? `${legs.length} legs. ${booked} booked, ${open} still need something.` : 'Flights, trains, transfers: everything that gets you from place to place.'}</p>
+      <div className="chips" style={{ marginTop: 0 }}><button className="chipbtn go" onClick={() => edit({ kind: 'leg' })}>+ Add a leg</button></div>
       {before.length > 0 && <section className="blk"><SecH title="Before the trip" /><ul className="sheet">{before.map(l => <LegItem key={l.id} l={l} />)}</ul></section>}
       {ix.trip.days.map(d => {
         const ls = legs.filter(l => l.dayId === d.id); if (!ls.length) return null;
@@ -130,7 +131,7 @@ export function DestChips() {
 const IDEA = new Set(['sight', 'area', 'shop', 'other']);
 
 export function Places() {
-  const { ix, ui, set } = useApp();
+  const { ix, ui, set, edit } = useApp();
   const hasDiet = ix.trip.places.some(p => p.diet);
   const groups = ix.trip.destinations.filter(d => ui.dest === 'all' || d.id === ui.dest);
   /* which day, if any, each place is planned for */
@@ -159,7 +160,7 @@ export function Places() {
         <ul className="sheet">{wish.map(p => <IdeaItem key={p.id} p={p} />)}</ul></Fold>);
     });
   }
-  if (!body.length) body = [<Empty key="e">Nothing here for that filter.</Empty>];
+  if (!body.length) body = [<Empty key="e">{ix.trip.places.length ? 'Nothing here for that filter.' : 'No places yet. Add somewhere to eat, a sight, or a shop.'}</Empty>];
   return (
     <>
       <h1 className="page-h">Places</h1>
@@ -168,18 +169,19 @@ export function Places() {
         <button aria-pressed={ui.seg === 'ideas'} onClick={() => set({ seg: 'ideas' })}>Things to do</button>
       </div>
       <div className="chips"><DestChips />{ui.seg === 'food' && hasDiet && <VegToggle />}</div>
+      <div className="chips"><button className="chipbtn go" onClick={() => edit({ kind: 'place', as: ui.seg === 'food' ? 'food' : 'sight', ...(ui.dest !== 'all' ? { destinationId: ui.dest } : {}) })}>+ Add a place</button></div>
       <div id="results">{body}</div>
     </>
   );
 }
 
 function IdeaItem({ p, day }: { p: Place; day?: string }) {
-  const { ix } = useApp();
+  const { ix, edit } = useApp();
   return (
     <li>
       <div className="item-h"><span className="item-n">{p.name}</span>{day && <Pill kind="ok">On {shortDate(day)}</Pill>}</div>
       <Txt text={p.notes} className="item-d" />
-      <div className="meta">{p.area && <span>{p.area}</span>}<a href={mapsLink(ix, p)} target="_blank" rel="noopener noreferrer">Find in Maps</a></div>
+      <div className="meta">{p.area && <span>{p.area}</span>}<a href={mapsLink(ix, p)} target="_blank" rel="noopener noreferrer">Find in Maps</a><button className="linkbtn" onClick={() => edit({ kind: 'place', id: p.id })}>Edit</button></div>
     </li>
   );
 }
@@ -187,7 +189,7 @@ function IdeaItem({ p, day }: { p: Place; day?: string }) {
 /* ---------- To do ---------- */
 
 export function Prep() {
-  const { ix } = useApp();
+  const { ix, edit } = useApp();
   const t = ix.trip;
   return (
     <>
@@ -199,8 +201,9 @@ export function Prep() {
         return (
           <section key={g} className="blk">
             <SecH title={g}><span className="kicker">{open.length} open</span></SecH>
-            {open.length ? <ul className="sheet">{open.map(x => <TodoItem key={x.id} t={x} />)}</ul> : <Empty>All done.</Empty>}
+            {open.length ? <ul className="sheet">{open.map(x => <TodoItem key={x.id} t={x} />)}</ul> : <Empty>{items.length ? 'All done.' : 'Nothing on this list yet.'}</Empty>}
             {done.length > 0 && <Fold title="Done" count={done.length}><ul className="sheet">{done.map(x => <TodoItem key={x.id} t={x} />)}</ul></Fold>}
+            <button className="linkbtn" onClick={() => edit({ kind: 'todo', group: g })}>+ Add a to-do</button>
           </section>
         );
       })}

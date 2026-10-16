@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { deleteTrip, openSample, pref, resetSample, selectTrip, setMe, setPref, useStore } from './model/store';
+import { openSample, pref, resetSample, selectTrip, setMe, setPref, useStore } from './model/store';
 import { indexTrip, whereNow } from './model/trip';
 import type { Trip } from './model/types';
 import { shortDate } from './model/time';
@@ -9,6 +9,8 @@ import { Days, Places, Prep, Today, Transit } from './ui/views';
 import { MapView } from './ui/map';
 import { Phrases } from './ui/phrases';
 import { Search } from './ui/search';
+import { CopySampleSheet, DayEditor, LegEditor, NewTripSheet, PlaceEditor, TodoEditor, TripSettings, type Edit } from './ui/editors';
+import { makeSample } from './model/sample';
 
 export default function App() {
   const { trips, activeId, me } = useStore();
@@ -19,6 +21,8 @@ export default function App() {
 /* ---------- welcome ---------- */
 
 function Welcome({ trips }: { trips: Trip[] }) {
+  const [sheet, setSheet] = useState<'new' | 'copy' | null>(null);
+  const sample = useMemo(() => trips.find(t => t.sample) || makeSample(new Date()), [trips]);
   return (
     <div className="wrap" style={{ paddingBottom: 40 }}>
       <div className="gate">
@@ -31,8 +35,10 @@ function Welcome({ trips }: { trips: Trip[] }) {
           <div className="stripe">{(['violet', 'amber', 'red', 'green'] as const).map(c => <i key={c} style={{ ['--line' as string]: `var(--l-${c})` }} />)}</div>
         </header>
         <button className="gobtn" style={{ width: '100%' }} onClick={openSample}>Explore a sample trip</button>
-        <button className="gobtn ghost" style={{ width: '100%' }} disabled>Plan your own trip</button>
-        <p className="hint">Planning your own trip is next on the list. The sample is a made-up ten days through Kyoto, Nara, Osaka and Tokyo, set so that today is day two.</p>
+        <button className="gobtn ghost" style={{ width: '100%' }} onClick={() => setSheet('new')}>Plan your own trip</button>
+        <p className="hint">The sample is a made-up ten days through Kyoto, Nara, Osaka and Tokyo, set so that today is day two. Like it? <button className="linkbtn" onClick={() => setSheet('copy')}>Start from the sample</button> and change it to suit you.</p>
+        {sheet === 'new' && <NewTripSheet close={() => setSheet(null)} />}
+        {sheet === 'copy' && <CopySampleSheet src={sample} close={() => setSheet(null)} />}
         {trips.length > 0 && (
           <section className="sec">
             <div className="sec-h"><h2>Your trips</h2></div>
@@ -88,6 +94,8 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
     setUi(u => ({ ...u, tab, day: day || u.day, q: '' }));
     window.scrollTo(0, 0);
   }, []);
+  const [editing, edit] = useState<Edit | null>(null);
+  const close = useCallback(() => edit(null), []);
   const geoWanted = ui.tab === 'map' || (ui.tab === 'today' && now.phase === 'during');
   const geo = useGeo(geoWanted);
 
@@ -104,7 +112,7 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
   const View = { today: Today, days: Days, transit: Transit, places: Places, map: MapView, phrases: Phrases, prep: Prep }[ui.tab];
 
   return (
-    <AppCtx.Provider value={{ ix, now, ui, set, go, geo, me }}>
+    <AppCtx.Provider value={{ ix, now, ui, set, go, geo, me, edit }}>
       <div className="wrap">
         {!(ui.tab === 'phrases' && !searching) && (
           <div className="sbar">
@@ -117,7 +125,12 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
           </div>
         )}
         <div id="view">{searching ? <Search q={q} /> : <View />}</div>
-        <Footer trip={trip} me={me} />
+        <Footer trip={trip} me={me} onSettings={() => edit({ kind: 'trip' })} />
+        {editing?.kind === 'trip' && <TripSettings trip={trip} close={close} />}
+        {editing?.kind === 'day' && <DayEditor trip={trip} id={editing.id} close={close} onDayChange={id => go('days', id)} />}
+        {editing?.kind === 'leg' && <LegEditor trip={trip} id={editing.id} dayId={editing.dayId} close={close} />}
+        {editing?.kind === 'place' && <PlaceEditor trip={trip} id={editing.id} as={editing.as} dayId={editing.dayId} destinationId={editing.destinationId} close={close} />}
+        {editing?.kind === 'todo' && <TodoEditor trip={trip} id={editing.id} group={editing.group} close={close} />}
       </div>
       <nav className="tabs" aria-label="Sections">
         <div className="tabs-in">
@@ -132,7 +145,7 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
   );
 }
 
-function Footer({ trip, me }: { trip: Trip; me: string }) {
+function Footer({ trip, me, onSettings }: { trip: Trip; me: string; onSettings: () => void }) {
   const [name, setName] = useState(me);
   return (
     <div className="foot">
@@ -140,7 +153,7 @@ function Footer({ trip, me }: { trip: Trip; me: string }) {
         {trip.sample ? 'This is the sample trip. Ticks and notes are saved on this phone only. ' : 'Saved on this phone. '}
         <button className="linkbtn" onClick={() => selectTrip(null)}>All trips</button>
         {trip.sample && <> · <button className="linkbtn" onClick={resetSample}>Start the sample over</button></>}
-        {!trip.sample && <> · <button className="linkbtn" onClick={() => { if (confirm(`Delete “${trip.name}” from this phone?`)) deleteTrip(trip.id); }}>Delete trip</button></>}
+        {' · '}<button className="linkbtn" onClick={onSettings}>Trip settings</button>
       </p>
       <label className="lbl" htmlFor="me">Your name, for notes and ticks</label>
       <div className="sbar" style={{ marginTop: 6 }}>

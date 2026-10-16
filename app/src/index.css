@@ -222,3 +222,55 @@ button.box::after { content: ""; position: absolute; inset: -11px }
 .stripe { display: grid; grid-template-columns: repeat(4, 1fr); height: 12px }
 .stripe i { background: var(--line) }
 @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth } }
+
+/* ---------- editing ---------- */
+.editbtn { margin-top: 10px; appearance: none; border: 1px solid var(--rule); background: var(--bg); color: var(--ink); border-radius: 999px; padding: 4px 10px; font: 600 12.5px var(--f-body); cursor: pointer }
+.grow { flex: 1 }
+body.sheet-open { overflow: hidden }
+.sheet-wrap { position: fixed; inset: 0; z-index: 3000; background: var(--bg); display: flex; flex-direction: column; padding-top: env(safe-area-inset-top, 0px) }
+@media (prefers-reduced-motion: no-preference) { .sheet-wrap { animation: sheet-in .22s ease-out } }
+@keyframes sheet-in { from { transform: translateY(24px); opacity: 0 } to { transform: none; opacity: 1 } }
+.sheet-bar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; padding: 8px 16px; border-bottom: 1px solid var(--rule); background: var(--card) }
+.sheet-bar h2 { margin: 0; font: 700 16px/1.2 var(--f-display); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60vw }
+.sheet-bar .linkbtn { font-size: 16px; padding: 8px 0 }
+.sheet-bar > :last-child { justify-self: end }
+.linkbtn.strong { font-weight: 700 }
+.linkbtn:disabled { opacity: .4; cursor: default }
+.sheet-body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 8px 16px calc(40px + env(safe-area-inset-bottom, 0px)); max-width: 640px; width: 100%; margin-inline: auto }
+.sheet-foot { margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--rule); display: grid; gap: 12px; justify-items: start }
+.field { margin-top: 14px; min-width: 0 }
+.flabel { display: block; font: 700 12.5px/1.2 var(--f-display); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px }
+.fhint { font-size: 13.5px; color: var(--muted); margin-top: 6px }
+.fhint b { color: var(--ink); font-weight: 600 }
+.fsec { font: 900 20px/1.2 var(--f-display); margin: 30px 0 0 }
+.input { width: 100%; min-width: 0; padding: 11px 12px; border: 1px solid var(--rule); border-radius: 10px; background: var(--card); color: var(--ink); font: 16px var(--f-body); -webkit-appearance: none; appearance: none }
+select.input { background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 32px }
+.input.area { resize: vertical; line-height: 1.4; min-height: 84px }
+.input.area.sm { min-height: 56px }
+.input.time { width: auto; min-width: 120px }
+.frow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px }
+.frow .field { margin-top: 14px }
+.field.nights { max-width: 110px }
+.frow:has(.nights) { grid-template-columns: 1fr auto }
+.fcheck { display: grid; grid-template-columns: 22px 1fr; gap: 10px; align-items: start; margin-top: 12px; cursor: pointer }
+.fcheck input { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--ink) }
+.fcheck b { font-weight: 600 }
+.fcheck .fhint { display: block; margin-top: 1px }
+.planrow { background: var(--card); border: 1px solid var(--rule); border-radius: 12px; padding: 10px 12px 12px; margin-top: 10px; display: grid; gap: 8px }
+.planrow .field:first-child { margin-top: 0 }
+.prow-top { display: flex; align-items: center; gap: 6px }
+.prow-checks .fcheck { margin-top: 4px }
+.iconbtn { appearance: none; border: 1px solid var(--rule); background: var(--bg); color: var(--ink); border-radius: 8px; min-width: 36px; height: 36px; font: 600 15px var(--f-body); cursor: pointer }
+.iconbtn:disabled { opacity: .35; cursor: default }
+.lines { display: grid; gap: 8px }
+.lrow { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: start }
+.dangerbtn { appearance: none; border: 1px solid var(--no-bg); background: var(--no-bg); color: var(--no); border-radius: 10px; padding: 10px 14px; font: 600 15px var(--f-body); cursor: pointer }
+.zlist { margin-top: 6px; border: 1px solid var(--rule); border-radius: 10px; background: var(--card); max-height: 240px; overflow-y: auto }
+.zopt { appearance: none; display: block; width: 100%; text-align: left; border: 0; background: none; padding: 10px 12px; font: 15px var(--f-body); color: var(--ink); cursor: pointer }
+.zopt + .zopt { border-top: 1px solid var(--rule) }
+.zopt[aria-selected="true"] { font-weight: 700 }
+.swatches { display: flex; flex-wrap: wrap; gap: 10px }
+.swatch { appearance: none; width: 36px; height: 36px; border-radius: 50%; border: 3px solid var(--card); background: var(--line); box-shadow: 0 0 0 1px var(--rule); cursor: pointer }
+.swatch[aria-checked="true"] { box-shadow: 0 0 0 3px var(--ink) }
+.pinmap { height: 240px; min-height: 240px; margin-top: 0 }
+.destedit { margin-top: 6px; padding-top: 4px; border-top: 1px dashed var(--rule) }

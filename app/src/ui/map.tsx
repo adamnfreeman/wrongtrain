@@ -97,12 +97,12 @@ export function MapView() {
 }
 
 function PinItem({ p, away }: { p: Place; away?: number }) {
-  const { ix } = useApp();
+  const { ix, edit } = useApp();
   return (
     <li>
       <div className="item-h"><span className="item-n"><span className="dot" style={pinColor(pinGroup(p).color)} />{p.name}</span><Pill>{p.wishlist ? 'Wishlist' : KIND_LABEL[p.kind]}</Pill></div>
       <Txt text={p.notes} className="item-d" />
-      <div className="meta">{away != null && <span>{fmtDist(away)} away</span>}<Ext href={mapsLink(ix, p)}>Open in Google Maps</Ext></div>
+      <div className="meta">{away != null && <span>{fmtDist(away)} away</span>}<Ext href={mapsLink(ix, p)}>Open in Google Maps</Ext><button className="linkbtn" onClick={() => edit({ kind: 'place', id: p.id })}>Edit</button></div>
     </li>
   );
 }
