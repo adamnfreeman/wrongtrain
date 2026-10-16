@@ -1,122 +1,152 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { deleteTrip, openSample, pref, resetSample, selectTrip, setMe, setPref, useStore } from './model/store';
+import { indexTrip, whereNow } from './model/trip';
+import type { Trip } from './model/types';
+import { shortDate } from './model/time';
+import { AppCtx, TABS, type Tab, type UI } from './ui/ctx';
+import { useGeo } from './ui/geo';
+import { Days, Places, Prep, Today, Transit } from './ui/views';
+import { MapView } from './ui/map';
+import { Phrases } from './ui/phrases';
+import { Search } from './ui/search';
 
-function App() {
-  const [count, setCount] = useState(0)
-
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+export default function App() {
+  const { trips, activeId, me } = useStore();
+  const trip = trips.find(t => t.id === activeId);
+  return trip ? <TripApp key={trip.id} trip={trip} me={me} /> : <Welcome trips={trips} />;
 }
 
-export default App
+/* ---------- welcome ---------- */
+
+function Welcome({ trips }: { trips: Trip[] }) {
+  return (
+    <div className="wrap" style={{ paddingBottom: 40 }}>
+      <div className="gate">
+        <header className="board">
+          <div className="board-main">
+            <div className="kicker">WrongTrain</div>
+            <h1>Every trip is a line</h1>
+            <p className="board-sub">Days, trains, places to eat and things to do, for everyone on the trip. Works with no signal.</p>
+          </div>
+          <div className="stripe">{(['violet', 'amber', 'red', 'green'] as const).map(c => <i key={c} style={{ ['--line' as string]: `var(--l-${c})` }} />)}</div>
+        </header>
+        <button className="gobtn" style={{ width: '100%' }} onClick={openSample}>Explore a sample trip</button>
+        <button className="gobtn ghost" style={{ width: '100%' }} disabled>Plan your own trip</button>
+        <p className="hint">Planning your own trip is next on the list. The sample is a made-up ten days through Kyoto, Nara, Osaka and Tokyo, set so that today is day two.</p>
+        {trips.length > 0 && (
+          <section className="sec">
+            <div className="sec-h"><h2>Your trips</h2></div>
+            <ul className="sheet">
+              {trips.map(t => (
+                <li key={t.id}>
+                  <button className="linkbtn item-n" onClick={() => selectTrip(t.id)}>{t.name}</button>
+                  {t.days.length > 0 && <div className="meta"><span>{shortDate(t.days[0].date)} – {shortDate(t.days[t.days.length - 1].date)}</span>{t.sample && <span>Sample</span>}</div>}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- the open trip ---------- */
+
+const ICONS: Record<Tab, { label: string; icon: React.ReactNode }> = {
+  today: { label: 'Today', icon: <><circle cx="12" cy="12" r="8.5" /><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none" /></> },
+  days: { label: 'Days', icon: <><rect x="3.5" y="5" width="17" height="15.5" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></> },
+  transit: { label: 'Transit', icon: <><rect x="5" y="3" width="14" height="14" rx="3.5" /><path d="M5 10.5h14M9 20.5l1.5-3.5M15 20.5L13.5 17M9 13.8h.01M15 13.8h.01" /></> },
+  places: { label: 'Places', icon: <path d="M12 3.6l2.6 5.2 5.8.9-4.2 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.2-4.1 5.8-.9z" /> },
+  map: { label: 'Map', icon: <><path d="M12 21s7-6.2 7-11.5a7 7 0 0 0-14 0C5 14.8 12 21 12 21z" /><circle cx="12" cy="9.5" r="2.4" /></> },
+  phrases: { label: 'Phrases', icon: <><path d="M4 5h16v11H10l-4.5 3.5V16H4z" /><path d="M8.5 9.5h7M8.5 12.5h4.5" /></> },
+  prep: { label: 'To do', icon: <path d="M4 7.5l2 2 3-3.5M4 15.5l2 2 3-3.5M12.5 8H20M12.5 16H20" /> },
+};
+
+function fromHash(ids: Set<string>): Partial<UI> {
+  const h = decodeURIComponent((location.hash || '').slice(1));
+  if ((TABS as readonly string[]).includes(h)) return { tab: h as Tab };
+  if (ids.has(h)) return { tab: 'days', day: h };
+  return {};
+}
+
+function TripApp({ trip, me }: { trip: Trip; me: string }) {
+  const ix = useMemo(() => indexTrip(trip), [trip]);
+  const now = whereNow(ix);
+  const ids = useMemo(() => new Set(trip.days.map(d => d.id)), [trip.days]);
+  const [ui, setUi] = useState<UI>(() => ({
+    tab: 'today', day: (now.cur || trip.days[0])?.id || '', seg: 'food',
+    dest: now.cur?.destinationId && !now.cur.travel ? now.cur.destinationId : 'all',
+    veg: pref('veg', false), hide: {}, sim: { day: '', min: 840 }, pcat: 'All', pq: '', q: '',
+    ...fromHash(ids),
+  }));
+  const set = useCallback((p: Partial<UI>) => {
+    if ('veg' in p) setPref('veg', p.veg);
+    setUi(u => ({ ...u, ...p }));
+  }, []);
+  const go = useCallback((tab: Tab, day?: string) => {
+    setUi(u => ({ ...u, tab, day: day || u.day, q: '' }));
+    window.scrollTo(0, 0);
+  }, []);
+  const geoWanted = ui.tab === 'map' || (ui.tab === 'today' && now.phase === 'during');
+  const geo = useGeo(geoWanted);
+
+  useEffect(() => {
+    try { history.replaceState(null, '', '#' + (ui.tab === 'days' ? ui.day : ui.tab)); } catch { /* ignore */ }
+  }, [ui.tab, ui.day]);
+  useEffect(() => {
+    const f = () => setUi(u => ({ ...u, ...fromHash(ids) }));
+    window.addEventListener('hashchange', f);
+    return () => window.removeEventListener('hashchange', f);
+  }, [ids]);
+
+  const q = ui.q.trim(), searching = q.length > 1;
+  const View = { today: Today, days: Days, transit: Transit, places: Places, map: MapView, phrases: Phrases, prep: Prep }[ui.tab];
+
+  return (
+    <AppCtx.Provider value={{ ix, now, ui, set, go, geo, me }}>
+      <div className="wrap">
+        {!(ui.tab === 'phrases' && !searching) && (
+          <div className="sbar">
+            <div className="sin">
+              <input className="search" type="search" placeholder="Search the whole trip" aria-label="Search the whole trip" autoComplete="off"
+                enterKeyHint="search" value={ui.q} onChange={e => set({ q: e.target.value })} onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} />
+              {ui.q && <button className="sclear" onClick={() => set({ q: '' })}>Clear</button>}
+            </div>
+            {ui.tab !== 'prep' && <button className="notebtn" onClick={() => { go('prep'); setTimeout(() => document.getElementById('gnote')?.focus(), 50); }}>+ Note</button>}
+          </div>
+        )}
+        <div id="view">{searching ? <Search q={q} /> : <View />}</div>
+        <Footer trip={trip} me={me} />
+      </div>
+      <nav className="tabs" aria-label="Sections">
+        <div className="tabs-in">
+          {TABS.map(t => (
+            <button key={t} className="tab" aria-current={ui.tab === t ? 'page' : undefined} onClick={() => go(t)}>
+              <svg viewBox="0 0 24 24" aria-hidden="true">{ICONS[t].icon}</svg>{ICONS[t].label}
+            </button>
+          ))}
+        </div>
+      </nav>
+    </AppCtx.Provider>
+  );
+}
+
+function Footer({ trip, me }: { trip: Trip; me: string }) {
+  const [name, setName] = useState(me);
+  return (
+    <div className="foot">
+      <p>
+        {trip.sample ? 'This is the sample trip. Ticks and notes are saved on this phone only. ' : 'Saved on this phone. '}
+        <button className="linkbtn" onClick={() => selectTrip(null)}>All trips</button>
+        {trip.sample && <> · <button className="linkbtn" onClick={resetSample}>Start the sample over</button></>}
+        {!trip.sample && <> · <button className="linkbtn" onClick={() => { if (confirm(`Delete “${trip.name}” from this phone?`)) deleteTrip(trip.id); }}>Delete trip</button></>}
+      </p>
+      <label className="lbl" htmlFor="me">Your name, for notes and ticks</label>
+      <div className="sbar" style={{ marginTop: 6 }}>
+        <div className="sin"><input id="me" className="search" style={{ paddingRight: 12 }} value={name} placeholder={trip.travelers[0] ? `e.g. ${trip.travelers[0]}` : 'Your name'}
+          onChange={e => setName(e.target.value)} onBlur={() => setMe(name)} onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} /></div>
+      </div>
+    </div>
+  );
+}

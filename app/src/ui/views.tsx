@@ -1,0 +1,249 @@
+/* Today, Days, Transit, Places and To do. */
+import { useEffect, useRef, useState } from 'react';
+import type { Place } from '../model/types';
+import { lineOf, lineOfDest, runs, cityOf, mapsLink } from '../model/trip';
+import { longDate, shortDate, stamp } from '../model/time';
+import { onToday } from '../model/next';
+import { addNote, toggleNote } from '../model/store';
+import { Empty, Fold, Pill, SecH, Txt, line } from './bits';
+import { Board, DayBody, DayStrip, EatItem, LegItem, RouteList, TodoItem, VegToggle, vegOk } from './day';
+import { NextCard } from './next';
+import { useApp } from './ctx';
+
+/* ---------- Today ---------- */
+
+export function Today() {
+  const { ix, now, go } = useApp();
+  const days = ix.trip.days;
+  if (!days.length) return <Empty>This trip has no days yet.</Empty>;
+  if (now.phase === 'during' && now.cur) {
+    return (
+      <>
+        <Board d={now.cur} />
+        <NextCard />
+        <DayBody d={now.cur} />
+        <section className="sec"><SecH title="The whole route" /><RouteList /></section>
+      </>
+    );
+  }
+  const rs = runs(ix);
+  const big = now.phase === 'after' ? 'Trip complete' : now.togo > 1 ? `${now.togo} days to go` : now.togo === 1 ? 'Tomorrow' : 'Time to go';
+  const open = ix.trip.todos.filter(t => t.group === ix.trip.todoGroups[0] && !t.done);
+  return (
+    <>
+      <header className="board">
+        <div className="board-main">
+          <div className="kicker">{ix.trip.name} · {shortDate(days[0].date)} – {shortDate(days[days.length - 1].date)}</div>
+          <h1>{big}</h1>
+          <p className="board-sub">{days.length} days, {rs.length} {rs.length === 1 ? 'stop' : 'stops'}, one line.</p>
+        </div>
+        <div className="legs3">
+          {rs.map(r => (
+            <button key={r.start.id} className="band-btn" style={line(lineOfDest(r.dest))} onClick={() => go('days', r.start.id)}>
+              <small>{shortDate(r.start.date)}</small>{r.dest.name}
+            </button>
+          ))}
+        </div>
+      </header>
+      {now.phase === 'before' && open.length > 0 && (
+        <section className="sec">
+          <SecH title="Next to do"><button className="linkbtn" onClick={() => go('prep')}>All {open.length}</button></SecH>
+          <ul className="sheet">{open.slice(0, 3).map(t => <TodoItem key={t.id} t={t} brief />)}</ul>
+        </section>
+      )}
+      {now.phase === 'before' && <NextCard />}
+      <section className="sec"><SecH title="The route" /><RouteList /></section>
+    </>
+  );
+}
+
+/* ---------- Days ---------- */
+
+export function Days() {
+  const { ix, ui, go } = useApp();
+  const d = ix.trip.days.find(x => x.id === ui.day) || ix.trip.days[0];
+  const touch = useRef({ x: 0, y: 0 });
+  useEffect(() => {
+    const st = document.getElementById('strip'), cur = st?.querySelector<HTMLElement>('[aria-current="true"]');
+    if (st && cur) st.scrollLeft = cur.offsetLeft - st.clientWidth / 2 + cur.clientWidth / 2;
+  }, [d?.id]);
+  if (!d) return <Empty>This trip has no days yet.</Empty>;
+  const i = ix.dayPos.get(d.id)!;
+  /* swipe left or right to change day */
+  return (
+    <div
+      onTouchStart={e => { const t = e.touches[0]; touch.current = { x: t.clientX, y: t.clientY }; }}
+      onTouchEnd={e => {
+        if ((e.target as HTMLElement).closest('#strip')) return;
+        const t = e.changedTouches[0], dx = t.clientX - touch.current.x, dy = t.clientY - touch.current.y;
+        if (Math.abs(dx) < 70 || Math.abs(dy) > 45) return;
+        const n = ix.trip.days[i + (dx < 0 ? 1 : -1)]; if (n) go('days', n.id);
+      }}>
+      <DayStrip cur={d} />
+      <Board d={d} />
+      <DayBody d={d} />
+    </div>
+  );
+}
+
+/* ---------- Transit ---------- */
+
+export function Transit() {
+  const { ix, go } = useApp();
+  const legs = ix.trip.legs;
+  const booked = legs.filter(l => l.status === 'booked').length, open = legs.filter(l => l.status === 'todo').length;
+  const before = legs.filter(l => !l.dayId);
+  return (
+    <>
+      <h1 className="page-h">Getting around</h1>
+      <p className="lede">{legs.length} legs. {booked} booked, {open} still need something.</p>
+      {before.length > 0 && <section className="blk"><SecH title="Before the trip" /><ul className="sheet">{before.map(l => <LegItem key={l.id} l={l} />)}</ul></section>}
+      {ix.trip.days.map(d => {
+        const ls = legs.filter(l => l.dayId === d.id); if (!ls.length) return null;
+        return (
+          <section key={d.id} className="blk" style={line(lineOf(ix, d))}>
+            <SecH title={`${longDate(d.date)} · ${cityOf(ix, d)}`}><button className="linkbtn" onClick={() => go('days', d.id)}>Day plan</button></SecH>
+            <ul className="sheet">{ls.map(l => <LegItem key={l.id} l={l} />)}</ul>
+          </section>
+        );
+      })}
+      {!legs.length && <Empty>No legs yet.</Empty>}
+    </>
+  );
+}
+
+/* ---------- Places ---------- */
+
+export function DestChips() {
+  const { ix, ui, set } = useApp();
+  if (ix.trip.destinations.length < 2) return null;
+  return (
+    <>
+      <button className="chipbtn" aria-pressed={ui.dest === 'all'} onClick={() => set({ dest: 'all' })}>All</button>
+      {ix.trip.destinations.map(d => (
+        <button key={d.id} className="chipbtn" style={line(d.color)} aria-pressed={ui.dest === d.id} onClick={() => set({ dest: d.id })}>{d.name}</button>
+      ))}
+    </>
+  );
+}
+
+const IDEA = new Set(['sight', 'area', 'shop', 'other']);
+
+export function Places() {
+  const { ix, ui, set } = useApp();
+  const hasDiet = ix.trip.places.some(p => p.diet);
+  const groups = ix.trip.destinations.filter(d => ui.dest === 'all' || d.id === ui.dest);
+  /* which day, if any, each place is planned for */
+  const dayOf = (p: Place) => ix.trip.days.find(d => onToday(p, d));
+  let body: React.ReactNode[] = [];
+  if (ui.seg === 'food') {
+    groups.forEach(dest => {
+      (['food', 'coffee'] as const).forEach(kind => {
+        const list = ix.trip.places.filter(p => p.destinationId === dest.id && p.kind === kind && vegOk(p, ui.veg));
+        if (!list.length) return;
+        body.push(
+          <section key={dest.id + kind} className="blk" style={line(dest.color)}>
+            <h3>{dest.name} · {kind === 'food' ? 'Food' : 'Coffee'}</h3>
+            <ul className="sheet">{list.map(p => <EatItem key={p.id} p={p} />)}</ul>
+          </section>,
+        );
+      });
+    });
+  } else {
+    groups.forEach(dest => {
+      const list = ix.trip.places.filter(p => p.destinationId === dest.id && IDEA.has(p.kind) && !p.wishlist);
+      if (list.length) body.push(<h3 key={dest.id + 'h'} className="group-h">{dest.name}</h3>, <Fold key={dest.id} title="Things to see and do" count={list.length} open>
+        <ul className="sheet">{list.map(p => <IdeaItem key={p.id} p={p} day={dayOf(p)?.date} />)}</ul></Fold>);
+      const wish = ix.trip.places.filter(p => p.destinationId === dest.id && p.wishlist);
+      if (wish.length) body.push(<Fold key={dest.id + 'w'} title="Wishlist" count={wish.length} note="Not planned yet. Add one to a day when it fits.">
+        <ul className="sheet">{wish.map(p => <IdeaItem key={p.id} p={p} />)}</ul></Fold>);
+    });
+  }
+  if (!body.length) body = [<Empty key="e">Nothing here for that filter.</Empty>];
+  return (
+    <>
+      <h1 className="page-h">Places</h1>
+      <div className="seg" role="group" aria-label="List">
+        <button aria-pressed={ui.seg === 'food'} onClick={() => set({ seg: 'food' })}>Food</button>
+        <button aria-pressed={ui.seg === 'ideas'} onClick={() => set({ seg: 'ideas' })}>Things to do</button>
+      </div>
+      <div className="chips"><DestChips />{ui.seg === 'food' && hasDiet && <VegToggle />}</div>
+      <div id="results">{body}</div>
+    </>
+  );
+}
+
+function IdeaItem({ p, day }: { p: Place; day?: string }) {
+  const { ix } = useApp();
+  return (
+    <li>
+      <div className="item-h"><span className="item-n">{p.name}</span>{day && <Pill kind="ok">On {shortDate(day)}</Pill>}</div>
+      <Txt text={p.notes} className="item-d" />
+      <div className="meta">{p.area && <span>{p.area}</span>}<a href={mapsLink(ix, p)} target="_blank" rel="noopener noreferrer">Find in Maps</a></div>
+    </li>
+  );
+}
+
+/* ---------- To do ---------- */
+
+export function Prep() {
+  const { ix } = useApp();
+  const t = ix.trip;
+  return (
+    <>
+      <h1 className="page-h">To do</h1>
+      <Notes />
+      <p className="lede" style={{ marginTop: 22 }}>Tap a box to tick it off for everyone on the trip.</p>
+      {t.todoGroups.map(g => {
+        const items = t.todos.filter(x => x.group === g), open = items.filter(x => !x.done), done = items.filter(x => x.done);
+        return (
+          <section key={g} className="blk">
+            <SecH title={g}><span className="kicker">{open.length} open</span></SecH>
+            {open.length ? <ul className="sheet">{open.map(x => <TodoItem key={x.id} t={x} />)}</ul> : <Empty>All done.</Empty>}
+            {done.length > 0 && <Fold title="Done" count={done.length}><ul className="sheet">{done.map(x => <TodoItem key={x.id} t={x} />)}</ul></Fold>}
+          </section>
+        );
+      })}
+      {t.guides.map((g, i) => {
+        const head = g.group !== t.guides[i - 1]?.group ? <h3 className="group-h">{g.group}</h3> : null;
+        return (
+          <div key={g.id}>
+            {head}
+            <Fold title={g.title} count={g.items.length}>
+              <ul className="sheet">{g.items.map((r, i) => <li key={i}><div className="item-h"><span className="item-n">{r.title}</span></div><Txt text={r.body} className="item-d" /></li>)}</ul>
+            </Fold>
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
+function Notes() {
+  const { ix } = useApp();
+  const [draft, setDraft] = useState('');
+  const [msg, setMsg] = useState<{ text: string; bad: boolean } | null>(null);
+  const all = ix.trip.notes.slice().reverse(), open = all.filter(n => !n.done), done = all.filter(n => n.done);
+  const add = () => {
+    if (!draft.trim()) return setMsg({ text: 'Write the note first.', bad: true });
+    addNote(ix.trip.id, draft); setDraft(''); setMsg({ text: 'Added for everyone on the trip.', bad: false });
+  };
+  const item = (n: (typeof all)[number]) => (
+    <li key={n.id} className={'todo' + (n.done ? ' done' : '')}>
+      <button className="box" role="checkbox" aria-checked={n.done} aria-label={(n.done ? 'Reopen: ' : 'Mark dealt with: ') + n.text} onClick={() => toggleNote(ix.trip.id, n.id)}>{n.done ? '✓' : ''}</button>
+      <div><div className="kick">{n.author} · {stamp(n.at)}</div><p className="item-d">{n.text}</p></div>
+    </li>
+  );
+  return (
+    <section className="blk" id="gnotes">
+      <SecH title="Group notes"><span className="kicker">{open.length} open</span></SecH>
+      <p className="note">Ideas, questions and things to add, for everyone on the trip to see.</p>
+      <textarea className="search notebox" id="gnote" rows={3} maxLength={600} value={draft} onChange={e => setDraft(e.target.value)}
+        placeholder="For example: can we fit in a sentō one evening?" aria-label="Your note" />
+      <div className="chips"><button className="chipbtn go" onClick={add}>Add note</button></div>
+      {msg && <p className={'geomsg' + (msg.bad ? ' bad' : '')} role="status">{msg.text}</p>}
+      {open.length > 0 && <ul className="sheet" style={{ marginTop: 12 }}>{open.map(item)}</ul>}
+      {done.length > 0 && <Fold title="Dealt with" count={done.length}><ul className="sheet">{done.map(item)}</ul></Fold>}
+    </section>
+  );
+}
