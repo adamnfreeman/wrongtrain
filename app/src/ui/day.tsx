@@ -1,18 +1,26 @@
 /* A day: its station board, plan, getting around, and where to eat. Plus the route list and the
    list items other screens reuse (legs, food, to-dos). */
+import { useEffect, useRef } from 'react';
 import type { Bullet, Day, Leg, Place, Todo } from '../model/types';
 import { DocLinks } from './wallet';
-import { cityOf, codeOf, lineOf, mapsLink, stayLine } from '../model/trip';
-import { dayOfMonth, fmtHM, fmtT, longDate, shortDate } from '../model/time';
+import { cityOf, codeOf, lineOf, mapsLink, stayLine, destOf } from '../model/trip';
+import { dayOfMonth, fmtHM, fmtT, longDate } from '../model/time';
 import { anchorsFor } from '../model/next';
 import { toggleTodo } from '../model/store';
 import { Ext, Pill, Rich, SecH, Txt, line } from './bits';
 import { useApp } from './ctx';
 
-export function Board({ d }: { d: Day }) {
-  const { ix, go, edit } = useApp();
-  const i = ix.dayPos.get(d.id)!, days = ix.trip.days, p = days[i - 1], n = days[i + 1];
+/** The day's heading: which day, the city, tonight's stay. compact on Today, where the time to leave leads. */
+export function Board({ d, compact }: { d: Day; compact?: boolean }) {
+  const { ix, edit } = useApp();
+  const i = ix.dayPos.get(d.id)!, days = ix.trip.days;
   const stay = d.stayId ? ix.place.get(d.stayId) : undefined;
+  if (compact) return (
+    <header className="dayhead" style={line(lineOf(ix, d))}>
+      <div className="kicker">{longDate(d.date)} · Day {i + 1} of {days.length}</div>
+      <h1>{cityOf(ix, d)}</h1>
+    </header>
+  );
   return (
     <header className="board" style={line(lineOf(ix, d))}>
       <div className="board-main">
@@ -22,14 +30,6 @@ export function Board({ d }: { d: Day }) {
           {stayLine(ix, d)}{stay && <> · <Ext href={mapsLink(ix, stay)}>Map</Ext></>}
         </p>
         <button className="editbtn" onClick={() => edit({ kind: 'day', id: d.id })}>Edit day</button>
-      </div>
-      <div className="band">
-        <button className="band-btn" disabled={!p} onClick={() => p && go('days', p.id)}>
-          <small>◀ {p ? shortDate(p.date) : 'Start'}</small>{p && cityOf(ix, p)}
-        </button>
-        <button className="band-btn next" disabled={!n} onClick={() => n && go('days', n.id)}>
-          <small>{n ? shortDate(n.date) : 'End'} ▶</small>{n && cityOf(ix, n)}
-        </button>
       </div>
     </header>
   );
@@ -133,16 +133,48 @@ export function RouteList() {
 }
 
 /* the day strip along the top of Days */
-export function DayStrip({ cur }: { cur: Day }) {
+/** The days as a line: a box per day in its destination's colour, joined up. Drag it and the day
+    in the middle opens; tap a day to slide to it. */
+export function DaySlider({ cur }: { cur: Day }) {
   const { ix, go } = useApp();
+  const ref = useRef<HTMLDivElement>(null);
+  const days = ix.trip.days;
+  /* keep the open day in the middle (instantly when it changes from elsewhere) */
+  useEffect(() => {
+    const st = ref.current, el = st?.querySelector<HTMLElement>(`[data-day="${cur.id}"]`);
+    if (st && el) st.scrollLeft = el.offsetLeft - st.clientWidth / 2 + el.clientWidth / 2;
+  }, [cur.id]);
+  /* when the slider comes to rest, open the day nearest the middle */
+  useEffect(() => {
+    const st = ref.current; if (!st) return;
+    let t = 0;
+    const settle = () => {
+      const mid = st.scrollLeft + st.clientWidth / 2;
+      let best: HTMLElement | null = null, dist = Infinity;
+      st.querySelectorAll<HTMLElement>('[data-day]').forEach(el => { const c = Math.abs(el.offsetLeft + el.clientWidth / 2 - mid); if (c < dist) { dist = c; best = el; } });
+      const id = (best as HTMLElement | null)?.dataset.day;
+      if (id && id !== cur.id) go('days', id);
+    };
+    const onScroll = () => { clearTimeout(t); t = window.setTimeout(settle, 140); };
+    st.addEventListener('scroll', onScroll, { passive: true });
+    return () => { st.removeEventListener('scroll', onScroll); clearTimeout(t); };
+  }, [cur.id, go]);
   return (
-    <div className="daystrip" id="strip">
-      {ix.trip.days.map(x => (
-        <button key={x.id} className="daychip" style={line(lineOf(ix, x))} aria-current={x.id === cur.id}
-          aria-label={longDate(x.date)} onClick={() => go('days', x.id)}>
-          {longDate(x.date).slice(0, 3)}<b>{dayOfMonth(x.date)}</b>
-        </button>
-      ))}
+    <div className="dslider" ref={ref} data-noswipe>
+      <div className="dslider-in">
+        {days.map((x, i) => {
+          const prev = days[i - 1], newCity = !prev || prev.destinationId !== x.destinationId || prev.travel !== x.travel;
+          return (
+            <button key={x.id} data-day={x.id} className={'dbox' + (x.travel ? ' travel' : '')} style={line(lineOf(ix, x))}
+              aria-current={x.id === cur.id} aria-label={`${longDate(x.date)}, ${cityOf(ix, x)}`}
+              onClick={e => (e.currentTarget as HTMLElement).scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })}>
+              {i > 0 && <i className="dlink" style={line(lineOf(ix, prev))} />}
+              <small>{longDate(x.date).slice(0, 3)}</small><b>{dayOfMonth(x.date)}</b>
+              {newCity && <em>{x.travel ? 'Travel' : destOf(ix, x)?.name || ''}</em>}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

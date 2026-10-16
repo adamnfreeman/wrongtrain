@@ -7,11 +7,11 @@ const config: CapacitorConfig = {
   ios: {
     /* the page draws under the status bar itself, using the safe-area insets */
     contentInset: 'never',
-    backgroundColor: '#EEF1F0',
+    backgroundColor: '#0F1418',
   },
   plugins: {
     /* hidden by the app once it has drawn (src/native.ts), so there is no blank flash */
-    SplashScreen: { launchAutoHide: false, backgroundColor: '#EEF1F0', showSpinner: false },
+    SplashScreen: { launchAutoHide: false, backgroundColor: '#0F1418', showSpinner: false },
   },
 };
 

@@ -4,7 +4,9 @@ import type { Now, TripIndex } from '../model/trip';
 import type { Geo } from './geo';
 import type { Edit } from './editors';
 
-export const TABS = ['today', 'days', 'transit', 'places', 'map', 'phrases', 'wallet', 'prep'] as const;
+export const TABS = ['today', 'days', 'map', 'wallet', 'trip', 'transit', 'places', 'phrases', 'prep'] as const;
+/** The tabs on the bottom bar, in order; the rest open from Trip. Swiping moves between these. */
+export const MAIN_TABS = ['today', 'days', 'map', 'wallet', 'trip'] as const;
 export type Tab = (typeof TABS)[number];
 
 export interface UI {

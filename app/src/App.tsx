@@ -3,7 +3,7 @@ import { openSample, pref, resetSample, selectTrip, setMe, setPref, useStore } f
 import { indexTrip, whereNow } from './model/trip';
 import type { Trip } from './model/types';
 import { shortDate } from './model/time';
-import { AppCtx, TABS, type Tab, type UI } from './ui/ctx';
+import { AppCtx, MAIN_TABS, TABS, type Tab, type UI } from './ui/ctx';
 import { useGeo } from './ui/geo';
 import { Days, Places, Prep, Today, Transit } from './ui/views';
 import { MapView } from './ui/map';
@@ -17,6 +17,8 @@ import { setMyName } from './sync/engine';
 import { Toast, useWaitingForMe } from './ui/requests';
 import { ThemeSwitch } from './ui/theme';
 import { PlannerSheet } from './ui/planner';
+import { BackToTrip, TripHub, UNDER_TRIP } from './ui/trip';
+import { useRef } from 'react';
 
 export default function App() {
   const { trips, activeId, me } = useStore();
@@ -41,6 +43,12 @@ export default function App() {
 
 function Welcome({ trips }: { trips: Trip[] }) {
   const [sheet, setSheet] = useState<'plan' | 'new' | 'copy' | 'join' | null>(null);
+  /* the last trip's tab is in the address; drop it, so the next trip opened starts on Today */
+  useEffect(() => {
+    if (location.hash && !/join=|access_token|error_description/.test(location.hash)) {
+      try { history.replaceState(null, '', location.pathname + location.search); } catch { /* ignore */ }
+    }
+  }, []);
   const sample = useMemo(() => trips.find(t => t.sample) || makeSample(new Date()), [trips]);
   return (
     <div className="wrap" style={{ paddingBottom: 40 }}>
@@ -84,15 +92,12 @@ function Welcome({ trips }: { trips: Trip[] }) {
 
 /* ---------- the open trip ---------- */
 
-const ICONS: Record<Tab, { label: string; icon: React.ReactNode }> = {
+const ICONS: Record<(typeof MAIN_TABS)[number], { label: string; icon: React.ReactNode }> = {
   today: { label: 'Today', icon: <><circle cx="12" cy="12" r="8.5" /><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none" /></> },
   days: { label: 'Days', icon: <><rect x="3.5" y="5" width="17" height="15.5" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></> },
-  transit: { label: 'Transit', icon: <><rect x="5" y="3" width="14" height="14" rx="3.5" /><path d="M5 10.5h14M9 20.5l1.5-3.5M15 20.5L13.5 17M9 13.8h.01M15 13.8h.01" /></> },
-  places: { label: 'Places', icon: <path d="M12 3.6l2.6 5.2 5.8.9-4.2 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.2-4.1 5.8-.9z" /> },
   map: { label: 'Map', icon: <><path d="M12 21s7-6.2 7-11.5a7 7 0 0 0-14 0C5 14.8 12 21 12 21z" /><circle cx="12" cy="9.5" r="2.4" /></> },
-  phrases: { label: 'Phrases', icon: <><path d="M4 5h16v11H10l-4.5 3.5V16H4z" /><path d="M8.5 9.5h7M8.5 12.5h4.5" /></> },
   wallet: { label: 'Wallet', icon: <><rect x="3.5" y="6" width="17" height="13" rx="2.5" /><path d="M3.5 10h17M15 14.5h2.5" /></> },
-  prep: { label: 'To do', icon: <path d="M4 7.5l2 2 3-3.5M4 15.5l2 2 3-3.5M12.5 8H20M12.5 16H20" /> },
+  trip: { label: 'Trip', icon: <><circle cx="6" cy="6" r="1.6" /><circle cx="12" cy="6" r="1.6" /><circle cx="18" cy="6" r="1.6" /><circle cx="6" cy="12" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="18" cy="12" r="1.6" /><circle cx="6" cy="18" r="1.6" /><circle cx="12" cy="18" r="1.6" /><circle cx="18" cy="18" r="1.6" /></> },
 };
 
 function fromHash(ids: Set<string>): Partial<UI> {
@@ -139,28 +144,31 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
 
   const q = ui.q.trim(), searching = q.length > 1;
   const waiting = useWaitingForMe(trip.id);
-  const View = { today: Today, days: Days, transit: Transit, places: Places, map: MapView, phrases: Phrases, wallet: Wallet, prep: Prep }[ui.tab];
+  const View = { today: Today, days: Days, transit: Transit, places: Places, map: MapView, phrases: Phrases, wallet: Wallet, trip: TripHub, prep: Prep }[ui.tab];
+  /* swipe sideways to move between the bottom-bar tabs; not on the map, which drags */
+  const touch = useRef<{ x: number; y: number; ok: boolean } | null>(null);
+  const main = MAIN_TABS as readonly string[];
+  const onTouchStart = (e: React.TouchEvent) => {
+    const el = e.target as HTMLElement, t0 = e.touches[0];
+    touch.current = { x: t0.clientX, y: t0.clientY, ok: main.includes(ui.tab) && ui.tab !== 'map' && !el.closest('[data-noswipe], input, textarea, select, .sheet-wrap, .leaflet-container') };
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const s = touch.current; touch.current = null;
+    if (!s?.ok) return;
+    const t1 = e.changedTouches[0], dx = t1.clientX - s.x, dy = t1.clientY - s.y;
+    if (Math.abs(dx) < 70 || Math.abs(dy) > Math.abs(dx) * 0.6) return;
+    const next = main[main.indexOf(ui.tab) + (dx < 0 ? 1 : -1)];
+    if (next) go(next as Tab);
+  };
 
   return (
     <AppCtx.Provider value={{ ix, now, ui, set, go, geo, me, edit }}>
-      <div className="wrap">
-        <div className="tripbar">
-          <button className="linkbtn" onClick={() => selectTrip(null)}>‹ All trips</button>
-          <span className="tripname">{trip.name}</span>
-          {trip.sample && <span className="pill">Sample</span>}
+      <div className="wrap" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+        {(UNDER_TRIP as string[]).includes(ui.tab) && <BackToTrip />}
+        <div id="view">
+          <View />
+          {ui.tab === 'trip' && (searching ? <Search q={q} /> : <Footer trip={trip} me={me} />)}
         </div>
-        {!(ui.tab === 'phrases' && !searching) && (
-          <div className="sbar">
-            <div className="sin">
-              <input className="search" type="search" placeholder="Search the whole trip" aria-label="Search the whole trip" autoComplete="off"
-                enterKeyHint="search" value={ui.q} onChange={e => set({ q: e.target.value })} onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} />
-              {ui.q && <button className="sclear" onClick={() => set({ q: '' })}>Clear</button>}
-            </div>
-            {ui.tab !== 'prep' && <button className="notebtn" onClick={() => { go('prep'); setTimeout(() => document.getElementById('gnote')?.focus(), 50); }}>+ Note</button>}
-          </div>
-        )}
-        <div id="view">{searching ? <Search q={q} /> : <View />}</div>
-        <Footer trip={trip} me={me} onSettings={() => edit({ kind: 'trip' })} />
         {editing?.kind === 'trip' && <TripSettings trip={trip} close={close} />}
         {editing?.kind === 'day' && <DayEditor trip={trip} id={editing.id} close={close} onDayChange={id => go('days', id)} />}
         {editing?.kind === 'leg' && <LegEditor trip={trip} id={editing.id} dayId={editing.dayId} close={close} />}
@@ -171,10 +179,10 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
       </div>
       <nav className="tabs" aria-label="Sections">
         <div className="tabs-in">
-          {TABS.map(t => (
-            <button key={t} className="tab" aria-current={ui.tab === t ? 'page' : undefined} onClick={() => go(t)}>
+          {MAIN_TABS.map(t => (
+            <button key={t} className="tab" aria-current={ui.tab === t || (t === 'trip' && (UNDER_TRIP as string[]).includes(ui.tab)) ? 'page' : undefined} onClick={() => go(t)}>
               <svg viewBox="0 0 24 24" aria-hidden="true">{ICONS[t].icon}</svg>{ICONS[t].label}
-              {t === 'prep' && waiting > 0 && <span className="tabn" aria-label={`${waiting} waiting for your OK`}>{waiting}</span>}
+              {t === 'trip' && waiting > 0 && <span className="tabn" aria-label={`${waiting} waiting for your OK`}>{waiting}</span>}
             </button>
           ))}
         </div>
@@ -183,16 +191,14 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
   );
 }
 
-function Footer({ trip, me, onSettings }: { trip: Trip; me: string; onSettings: () => void }) {
+function Footer({ trip, me }: { trip: Trip; me: string }) {
   const [name, setName] = useState(me);
   return (
     <div className="foot">
       <SyncLine trip={trip} />
       <p>
         {trip.sample ? 'This is the sample trip. Ticks and notes are saved on this phone only. ' : 'Saved on this phone. '}
-        <button className="linkbtn" onClick={() => selectTrip(null)}>All trips</button>
-        {trip.sample && <> · <button className="linkbtn" onClick={resetSample}>Start the sample over</button></>}
-        {' · '}<button className="linkbtn" onClick={onSettings}>Trip settings</button>
+        {trip.sample && <button className="linkbtn" onClick={resetSample}>Start the sample over</button>}
       </p>
       <AccountLine />
       <label className="lbl" htmlFor="me">Your name, for notes and ticks</label>

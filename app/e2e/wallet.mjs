@@ -53,10 +53,10 @@ check(await page.locator('.pill:has-text("Private")').count() === 1, '... and ma
 await page.screenshot({ path: `${OUT}/w-1-docs.png` });
 
 /* money: who is going, and who I am */
-await page.click('button:has-text("Trip settings")');
+await page.click('.tab:has-text("Trip")').then(() => page.click('.rows button:has-text("Trip settings")'));
 await sheet.getByLabel("Who's going").fill('Adam, Ben, Cat');
 await sheet.getByText('Save', { exact: true }).click();
-await page.fill('#me', 'Adam'); await page.locator('#me').blur();
+await page.click('.tab:has-text("Trip")'); await page.fill('#me', 'Adam'); await page.locator('#me').blur();
 await page.click('.tab:has-text("Wallet")');
 await page.click('.seg >> text=Money');
 await page.click('text=+ Add an expense');
@@ -81,7 +81,7 @@ check(await page.locator('text=≈ $20.10').count() === 1, '... and shown in the
 
 /* Venmo: Adam sets his username; Ben sees a button to pay him */
 await page.fill('[aria-label="Your Venmo username"]', '@adam-f'); await page.locator('[aria-label="Your Venmo username"]').blur();
-await page.fill('#me', 'Ben'); await page.locator('#me').blur();
+await page.click('.tab:has-text("Trip")'); await page.fill('#me', 'Ben'); await page.locator('#me').blur();
 await page.click('.tab:has-text("Today")'); await page.click('.tab:has-text("Wallet")');
 const venmo = page.locator('a:has-text("Pay with Venmo")');
 check(await venmo.count() === 1 && /venmo\.com\/adam-f\?txn=pay&amount=16\.60/.test(await venmo.getAttribute('href')), 'Ben gets a Pay with Venmo link to Adam, for $30 less his share of what he paid ($16.60)');

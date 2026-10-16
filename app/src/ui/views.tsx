@@ -1,5 +1,5 @@
 /* Today, Days, Transit, Places and To do. */
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import type { Place } from '../model/types';
 import { lineOf, lineOfDest, runs, cityOf, mapsLink } from '../model/trip';
 import { longDate, shortDate, stamp } from '../model/time';
@@ -9,7 +9,7 @@ import { Requests } from './requests';
 import { useSync } from '../sync/engine';
 import { canFile, dismissFiling, fileNote, undoFile, useFilings, type NoteFiling } from '../sync/filing';
 import { Empty, Fold, Pill, SecH, Txt, line } from './bits';
-import { Board, DayBody, DayStrip, EatItem, LegItem, RouteList, TodoItem, VegToggle, vegOk } from './day';
+import { Board, DayBody, DaySlider, EatItem, LegItem, RouteList, TodoItem, VegToggle, vegOk } from './day';
 import { NextCard } from './next';
 import { Nearby } from './nearby';
 import { DayPhotos } from './photos';
@@ -24,7 +24,7 @@ export function Today() {
   if (now.phase === 'during' && now.cur) {
     return (
       <>
-        <Board d={now.cur} />
+        <Board d={now.cur} compact />
         <NextCard />
         <Nearby />
         <DayBody d={now.cur} />
@@ -68,26 +68,12 @@ export function Today() {
 /* ---------- Days ---------- */
 
 export function Days() {
-  const { ix, ui, go } = useApp();
+  const { ix, ui } = useApp();
   const d = ix.trip.days.find(x => x.id === ui.day) || ix.trip.days[0];
-  const touch = useRef({ x: 0, y: 0 });
-  useEffect(() => {
-    const st = document.getElementById('strip'), cur = st?.querySelector<HTMLElement>('[aria-current="true"]');
-    if (st && cur) st.scrollLeft = cur.offsetLeft - st.clientWidth / 2 + cur.clientWidth / 2;
-  }, [d?.id]);
   if (!d) return <Empty>This trip has no days yet.</Empty>;
-  const i = ix.dayPos.get(d.id)!;
-  /* swipe left or right to change day */
   return (
-    <div
-      onTouchStart={e => { const t = e.touches[0]; touch.current = { x: t.clientX, y: t.clientY }; }}
-      onTouchEnd={e => {
-        if ((e.target as HTMLElement).closest('#strip')) return;
-        const t = e.changedTouches[0], dx = t.clientX - touch.current.x, dy = t.clientY - touch.current.y;
-        if (Math.abs(dx) < 70 || Math.abs(dy) > 45) return;
-        const n = ix.trip.days[i + (dx < 0 ? 1 : -1)]; if (n) go('days', n.id);
-      }}>
-      <DayStrip cur={d} />
+    <div>
+      <DaySlider cur={d} />
       <Board d={d} />
       <DayBody d={d} />
       <DayPhotos d={d} />
