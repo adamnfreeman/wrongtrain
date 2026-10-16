@@ -127,6 +127,10 @@ Next:
 11. Later: Sign in with Apple (needs the developer account), universal links so invite links
    open the app, a city list for guessing time zones (Kyoto, Florence and similar don't match
    an IANA zone name), editing the "Before you go" guides.
+12. **Change email** (asked for Oct 16) on Account & settings: move the account to a new address
+   (say to an @wrongtrain.lol one), keeping its trips. There are no passwords (sign-in is an
+   emailed code), so this is the "change password" of WrongTrain. Supabase's `updateUser({ email })`
+   sends a code to the new address to confirm it.
 
 ## Working together
 
