@@ -4,6 +4,7 @@ import type { Trip } from '../model/types';
 import { getState, setMe, useStore } from '../model/store';
 import { createInvite, deleteAccount, errText, joinTrip, leaveTrip, members, removeMember, setMyName, shareTrip, signOut, sendCode, useSync, verifyCode, type Member } from '../sync/engine';
 import { DeleteButton, Sheet, Text } from './form';
+import { shareBase } from '../native';
 
 /* ---------- sign in ---------- */
 
@@ -104,7 +105,7 @@ export function Sharing({ trip, onLeft }: { trip: Trip; onLeft: () => void }) {
     setBusy(false);
   };
   const invite = async () => { setBusy(true); setMsg(''); try { setCode(await createInvite(trip.id)); } catch (e) { setMsg(errText(e)); } setBusy(false); };
-  const link = code ? `${location.origin}${location.pathname}#join=${code}` : '';
+  const link = code ? `${shareBase()}#join=${code}` : '';
   const send = async () => {
     const text = `Join “${trip.name}” on WrongTrain with the code ${code}`;
     const canShare = typeof navigator.share === 'function';

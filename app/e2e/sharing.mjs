@@ -19,6 +19,7 @@ const check = (c, m) => { if (!c) failures++; console.log((c ? 'PASS ' : 'FAIL '
 const sheet = page.locator('.sheet-wrap').last();
 
 await page.goto('http://localhost:8092/');
+await page.waitForSelector('text=Explore a sample trip');
 check(await page.locator('text=Join a trip with a code').count() === 1, 'welcome offers joining with a code');
 check(await page.locator('.acct >> text=Sign in').count() === 1, 'welcome offers signing in');
 

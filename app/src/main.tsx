@@ -9,10 +9,15 @@ import '@fontsource/zen-kaku-gothic-new/500.css'
 import '@fontsource/zen-kaku-gothic-new/700.css'
 import '@fontsource/zen-kaku-gothic-new/900.css'
 import './index.css'
-import App from './App.tsx'
-import { startSync } from './sync/engine'
+import { restoreBackup, startNative } from './native'
+
+/* In the iPhone app, put back anything iOS cleared from storage before the app reads it.
+   The rest loads afterwards, because the trip store and the sign-in read storage as they load. */
+await restoreBackup()
+const [{ default: App }, { pullAll, startSync }] = await Promise.all([import('./App.tsx'), import('./sync/engine')])
 
 startSync()
+void startNative(() => { void pullAll() })
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

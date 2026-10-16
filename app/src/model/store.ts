@@ -8,6 +8,7 @@ import type { Trip } from './types';
 import { addDays, daysBetween, todayIn } from './time';
 import { newId } from './trip';
 import { makeSample } from './sample';
+import { backupSoon } from '../native';
 
 /** What this phone knows about a shared trip's server copy. */
 export interface SyncInfo {
@@ -43,6 +44,7 @@ let state: State = load();
 
 function save() {
   try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* full or blocked: keep going in memory */ }
+  backupSoon();
 }
 
 let changeHook: ((tripId: string) => void) | null = null;
