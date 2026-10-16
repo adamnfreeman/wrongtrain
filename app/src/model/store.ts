@@ -135,14 +135,16 @@ export function toggleTodo(tripId: string, todoId: string) {
   }));
 }
 
-export function addNote(tripId: string, text: string) {
+/** Adds a group note and returns its id, or '' when there was nothing to add. */
+export function addNote(tripId: string, text: string): string {
   const clean = text.replace(/[ \t]+/g, ' ').trim().slice(0, 600);
-  if (!clean) return false;
+  if (!clean) return '';
+  const id = newId('n');
   patchTrip(tripId, t => ({
     ...t,
-    notes: [...t.notes, { id: newId('n'), author: state.me || 'Me', text: clean, at: new Date().toISOString(), done: false }],
+    notes: [...t.notes, { id, author: state.me || 'Me', text: clean, at: new Date().toISOString(), done: false }],
   }));
-  return true;
+  return id;
 }
 
 export function toggleNote(tripId: string, noteId: string) {

@@ -155,6 +155,11 @@ mark { background: var(--warn-bg); color: inherit; border-radius: 3px; padding: 
 .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--pc); margin-right: 6px; vertical-align: -1px }
 .geomsg { font-size: 13.5px; color: var(--muted); margin-top: 8px }
 .geomsg.bad { color: var(--warn) }
+/* what Claude did with a group note */
+.filed { font-size: 13.5px; color: var(--muted); margin-top: 6px; border-left: 2px solid var(--rule); padding-left: 10px }
+.filed.bad { color: var(--warn) }
+.filed ul { margin: 4px 0 0; padding-left: 16px }
+.filed p + p { margin-top: 4px }
 .me { background: var(--l-travel); border: 3px solid var(--card); border-radius: 50%; box-shadow: 0 0 0 2px var(--l-travel) }
 .me::after { content: ""; position: absolute; inset: -3px; border-radius: 50%; border: 2px solid var(--l-travel); opacity: 0 }
 @media (prefers-reduced-motion: no-preference) { .me::after { animation: me-pulse 2.2s ease-out infinite } }

@@ -319,6 +319,67 @@ grant execute on function public.share_trip(text, jsonb, text), public.save_trip
   public.withdraw_request(uuid), public.set_trip_rule(text, text), public.set_member_role(text, uuid, text),
   public.my_role(text) to authenticated;
 
+-- ---------- Claude: filing notes ----------
+--
+-- The file-note Edge Function (supabase/functions/file-note) asks Claude to file group notes.
+-- Each call is counted against the trip, so billing (a per-trip pass the owner buys) can gate it
+-- later. Until then every trip gets a free allowance. Only the Edge Function, using the
+-- service key, can count or refund a use; the app cannot call these.
+
+create table if not exists public.ai_uses (
+  id             uuid primary key default gen_random_uuid(),
+  trip_id        text not null references public.trips (id) on delete cascade,
+  user_id        uuid references auth.users (id) on delete set null,
+  kind           text not null,
+  input_tokens   integer,
+  output_tokens  integer,
+  created_at     timestamptz not null default now()
+);
+create index if not exists ai_uses_trip on public.ai_uses (trip_id);
+
+-- A paid pass for a trip. Nothing writes here yet: in-app purchase (RevenueCat) will.
+create table if not exists public.trip_passes (
+  trip_id   text primary key references public.trips (id) on delete cascade,
+  paid_by   uuid references auth.users (id) on delete set null,
+  paid_at   timestamptz not null default now(),
+  source    text not null default ''
+);
+
+alter table public.ai_uses enable row level security;
+alter table public.trip_passes enable row level security;
+-- no policies: nobody reads or writes these from the app
+
+-- How many uses a trip gets: a free allowance, or a larger one with a pass (a ceiling on cost).
+create or replace function public.ai_allowance(t text) returns integer
+language sql stable security definer set search_path = public as $$
+  select case when exists (select 1 from trip_passes p where p.trip_id = t) then 500 else 20 end;
+$$;
+
+-- Counts one use against the trip, for someone on it. Returns the use's id and how many are left,
+-- or fails with 'allowance used up'.
+create or replace function public.claim_ai_use(trip_id text, user_id uuid, kind text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare t text := trip_id; u uuid := user_id; used integer; cap integer := ai_allowance(trip_id); r uuid;
+begin
+  if not exists (select 1 from trip_members m where m.trip_id = t and m.user_id = u) then raise exception 'not on this trip'; end if;
+  perform 1 from trips where id = t for update;  -- one claim at a time per trip
+  select count(*) into used from ai_uses a where a.trip_id = t;
+  if used >= cap then raise exception 'allowance used up'; end if;
+  insert into ai_uses (trip_id, user_id, kind) values (t, u, claim_ai_use.kind) returning id into r;
+  return jsonb_build_object('id', r, 'left', cap - used - 1);
+end $$;
+
+-- Gives a use back when the call to Claude failed.
+create or replace function public.refund_ai_use(use_id uuid)
+returns void language sql security definer set search_path = public as $$
+  delete from ai_uses where id = use_id;
+$$;
+
+revoke all on function public.ai_allowance(text), public.claim_ai_use(text, uuid, text), public.refund_ai_use(uuid)
+  from public, anon, authenticated;
+grant execute on function public.ai_allowance(text), public.claim_ai_use(text, uuid, text), public.refund_ai_use(uuid)
+  to service_role;
+
 -- ---------- live updates ----------
 
 -- phones listen for changes to trips they are on (the read rule above still applies)

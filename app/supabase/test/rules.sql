@@ -130,6 +130,29 @@ update trip_members set name = 'not you' where user_id <> auth.uid();
 select pg_temp.ok((select name from trip_members where user_id = '00000000-0000-0000-0000-00000000000a') = 'Ana', 'nobody can rename someone else');
 select pg_temp.ok((select name from trip_members where user_id = auth.uid()) = 'Benjamin', 'but you can rename yourself');
 
+-- counting Claude's filings (the file-note Edge Function, with the service key)
+select pg_temp.act('ben');
+select pg_temp.ok(pg_temp.fails($$select public.claim_ai_use('t1', auth.uid(), 'file-note')$$), 'the app cannot count a filing itself');
+select pg_temp.ok(pg_temp.fails($$select public.refund_ai_use(gen_random_uuid())$$), '... or give one back');
+reset role;
+set role service_role;
+select pg_temp.ok((public.claim_ai_use('t1', '00000000-0000-0000-0000-00000000000b', 'file-note') ->> 'left')::int = 19, 'the Edge Function counts a filing: 19 of 20 free ones left');
+select pg_temp.ok(pg_temp.fails($$select public.claim_ai_use('t1', '00000000-0000-0000-0000-00000000000c', 'file-note')$$), '... only for someone on the trip');
+select public.refund_ai_use((select id from ai_uses limit 1));
+select pg_temp.ok((select count(*) from ai_uses) = 0, 'a failed call is given back');
+reset role;
+insert into ai_uses (trip_id, kind) select 't1', 'file-note' from generate_series(1, 20);
+select pg_temp.act('ben');
+select pg_temp.ok((select count(*) from ai_uses) = 0, 'nobody reads usage from the app');
+reset role;
+set role service_role;
+select pg_temp.ok(pg_temp.fails($$select public.claim_ai_use('t1', '00000000-0000-0000-0000-00000000000b', 'file-note')$$), 'after 20 the free allowance is used up');
+reset role;
+insert into trip_passes (trip_id) values ('t1');
+set role service_role;
+select pg_temp.ok((public.claim_ai_use('t1', '00000000-0000-0000-0000-00000000000b', 'file-note') ->> 'left')::int = 479, 'a pass raises the allowance');
+reset role;
+
 select pg_temp.act('ana');
 select public.leave_trip('t1');
 select pg_temp.act('ben');

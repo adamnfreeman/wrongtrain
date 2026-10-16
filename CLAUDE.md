@@ -31,6 +31,11 @@ on a Mac.
   `change_needs_approval` in `schema.sql` must agree.
 - Supabase project: `https://wklwpihkpiuniazhidjz.supabase.co`. The publishable key in
   `src/sync/config.ts` is public by design. Never put the secret/service_role key anywhere.
+- Ideas box: a group note on a shared trip goes to the `file-note` Edge Function
+  (`supabase/functions/`), which asks Claude how to file it; the app applies the answer through
+  `patchTrip` (`src/model/filing.ts`, `src/sync/filing.ts`), so the trip rule applies. The
+  Anthropic key is only a Supabase secret (`ANTHROPIC_API_KEY`), never in the app. Uses are
+  counted per trip in `ai_uses` (20 free; `trip_passes` is there for the paid pass).
 - Sign-in is an emailed 6-digit code. Email goes through Gmail SMTP (adam@thefreemans.io for
   now; wrongtrain.lol is being added to Google Workspace). The email templates contain only
   the code, no link.
@@ -57,7 +62,8 @@ Touch nothing else on `main`. GitHub Pages updates within a couple of minutes.
 
 Done: trip model, sample trip, all screens, trip editor, sharing (invite codes, live sync,
 offline queue), email sign-in, iOS project with icon and launch screen, first build running on
-the iPhone, owner approvals (trip rule, roles, requests and the approval list).
+the iPhone, owner approvals (trip rule, roles, requests and the approval list), the ideas box
+(Claude files group notes; not deployed yet).
 
 Next:
 1. **Run the updated `schema.sql` in Supabase** for approvals (roles, trip rule, requests).
@@ -65,13 +71,17 @@ Next:
    shared trips stop syncing until the database has it. Builds signed with the
    personal team work on the iPhone; build from Xcode (`npm run ios`, then Run), since building
    into `ios/App/build` inside the iCloud-synced Desktop fails code signing.
-2. **Map tiles.** The map uses OpenStreetMap's tile server, which does not allow app use and
+2. **Deploy the ideas box**: run `schema.sql` again, create an Anthropic API key, store it as
+   the `ANTHROPIC_API_KEY` secret and deploy `file-note`. Click-by-click steps are in
+   `app/supabase/functions/README.md`.
+3. **Map tiles.** The map uses OpenStreetMap's tile server, which does not allow app use and
    may block requests from the iOS web view. Switch to MapTiler (waiting on an API key); the
-   tile URL is in `src/ui/map.tsx` and `src/ui/form.tsx`.
-3. **Apple Developer account**: enrollment pending. Then App Store Connect, TestFlight.
-4. **Untested by a person yet**: sharing between two real devices (the live test covers it
+   tile URL is in `src/ui/map.tsx` and `src/ui/form.tsx`. MapTiler geocoding would also let
+   places Claude files get map pins (they are filed without coordinates for now).
+4. **Apple Developer account**: enrollment pending. Then App Store Connect, TestFlight.
+5. **Untested by a person yet**: sharing between two real devices (the live test covers it
    with throwaway users).
-5. Later: Sign in with Apple (needs the developer account), universal links so invite links
+6. Later: Sign in with Apple (needs the developer account), universal links so invite links
    open the app, a city list for guessing time zones (Kyoto, Florence and similar don't match
    an IANA zone name), editing the "Before you go" guides.
 

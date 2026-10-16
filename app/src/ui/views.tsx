@@ -6,6 +6,8 @@ import { longDate, shortDate, stamp } from '../model/time';
 import { onToday } from '../model/next';
 import { addNote, toggleNote } from '../model/store';
 import { Requests } from './requests';
+import { useSync } from '../sync/engine';
+import { canFile, dismissFiling, fileNote, undoFile, useFilings, type NoteFiling } from '../sync/filing';
 import { Empty, Fold, Pill, SecH, Txt, line } from './bits';
 import { Board, DayBody, DayStrip, EatItem, LegItem, RouteList, TodoItem, VegToggle, vegOk } from './day';
 import { NextCard } from './next';
@@ -226,29 +228,73 @@ export function Prep() {
 
 function Notes() {
   const { ix } = useApp();
+  const { session } = useSync();
+  const filings = useFilings();
   const [draft, setDraft] = useState('');
   const [msg, setMsg] = useState<{ text: string; bad: boolean } | null>(null);
-  const all = ix.trip.notes.slice().reverse(), open = all.filter(n => !n.done), done = all.filter(n => n.done);
+  const t = ix.trip, claude = canFile(t.id, !!session);
+  const all = t.notes.slice().reverse();
+  /* a note Claude just filed stays in view, with what was filed, until you tap OK */
+  const open = all.filter(n => !n.done || filings[n.id]), done = all.filter(n => n.done && !filings[n.id]);
   const add = () => {
     if (!draft.trim()) return setMsg({ text: 'Write the note first.', bad: true });
-    addNote(ix.trip.id, draft); setDraft(''); setMsg({ text: 'Added for everyone on the trip.', bad: false });
+    const id = addNote(t.id, draft); setDraft('');
+    if (id && claude) { setMsg(null); void fileNote(t.id, id); } else setMsg({ text: 'Added for everyone on the trip.', bad: false });
   };
   const item = (n: (typeof all)[number]) => (
     <li key={n.id} className={'todo' + (n.done ? ' done' : '')}>
-      <button className="box" role="checkbox" aria-checked={n.done} aria-label={(n.done ? 'Reopen: ' : 'Mark dealt with: ') + n.text} onClick={() => toggleNote(ix.trip.id, n.id)}>{n.done ? '✓' : ''}</button>
-      <div><div className="kick">{n.author} · {stamp(n.at)}</div><p className="item-d">{n.text}</p></div>
+      <button className="box" role="checkbox" aria-checked={n.done} aria-label={(n.done ? 'Reopen: ' : 'Mark dealt with: ') + n.text} onClick={() => toggleNote(t.id, n.id)}>{n.done ? '✓' : ''}</button>
+      <div>
+        <div className="kick">{n.author} · {stamp(n.at)}</div><p className="item-d">{n.text}</p>
+        {filings[n.id] ? <Filed tripId={t.id} noteId={n.id} f={filings[n.id]} />
+          : <>
+            {n.filed && <p className="filed">Claude: {n.filed}</p>}
+            {claude && !n.done && <div className="meta"><button className="linkbtn" onClick={() => void fileNote(t.id, n.id)}>{n.filed ? 'Ask Claude again' : 'File with Claude'}</button></div>}
+          </>}
+      </div>
     </li>
   );
   return (
     <section className="blk" id="gnotes">
-      <SecH title="Group notes"><span className="kicker">{open.length} open</span></SecH>
-      <p className="note">Ideas, questions and things to add, for everyone on the trip to see.</p>
+      <SecH title="Group notes"><span className="kicker">{open.filter(n => !n.done).length} open</span></SecH>
+      <p className="note">{claude
+        ? 'Leave a note with something to add: somewhere to eat, a sight, a shop, something to book or pack. Claude files it into the trip for everyone. Changes to plans already made wait for the owner.'
+        : 'Ideas, questions and things to add, for everyone on the trip to see.'}</p>
       <textarea className="search notebox" id="gnote" rows={3} maxLength={600} value={draft} onChange={e => setDraft(e.target.value)}
-        placeholder="For example: can we fit in a sentō one evening?" aria-label="Your note" />
+        placeholder={claude ? 'For example: add the ramen place near the hotel to Nov 3' : 'For example: can we fit in a sentō one evening?'} aria-label="Your note" />
       <div className="chips"><button className="chipbtn go" onClick={add}>Add note</button></div>
       {msg && <p className={'geomsg' + (msg.bad ? ' bad' : '')} role="status">{msg.text}</p>}
       {open.length > 0 && <ul className="sheet" style={{ marginTop: 12 }}>{open.map(item)}</ul>}
       {done.length > 0 && <Fold title="Dealt with" count={done.length}><ul className="sheet">{done.map(item)}</ul></Fold>}
     </section>
+  );
+}
+
+/** What Claude just did with a note: still working, what it filed (with Undo), or what went wrong. */
+function Filed({ tripId, noteId, f }: { tripId: string; noteId: string; f: NoteFiling }) {
+  const reply = useApp().ix.trip.notes.find(n => n.id === noteId)?.filed;
+  if (f.state === 'busy') return <p className="filed" role="status">Claude is filing this…</p>;
+  if (f.state === 'error') return (
+    <div className="filed bad" role="status">
+      {f.message}
+      <div className="meta"><button className="linkbtn" onClick={() => void fileNote(tripId, noteId)}>Try again</button></div>
+    </div>
+  );
+  const nothing = !f.added.length && !f.planned.length;
+  return (
+    <div className="filed" role="status">
+      {reply && <p>Claude: {reply}</p>}
+      {!nothing && (
+        <ul>
+          {f.added.map((l, i) => <li key={'a' + i}>{l}</li>)}
+          {f.planned.map((l, i) => <li key={'p' + i}>{l}{f.waiting ? ' (sent to the owner for approval)' : ''}</li>)}
+        </ul>
+      )}
+      {f.left != null && f.left <= 5 && <p>{f.left === 0 ? 'That was the last free filing on this trip.' : `${f.left} free filings left on this trip.`}</p>}
+      <div className="meta">
+        {!nothing && <button className="linkbtn" onClick={() => undoFile(tripId, noteId)}>Undo</button>}
+        <button className="linkbtn" onClick={() => dismissFiling(noteId)}>OK</button>
+      </div>
+    </div>
   );
 }

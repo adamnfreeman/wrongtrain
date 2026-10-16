@@ -155,6 +155,8 @@ export interface Note {
   text: string;
   at: string;
   done: boolean;
+  /** What Claude did with the note, or why it left it for the owner. Shown under the note. */
+  filed?: string;
 }
 
 export interface Guide {
