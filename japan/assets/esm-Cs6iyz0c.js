@@ -1,0 +1,2 @@
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["./web-C7Yf4tsy.js","./dist-62TeNfsI.js","./definitions-DlpntO5o.js"])))=>i.map(i=>d[i]);
+import{i as e}from"./dist-62TeNfsI.js";import{t}from"./preload-helper-CRzLMJPS.js";import{t as n}from"./synapse-I42WLusp.js";import{t as r}from"./definitions-DlpntO5o.js";var i=e(`Filesystem`,{web:()=>t(()=>import(`./web-C7Yf4tsy.js`).then(e=>new e.FilesystemWeb),__vite__mapDeps([0,1,2]),import.meta.url)});n();export{r as Directory,i as Filesystem};
