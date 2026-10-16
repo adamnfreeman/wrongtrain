@@ -58,6 +58,12 @@ on a Mac.
   `src/ui/account.tsx`). Sign in/out, your name, Appearance (`src/ui/theme.tsx`) and the build
   number and time (set in `vite.config.ts`), so you can tell whether a phone has the latest.
 
+- Trip files: "Open a trip file" on the welcome screen reads a trip saved as JSON
+  (`src/model/tripFile.ts`); opening a newer file of the same trip updates it and keeps ticks,
+  notes and the wallet. `node legacy/to-app.mjs` turns the Japan 2026 sheet into one (it asks
+  for your Japan page name and passcode and saves to the Desktop; run it again after sheet
+  changes). The file holds booking numbers and logins: never put it in the repo.
+
 - Testing the planner cheaply: test mode in the app, `plan_cache`, and the `PLANNER_MODEL`
   (now `claude-haiku-5-5`) and `PLAN_TESTERS` secrets; see `app/supabase/functions/README.md`.
   **Before launch:** delete `PLANNER_MODEL` (back to the best model) and hide the test mode switch.
