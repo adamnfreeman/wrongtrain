@@ -1,6 +1,8 @@
 import { startTransition, useCallback, useEffect, useMemo, useState } from 'react';
 import { importTrip, openSample, pref, resetSample, selectTrip, setPref, useStore } from './model/store';
 import { readTripFile } from './model/tripFile';
+import { JAPAN } from './edition';
+import { JapanApp, SheetOnly } from './ui/japan';
 import { indexTrip, whereNow } from './model/trip';
 import type { Trip } from './model/types';
 import { shortDate } from './model/time';
@@ -21,6 +23,11 @@ import { useDock } from './ui/dock';
 import { useRef } from 'react';
 
 export default function App() {
+  if (JAPAN) return <JapanApp TripApp={TripApp} />;
+  return <TheApp />;
+}
+
+function TheApp() {
   const { trips, activeId, me } = useStore();
   const trip = trips.find(t => t.id === activeId);
   /* an invite link (…#join=CODE) opens the join sheet over whatever is showing */
@@ -275,13 +282,14 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
         })}
       </div>
       <div className="sheets">
-        {editing?.kind === 'trip' && <TripSettings trip={trip} close={close} />}
-        {editing?.kind === 'day' && <DayEditor trip={trip} id={editing.id} close={close} onDayChange={id => go('days', id)} />}
-        {editing?.kind === 'leg' && <LegEditor trip={trip} id={editing.id} dayId={editing.dayId} close={close} />}
-        {editing?.kind === 'place' && <PlaceEditor trip={trip} id={editing.id} as={editing.as} dayId={editing.dayId} destinationId={editing.destinationId} close={close} />}
-        {editing?.kind === 'todo' && <TodoEditor trip={trip} id={editing.id} group={editing.group} close={close} />}
-        {editing?.kind === 'doc' && <DocEditor trip={trip} id={editing.id} forRef={editing.for} close={close} />}
-        {editing?.kind === 'expense' && <ExpenseEditor trip={trip} id={editing.id} close={close} />}
+        {JAPAN && editing && <SheetOnly close={close} toNotes={() => go('prep')} />}
+        {!JAPAN && editing?.kind === 'trip' && <TripSettings trip={trip} close={close} />}
+        {!JAPAN && editing?.kind === 'day' && <DayEditor trip={trip} id={editing.id} close={close} onDayChange={id => go('days', id)} />}
+        {!JAPAN && editing?.kind === 'leg' && <LegEditor trip={trip} id={editing.id} dayId={editing.dayId} close={close} />}
+        {!JAPAN && editing?.kind === 'place' && <PlaceEditor trip={trip} id={editing.id} as={editing.as} dayId={editing.dayId} destinationId={editing.destinationId} close={close} />}
+        {!JAPAN && editing?.kind === 'todo' && <TodoEditor trip={trip} id={editing.id} group={editing.group} close={close} />}
+        {!JAPAN && editing?.kind === 'doc' && <DocEditor trip={trip} id={editing.id} forRef={editing.for} close={close} />}
+        {!JAPAN && editing?.kind === 'expense' && <ExpenseEditor trip={trip} id={editing.id} close={close} />}
       </div>
       <div className="statusbg" aria-hidden="true" />
       <div className="tabpeek" ref={peek} aria-hidden="true" />

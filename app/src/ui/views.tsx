@@ -5,6 +5,7 @@ import { lineOf, lineOfDest, runs, cityOf, mapsLink } from '../model/trip';
 import { longDate, shortDate, stamp } from '../model/time';
 import { onToday } from '../model/next';
 import { addNote, toggleNote, getState } from '../model/store';
+import { JAPAN } from '../edition';
 import { Requests } from './requests';
 import { useSync } from '../sync/engine';
 import { canFile, dismissFiling, fileNote, undoFile, useFilings, type NoteFiling } from '../sync/filing';
@@ -223,7 +224,7 @@ function Notes() {
   const [msg, setMsg] = useState<{ text: string; bad: boolean } | null>(null);
   const t = ix.trip, claude = canFile(t.id, !!session), shared = !!getState().sync[t.id];
   /* why Claude is not filing notes here, so a note that just sits there is not a mystery */
-  const why = claude ? '' : t.sample ? 'Notes are filed into the trip automatically on your own shared trips, not the sample.'
+  const why = claude || JAPAN ? '' : t.sample ? 'Notes are filed into the trip automatically on your own shared trips, not the sample.'
     : !shared ? 'To have notes filed into the trip automatically, share it: Trip settings, then Share with the group.'
     : !session ? 'Sign in to have notes filed into the trip automatically.' : '';
   const all = t.notes.slice().reverse();
@@ -232,11 +233,11 @@ function Notes() {
   const add = () => {
     if (!draft.trim()) return setMsg({ text: 'Write the note first.', bad: true });
     const id = addNote(t.id, draft); setDraft('');
-    if (id && claude) { setMsg(null); void fileNote(t.id, id); } else setMsg({ text: shared ? 'Added for everyone on the trip.' : 'Added.', bad: false });
+    if (id && claude) { setMsg(null); void fileNote(t.id, id); } else setMsg({ text: JAPAN ? 'Saved to the Group Notes tab in the sheet.' : shared ? 'Added for everyone on the trip.' : 'Added.', bad: false });
   };
   const item = (n: (typeof all)[number]) => (
     <li key={n.id} className={'todo' + (n.done ? ' done' : '')}>
-      <button className="box" role="checkbox" aria-checked={n.done} aria-label={(n.done ? 'Reopen: ' : 'Mark dealt with: ') + n.text} onClick={() => toggleNote(t.id, n.id)}>{n.done ? '✓' : ''}</button>
+      <button className="box" role="checkbox" aria-checked={n.done} aria-label={(n.done ? 'Reopen: ' : 'Mark dealt with: ') + n.text} disabled={JAPAN} onClick={() => toggleNote(t.id, n.id)}>{n.done ? '✓' : ''}</button>
       <div>
         <div className="kick">{n.author} · {stamp(n.at)}</div><p className="item-d">{n.text}</p>
         {filings[n.id] ? <Filed tripId={t.id} noteId={n.id} f={filings[n.id]} />
@@ -250,7 +251,9 @@ function Notes() {
   return (
     <section className="blk" id="gnotes">
       <SecH title="Group notes"><span className="kicker">{open.filter(n => !n.done).length} open</span></SecH>
-      <p className="note">{claude
+ <p className="note">{JAPAN
+        ? 'More than a to-do list: this is how things get added to the trip. Leave a note with what you want added (a shop, somewhere to eat, a sight, something to pack). It goes to the Group Notes tab in the sheet and is filed within about an hour.'
+        : claude
         ? 'Leave a note with something to add: somewhere to eat, a sight, a shop, something to book or pack. WrongTrain files it into the trip for everyone. Changes to plans already made wait for the owner.'
         : 'Ideas, questions and things to add, for everyone on the trip to see.'}{why && <> {why}</>}</p>
       <textarea className="search notebox" id="gnote" rows={3} maxLength={600} value={draft} onChange={e => setDraft(e.target.value)}

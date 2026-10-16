@@ -8,6 +8,8 @@ import { shareBase } from '../native';
 import { ROLES } from '../model/rules';
 import { RoleControl, RuleSetting } from './requests';
 import { ThemeSwitch } from './theme';
+import { JAPAN } from '../edition';
+import { savedCreds } from '../sheet/live';
 
 /* ---------- sign in ---------- */
 
@@ -224,7 +226,11 @@ function AccountSheet({ trip, close }: { trip?: Trip; close: () => void }) {
     <Sheet title="Account & settings" cancelLabel="Done" onCancel={() => { saveName(); close(); }}>
       <section className="sec" style={{ marginTop: 12 }}>
         <div className="sec-h"><h2>Account</h2></div>
-        {!sync.ready ? <p className="hint">Checking…</p>
+        {JAPAN ? <>
+            <p>Signed in to the Japan page as <b>{savedCreds()?.name}</b></p>
+            <button className="chipbtn" style={{ marginTop: 10 }} onClick={() => { close(); window.dispatchEvent(new Event('wt-japan-signout')); }}>Sign out</button>
+          </>
+          : !sync.ready ? <p className="hint">Checking…</p>
           : sync.session ? <>
             <p>Signed in as <b>{sync.session.user.email}</b></p>
             <button className="chipbtn" style={{ marginTop: 10 }} onClick={() => void signOut()}>Sign out</button>
@@ -246,7 +252,7 @@ function AccountSheet({ trip, close }: { trip?: Trip; close: () => void }) {
         <div className="sec-h"><h2>About</h2></div>
         <BuildLine />
       </section>
-      {sync.session && <section className="sec">
+      {!JAPAN && sync.session && <section className="sec">
         <button className="dangerbtn" onClick={async () => {
           if (!confirm('Delete your WrongTrain account? You leave every shared trip, and trips nobody else is on are deleted. Trips only on this phone stay.')) return;
           try { await deleteAccount(); } catch (e) { alert(errText(e)); }
