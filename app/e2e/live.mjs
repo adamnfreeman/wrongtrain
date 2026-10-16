@@ -47,9 +47,9 @@ try {
   await wait(1500);
 
   r = await ben.rpc('save_trip', { trip_id: id, trip_data: { ...trip, name: 'Ben was here' }, base_version: 1 });
-  check(!r.error && r.data === 2, 'Ben saves (version 2)');
+  check(!r.error && r.data === 2, 'Ben saves (version 2)' + (r.error ? ': ' + r.error.message : r.data !== 2 ? ': got ' + JSON.stringify(r.data) : ''));
   r = await ana.rpc('save_trip', { trip_id: id, trip_data: { ...trip, name: 'Ana, stale' }, base_version: 1 });
-  check(!r.error && r.data === -1, "Ana's save from the old version is refused, so the app merges first");
+  check(!r.error && r.data === -1, "Ana's save from the old version is refused, so the app merges first" + (r.error ? ': ' + r.error.message : ''));
 
   for (let i = 0; i < 20 && !heard.length; i++) await wait(250);
   check(heard.some(h => h.id === id && h.version === 2 && h.data?.name === 'Ben was here'), 'Ana hears about Ben\'s save live');
