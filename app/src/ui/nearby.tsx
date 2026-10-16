@@ -7,7 +7,7 @@ import { dirLink, fmtDist, newId, travel } from '../model/trip';
 import { fmtDur } from '../model/time';
 import { MOODS, type Mood } from '../../supabase/functions/_shared/nearby.ts';
 import { findNearby, type Found, type Suggestion } from '../sync/nearby';
-import { Ext, Glance } from './bits';
+import { Ext, SecH } from './bits';
 import { useApp } from './ctx';
 
 const KIND: Record<Mood, PlaceKind> = {
@@ -46,8 +46,8 @@ export function Nearby() {
   };
 
   return (
-    <Glance id="nearby" title="Something nearby" sum="Food, coffee, a film, something weird…">
-    <section id="nearby">
+    <section className="sec" id="nearby">
+      <SecH title="Something nearby" />
       <p className="lede2">What are you in the mood for?</p>
       <div className="chips" role="group" aria-label="Mood">
         {MOODS.map(m => (
@@ -84,6 +84,5 @@ export function Nearby() {
         </>
       )}
     </section>
-    </Glance>
   );
 }

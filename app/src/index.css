@@ -388,13 +388,12 @@ select.input { background-image: linear-gradient(45deg, transparent 50%, var(--m
 
 /* the day slider on Days (ui/day.tsx): a box per day on a line, the open one in the middle,
    each sized by --s (set while it moves) like the Dock on a Mac */
-.dslider { position: sticky; top: 0; z-index: 10; background: var(--bg); margin-inline: -16px;
-  /* flush with the top of the screen: back over the page's top padding, and clear of the clock */
-  margin-top: calc(-14px - env(safe-area-inset-top, 0px)); margin-bottom: 10px;
-  padding: calc(env(safe-area-inset-top, 0px) + 4px) 0 16px;
+.dslider { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); margin-inline: -16px;
+  /* tight under the clock: back over the page's top padding */
+  margin-top: -14px; margin-bottom: 8px; padding: 2px 0 12px;
   overflow-x: auto; overflow-y: hidden; overscroll-behavior: contain; touch-action: pan-x; scrollbar-width: none; scroll-snap-type: x mandatory;
-  /* no hard edge: the page fades in underneath */
-  box-shadow: 0 12px 14px -4px var(--bg) }
+  /* no hard edge: the page fades out underneath */
+  box-shadow: 0 10px 12px -6px var(--bg) }
 .dslider::-webkit-scrollbar { display: none }
 .dslider-in { padding-inline: calc(50% - 24px); width: max-content }
 .dtrack { position: relative; display: flex; align-items: center; gap: 14px; height: 62px }
@@ -431,7 +430,12 @@ select.input { background-image: linear-gradient(45deg, transparent 50%, var(--m
   overscroll-behavior-x: contain; scrollbar-width: none; -webkit-overflow-scrolling: touch }
 .pager::-webkit-scrollbar { display: none }
 .pane { flex: 0 0 100%; height: 100%; overflow-x: hidden; overflow-y: auto; overscroll-behavior-y: contain; scroll-snap-align: start; scroll-snap-stop: always;
-  padding-top: env(safe-area-inset-top, 0px); -webkit-overflow-scrolling: touch }
+  -webkit-overflow-scrolling: touch }
+/* the room for the clock goes inside the page, not on the scroller: on the scroller it would push
+   every sticky header (top: the inset) down twice */
+.pane > .wrap { padding-top: calc(14px + env(safe-area-inset-top, 0px)) }
+/* behind the clock and the notch: pages scroll away underneath it */
+.statusbg { position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top, 0px); z-index: 1000; background: var(--bg); pointer-events: none }
 
 /* the floating label above the bar while the sheet moves (App.tsx) */
 .tabpeek { position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); z-index: 1001; transform: translate(-50%, 8px);
@@ -444,23 +448,4 @@ select.input { background-image: linear-gradient(45deg, transparent 50%, var(--m
 
 /* depth while the sheet moves (set from App.tsx only while a page is off-centre) */
 .pane > .wrap { transform-origin: 50% 30% }
-/* a page that lands: its blocks rise into place, one after another */
-.wrap.arrive > * { animation: rise .34s cubic-bezier(.2, .7, .2, 1) both }
-.wrap.arrive > :nth-child(2) { animation-delay: .04s }
-.wrap.arrive > :nth-child(3) { animation-delay: .08s }
-.wrap.arrive > :nth-child(n+4) { animation-delay: .12s }
-@keyframes rise { from { opacity: .7; transform: translateY(10px) } to { opacity: 1; transform: none } }
-@media (prefers-reduced-motion: reduce) { .wrap.arrive > * { animation: none } }
 
-/* Today's foldable sections (Glance in ui/bits.tsx) */
-details.glance { border-top: 1px solid var(--rule) }
-details.glance:last-of-type { border-bottom: 1px solid var(--rule) }
-details.glance > summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: 1fr auto; grid-template-areas: "t c" "s c"; align-items: center; column-gap: 12px; padding: 14px 2px }
-details.glance > summary::-webkit-details-marker { display: none }
-.g-t { grid-area: t; font: 700 16px/1.25 var(--f-display) }
-.g-s { grid-area: s; font-size: 13.5px; color: var(--muted); margin-top: 2px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
-.g-c { grid-area: c; width: 9px; height: 9px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); transition: transform .2s ease; margin-right: 4px }
-details.glance[open] > summary .g-c { transform: rotate(-135deg) }
-.g-b { padding-bottom: 14px }
-.g-b > .sec:first-child, .g-b > section:first-child { margin-top: 0 }
-@media (prefers-reduced-motion: reduce) { .g-c { transition: none } }

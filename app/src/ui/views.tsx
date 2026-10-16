@@ -9,7 +9,7 @@ import { Requests } from './requests';
 import { useSync } from '../sync/engine';
 import { canFile, dismissFiling, fileNote, undoFile, useFilings, type NoteFiling } from '../sync/filing';
 import { Empty, Fold, Pill, SecH, Txt, line } from './bits';
-import { Board, DayBody, DaySlider, EatItem, LegItem, RouteList, TodoItem, VegToggle, vegOk } from './day';
+import { Board, DayBody, DaySlider, EatItem, LegItem, TodoItem, VegToggle, vegOk } from './day';
 import { NextCard } from './next';
 import { Nearby } from './nearby';
 import { DayPhotos } from './photos';
@@ -26,10 +26,8 @@ export function Today() {
       <>
         <Board d={now.cur} compact />
         <NextCard />
-        <div className="glances">
-          <DayBody d={now.cur} glance />
-          <Nearby />
-        </div>
+        <DayBody d={now.cur} />
+        <Nearby />
       </>
     );
   }
@@ -76,7 +74,6 @@ export function Days() {
       <Board d={d} />
       <DayBody d={d} />
       <DayPhotos d={d} />
-      <section className="sec"><SecH title="The whole route" /><RouteList /></section>
     </div>
   );
 }

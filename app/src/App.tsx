@@ -165,12 +165,6 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
   const [all, setAll] = useState(false);
   useEffect(() => { const t = window.setTimeout(() => setAll(true), 350); return () => clearTimeout(t); }, []);
   const barDragging = useRef(false), settledBy = useRef<'pager' | null>(null);
-  /* a page that lands: its content rises gently into place */
-  const arrive = (t: string) => {
-    const page = pager.current?.querySelector<HTMLElement>(`.pane[data-tab="${t}"] > .wrap`);
-    if (!page || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    page.classList.remove('arrive'); void page.offsetWidth; page.classList.add('arrive');
-  };
   /* a label above the bar, clear of the thumb, naming the page you will land on while things move */
   const peek = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -203,7 +197,6 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
         const t = order[Math.round(pg.scrollLeft / width())] as Tab | undefined;
         if (t && t !== tabNow.current) {
           settledBy.current = 'pager';
-          arrive(t);
           /* redraw in the background, so landing does not stutter */
           startTransition(() => setUi(u => ({ ...u, tab: t, q: '' })));
         }
@@ -237,7 +230,6 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
     if (settledBy.current === 'pager') { settledBy.current = null; return; }
     const left = order.indexOf(ui.tab) * pg.clientWidth;
     if (Math.abs(pg.scrollLeft - left) > 2) pg.scrollTo({ left, behavior: pagerReady.current ? 'smooth' : 'auto' });
-    else if (pagerReady.current) arrive(ui.tab);
     pagerReady.current = true;
   }, [ui.tab, ui.day, order]);
 
@@ -267,6 +259,7 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
         {editing?.kind === 'doc' && <DocEditor trip={trip} id={editing.id} forRef={editing.for} close={close} />}
         {editing?.kind === 'expense' && <ExpenseEditor trip={trip} id={editing.id} close={close} />}
       </div>
+      <div className="statusbg" aria-hidden="true" />
       <div className="tabpeek" ref={peek} aria-hidden="true" />
       <nav className="tabs" aria-label="Sections">
         <div className="tabs-in" ref={bar}>
