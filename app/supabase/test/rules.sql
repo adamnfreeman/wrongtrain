@@ -202,3 +202,15 @@ delete from storage.objects where name = 't3/scan.jpg';
 select pg_temp.ok((select count(*) from trip_photos) = 0 and (select count(*) from storage.objects where name like 't3/%') = 0, '... and can remove ones others added');
 reset role;
 select pg_temp.ok(exists (select 1 from storage.buckets where id = 'trip-files' and not public), 'the files bucket is private');
+
+-- plans: 5 a month per person, steps only on your own plan
+select pg_temp.act('ana');
+select pg_temp.ok(pg_temp.fails($$select public.claim_plan(auth.uid())$$), 'the app cannot start a plan itself (only the function can)');
+reset role;
+create temp table plans as select public.claim_plan('00000000-0000-0000-0000-00000000000a') as p;
+select public.claim_plan('00000000-0000-0000-0000-00000000000a') from generate_series(1, 4);
+select pg_temp.ok(pg_temp.fails($$select public.claim_plan('00000000-0000-0000-0000-00000000000a')$$), 'a sixth plan in a month is refused');
+select pg_temp.ok(((select p from plans) ->> 'left')::int = 4, '... and the first said four were left');
+select public.claim_plan_step(((select p from plans) ->> 'id')::uuid, '00000000-0000-0000-0000-00000000000a', 100, 50);
+select pg_temp.ok((select steps from ai_plans where id = ((select p from plans) ->> 'id')::uuid) = 1, 'a step counts against the plan, with its tokens');
+select pg_temp.ok(pg_temp.fails($$select public.claim_plan_step(((select p from plans) ->> 'id')::uuid, '00000000-0000-0000-0000-00000000000c', 0, 0)$$), 'nobody else can use someone''s plan');

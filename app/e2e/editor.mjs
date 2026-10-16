@@ -20,7 +20,7 @@ const sheet = page.locator('.sheet-wrap');
 const shot = async n => { await wait(400); return page.screenshot({ path: `${OUT}/e-${n}.png` }); };
 
 await page.goto('http://localhost:8091/');
-await page.click('text=Plan your own trip');
+await page.click('text=Plan it myself');
 await sheet.waitFor();
 await sheet.getByLabel('Trip name').fill('Italy in May');
 await sheet.getByLabel('First day').fill('2027-05-01');

@@ -15,6 +15,8 @@ import { makeSample } from './model/sample';
 import { AccountLine, JoinSheet, SyncLine, joinCodeFromLink } from './ui/account';
 import { setMyName } from './sync/engine';
 import { Toast, useWaitingForMe } from './ui/requests';
+import { ThemeSwitch } from './ui/theme';
+import { PlannerSheet } from './ui/planner';
 
 export default function App() {
   const { trips, activeId, me } = useStore();
@@ -38,7 +40,7 @@ export default function App() {
 /* ---------- welcome ---------- */
 
 function Welcome({ trips }: { trips: Trip[] }) {
-  const [sheet, setSheet] = useState<'new' | 'copy' | 'join' | null>(null);
+  const [sheet, setSheet] = useState<'plan' | 'new' | 'copy' | 'join' | null>(null);
   const sample = useMemo(() => trips.find(t => t.sample) || makeSample(new Date()), [trips]);
   return (
     <div className="wrap" style={{ paddingBottom: 40 }}>
@@ -51,10 +53,13 @@ function Welcome({ trips }: { trips: Trip[] }) {
           </div>
           <div className="stripe">{(['violet', 'amber', 'red', 'green'] as const).map(c => <i key={c} style={{ ['--line' as string]: `var(--l-${c})` }} />)}</div>
         </header>
-        <button className="gobtn" style={{ width: '100%' }} onClick={openSample}>Explore a sample trip</button>
-        <button className="gobtn ghost" style={{ width: '100%' }} onClick={() => setSheet('new')}>Plan your own trip</button>
+        <button className="gobtn" style={{ width: '100%' }} onClick={() => setSheet('plan')}>Plan a trip for me</button>
+        <p className="hint" style={{ marginTop: 0 }}>Answer a few questions and Claude suggests where to go, for how long, where to stay, what to eat and see. Then change anything.</p>
+        <button className="gobtn ghost" style={{ width: '100%' }} onClick={openSample}>Explore a sample trip</button>
+        <button className="gobtn ghost" style={{ width: '100%' }} onClick={() => setSheet('new')}>Plan it myself</button>
         <p className="hint">The sample is a made-up ten days through Kyoto, Nara, Osaka and Tokyo, set so that today is day two. Like it? <button className="linkbtn" onClick={() => setSheet('copy')}>Start from the sample</button> and change it to suit you.</p>
         <button className="gobtn ghost" style={{ width: '100%' }} onClick={() => setSheet('join')}>Join a trip with a code</button>
+        {sheet === 'plan' && <PlannerSheet close={() => setSheet(null)} />}
         {sheet === 'new' && <NewTripSheet close={() => setSheet(null)} />}
         {sheet === 'join' && <JoinSheet close={() => setSheet(null)} />}
         {sheet === 'copy' && <CopySampleSheet src={sample} close={() => setSheet(null)} />}
@@ -71,7 +76,7 @@ function Welcome({ trips }: { trips: Trip[] }) {
             </ul>
           </section>
         )}
-        <div className="foot"><AccountLine /></div>
+        <div className="foot"><AccountLine /><ThemeSwitch /></div>
       </div>
     </div>
   );
@@ -195,6 +200,7 @@ function Footer({ trip, me, onSettings }: { trip: Trip; me: string; onSettings: 
         <div className="sin"><input id="me" className="search" style={{ paddingRight: 12 }} value={name} placeholder={trip.travelers[0] ? `e.g. ${trip.travelers[0]}` : 'Your name'}
           onChange={e => setName(e.target.value)} onBlur={() => { setMe(name); if (name.trim()) void setMyName(name.trim()); }} onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} /></div>
       </div>
+      <ThemeSwitch />
     </div>
   );
 }

@@ -10,6 +10,9 @@ import '@fontsource/zen-kaku-gothic-new/700.css'
 import '@fontsource/zen-kaku-gothic-new/900.css'
 import './index.css'
 import { restoreBackup, startNative } from './native'
+import { applyTheme } from './ui/theme'
+
+applyTheme()
 
 /* In the iPhone app, put back anything iOS cleared from storage before the app reads it.
    The rest loads afterwards, because the trip store and the sign-in read storage as they load. */

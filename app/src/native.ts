@@ -47,7 +47,9 @@ export async function startNative(onResume: () => void) {
   const [{ StatusBar, Style }, { SplashScreen }, { App }] = await Promise.all([
     import('@capacitor/status-bar'), import('@capacitor/splash-screen'), import('@capacitor/app'),
   ]);
-  try { await StatusBar.setStyle({ style: Style.Default }); } catch { /* not available */ }
+  /* the status bar follows the chosen appearance (ui/theme.tsx); Default follows the phone */
+  const theme = (() => { try { return JSON.parse(localStorage.getItem('wt-pref-theme') || '"auto"'); } catch { return 'auto'; } })();
+  try { await StatusBar.setStyle({ style: theme === 'dark' ? Style.Dark : theme === 'light' ? Style.Light : Style.Default }); } catch { /* not available */ }
   /* The plugin ignores hide() until its own launch fade-in has finished, and still reports success,
      so a call this early can be dropped and leave the launch screen up for good. Ask again a few
      times; once it is gone, further calls do nothing.

@@ -56,6 +56,8 @@ screenshots land in `e2e/out/`.
 - `src/model/rules.ts` – who may change what on a shared trip, and requests for the rest.
 - `src/ui/wallet.tsx` – the Wallet tab: tickets, bookings and private IDs; expenses, receipts,
   balances and Venmo. `src/model/money.ts` does the sums. `src/ui/photos.tsx` – each day's photos.
+- `src/ui/planner.tsx`, `src/model/planner.ts` – "Plan a trip for me": questions, an outline you
+  can change, then each city filled in by Claude (`supabase/functions/plan-trip`), made into a trip.
 - `src/sync/files.ts` – files kept on the phone (offline) and in the trip's private storage.
 - `src/ui/nearby.tsx`, `src/sync/nearby.ts` – "Something nearby" on Today: a mood, then five places
   from OpenStreetMap, picked by Claude (`supabase/functions/suggest-nearby`) on shared trips.

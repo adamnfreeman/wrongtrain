@@ -47,6 +47,11 @@ on a Mac.
   bucket under the trip's id (`src/sync/files.ts`); private paths start `private/` and are
   never uploaded.
 
+- "Plan a trip for me" (welcome screen, `src/ui/planner.tsx`): questions, then the `plan-trip`
+  function (outline, then web research and a plan per city; `supabase/functions/_shared/planner.ts`),
+  then `src/model/planner.ts` makes a normal trip. Plans are counted per person in `ai_plans`.
+- Appearance (like the phone / light / dark) at the bottom of every page (`src/ui/theme.tsx`).
+
 ## Commands (in `app/`)
 
 ```
@@ -91,9 +96,13 @@ Next:
 6. **"Something nearby"** (built Oct 16) on Today: pick a mood, get 5 places from OpenStreetMap
    (Overpass), chosen by Claude on shared trips (`suggest-nearby`), else the nearest. The public
    Overpass server will not do for many users: move to a paid places API or our own server.
-7. **Share my location / friend finder** (asked for Oct 16): see where everyone on the trip
+7. **Planner, part 2 onwards** (see the vision in Oct 16 notes): per-person budgets and tastes
+   on a shared trip, personal plans alongside the group's, "who's where"; in-the-moment help
+   (more moods done; "who's playing tonight" needs event listings); leave-now notifications and
+   real transit directions; step-by-step station guidance; "get me home" options; affiliate links.
+8. **Share my location / friend finder** (asked for Oct 16): see where everyone on the trip
    is, by choice and for a set time.
-8. Later: Sign in with Apple (needs the developer account), universal links so invite links
+9. Later: Sign in with Apple (needs the developer account), universal links so invite links
    open the app, a city list for guessing time zones (Kyoto, Florence and similar don't match
    an IANA zone name), editing the "Before you go" guides.
 

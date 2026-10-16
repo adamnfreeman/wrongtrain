@@ -380,6 +380,49 @@ revoke all on function public.ai_allowance(text), public.claim_ai_use(text, uuid
 grant execute on function public.ai_allowance(text), public.claim_ai_use(text, uuid, text), public.refund_ai_use(uuid)
   to service_role;
 
+-- "Plan it for me" (plan-trip function): one row per plan, counted per person since there is
+-- no shared trip yet. A plan covers its outline and the research and build for each stop.
+create table if not exists public.ai_plans (
+  id             uuid primary key default gen_random_uuid(),
+  user_id        uuid not null references auth.users (id) on delete cascade,
+  steps          integer not null default 0,
+  input_tokens   bigint not null default 0,
+  output_tokens  bigint not null default 0,
+  created_at     timestamptz not null default now()
+);
+create index if not exists ai_plans_user on public.ai_plans (user_id, created_at);
+alter table public.ai_plans enable row level security;
+-- no policies: only the function reads and writes it
+
+-- Starts a plan if the person has plans left this month (5 for now). Returns its id and how many are left.
+create or replace function public.claim_plan(user_id uuid)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare u uuid := user_id; used integer; cap integer := 5; r uuid;
+begin
+  perform pg_advisory_xact_lock(hashtext(u::text));  -- one claim at a time per person
+  select count(*) into used from ai_plans p where p.user_id = u and p.created_at > now() - interval '30 days';
+  if used >= cap then raise exception 'plan allowance used up'; end if;
+  insert into ai_plans (user_id) values (u) returning id into r;
+  return jsonb_build_object('id', r, 'left', cap - used - 1);
+end $$;
+
+-- One more step of a plan (research or build for a stop), up to 40 per plan.
+create or replace function public.claim_plan_step(plan_id uuid, user_id uuid, input_tokens bigint, output_tokens bigint)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  update ai_plans p set steps = steps + 1, input_tokens = p.input_tokens + claim_plan_step.input_tokens, output_tokens = p.output_tokens + claim_plan_step.output_tokens
+    where p.id = plan_id and p.user_id = claim_plan_step.user_id and p.steps < 40;
+  if not found then raise exception 'plan not found or used up'; end if;
+end $$;
+
+create or replace function public.refund_plan(plan_id uuid)
+returns void language sql security definer set search_path = public as $$
+  delete from ai_plans where id = plan_id and steps = 0;
+$$;
+
+revoke all on function public.claim_plan(uuid), public.claim_plan_step(uuid, uuid, bigint, bigint), public.refund_plan(uuid) from public, anon, authenticated;
+grant execute on function public.claim_plan(uuid), public.claim_plan_step(uuid, uuid, bigint, bigint), public.refund_plan(uuid) to service_role;
+
 -- ---------- files and photos ----------
 
 -- Scans, tickets, receipts and photos, stored under the trip's id ("<trip id>/<file>"). Private

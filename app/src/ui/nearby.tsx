@@ -11,7 +11,8 @@ import { Ext, SecH } from './bits';
 import { useApp } from './ctx';
 
 const KIND: Record<Mood, PlaceKind> = {
-  food: 'food', coffee: 'coffee', drinks: 'food', rest: 'area', sights: 'sight', culture: 'sight', adventure: 'sight', film: 'event', shopping: 'shop',
+  food: 'food', coffee: 'coffee', drinks: 'food', sights: 'sight', culture: 'sight', offbeat: 'sight', music: 'event',
+  adventure: 'sight', chill: 'area', spa: 'other', film: 'event', shopping: 'shop',
 };
 
 export function Nearby() {

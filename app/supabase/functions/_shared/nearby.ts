@@ -9,15 +9,18 @@
 
 /** The moods to choose from. Each is a set of OpenStreetMap tags; a value is a regular expression. */
 export const MOODS = [
-  { key: 'food', label: 'Food', tags: [['amenity', '^(restaurant|fast_food|food_court)$']] },
-  { key: 'coffee', label: 'Coffee & cake', tags: [['amenity', '^(cafe|ice_cream)$'], ['shop', '^(bakery|pastry|confectionery)$']] },
-  { key: 'drinks', label: 'Drinks', tags: [['amenity', '^(bar|pub|biergarten|nightclub)$']] },
-  { key: 'rest', label: 'Rest', tags: [['leisure', '^(park|garden|spa|sauna)$'], ['amenity', '^public_bath$'], ['natural', '^beach$']] },
-  { key: 'sights', label: 'Sightseeing', tags: [['tourism', '^(attraction|viewpoint)$'], ['historic', '^(castle|monument|memorial|ruins|archaeological_site|city_gate|building|church|temple|shrine)$']] },
-  { key: 'culture', label: 'Culture', tags: [['tourism', '^(museum|gallery)$'], ['amenity', '^(theatre|arts_centre)$']] },
-  { key: 'adventure', label: 'Adventure', tags: [['tourism', '^(zoo|aquarium|theme_park)$'], ['leisure', '^(nature_reserve|water_park|escape_game|amusement_arcade|ice_rink|climbing|trampoline_park)$'], ['sport', '^climbing$']] },
-  { key: 'film', label: 'A film', tags: [['amenity', '^cinema$']] },
-  { key: 'shopping', label: 'Shopping', tags: [['shop', '^(mall|department_store|clothes|books|gift|shoes|second_hand|antiques|music|art|craft|games)$'], ['amenity', '^marketplace$']] },
+  { key: 'food', label: 'Food', hint: 'somewhere to eat', tags: [['amenity', '^(restaurant|fast_food|food_court)$']] },
+  { key: 'coffee', label: 'Coffee & cake', hint: 'coffee, cake or a sweet', tags: [['amenity', '^(cafe|ice_cream)$'], ['shop', '^(bakery|pastry|confectionery)$']] },
+  { key: 'drinks', label: 'Drinks', hint: 'a bar or pub', tags: [['amenity', '^(bar|pub|biergarten|nightclub)$']] },
+  { key: 'sights', label: 'Sightseeing', hint: 'the sights worth seeing', tags: [['tourism', '^(attraction|viewpoint)$'], ['historic', '^(castle|monument|memorial|ruins|archaeological_site|city_gate|building|church|temple|shrine)$']] },
+  { key: 'culture', label: 'Culture', hint: 'museums, galleries and theatre', tags: [['tourism', '^(museum|gallery)$'], ['amenity', '^(theatre|arts_centre)$']] },
+  { key: 'offbeat', label: 'Offbeat & weird', hint: 'strange, quirky, one-of-a-kind places; not standard history museums or the usual sights', tags: [['tourism', '^(attraction|museum|gallery|artwork)$'], ['amenity', '^(arts_centre|music_venue)$'], ['leisure', '^(escape_game|amusement_arcade)$']] },
+  { key: 'music', label: 'Live music', hint: 'somewhere with live music', tags: [['amenity', '^(music_venue|nightclub)$'], ['live_music', '^yes$']] },
+  { key: 'adventure', label: 'Adventure', hint: 'something active or exciting', tags: [['tourism', '^(zoo|aquarium|theme_park)$'], ['leisure', '^(nature_reserve|water_park|escape_game|amusement_arcade|ice_rink|climbing|trampoline_park)$'], ['sport', '^climbing$']] },
+  { key: 'chill', label: 'Chill & people-watch', hint: 'somewhere to sit and watch the world go by', tags: [['leisure', '^(park|garden)$'], ['tourism', '^viewpoint$'], ['outdoor_seating', '^yes$']] },
+  { key: 'spa', label: 'Massage & spa', hint: 'a massage, spa or bath', tags: [['shop', '^massage$'], ['leisure', '^(spa|sauna)$'], ['amenity', '^public_bath$']] },
+  { key: 'film', label: 'A film', hint: 'a cinema', tags: [['amenity', '^cinema$']] },
+  { key: 'shopping', label: 'Shopping', hint: 'interesting shops', tags: [['shop', '^(mall|department_store|clothes|books|gift|shoes|second_hand|antiques|music|art|craft|games|electronics|anime)$'], ['amenity', '^marketplace$']] },
 ] as const;
 export type Mood = (typeof MOODS)[number]['key'];
 export const isMood = (s: unknown): s is Mood => MOODS.some(m => m.key === s);
@@ -110,7 +113,7 @@ Use only ids from the list.`;
 
 /** The message for Claude: mood, time and the candidates, kept short. */
 export function nearbyPrompt(mood: Mood, localTime: string, candidates: Candidate[]): string {
-  const label = MOODS.find(m => m.key === mood)!.label;
+  const m = MOODS.find(x => x.key === mood)!, label = `${m.label} (${m.hint})`;
   const lines = candidates.slice(0, 40).map(c => [c.id, c.name, c.what, `${c.dist} m`, c.hours ? `hours: ${c.hours}` : ''].filter(Boolean).join(' | '));
   return `Mood: ${label}\nLocal time: ${localTime}\n\nPlaces (id | name | what | distance | hours):\n${lines.join('\n')}`;
 }

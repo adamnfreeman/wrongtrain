@@ -24,7 +24,7 @@ check(await page.locator('text=Join a trip with a code').count() === 1, 'welcome
 check(await page.locator('.acct >> text=Sign in').count() === 1, 'welcome offers signing in');
 
 /* a trip of your own, then share it */
-await page.click('text=Plan your own trip');
+await page.click('text=Plan it myself');
 await sheet.getByLabel('Stop 1').fill('Lisbon');
 await sheet.getByText('Create').click();
 await page.click('button:has-text("Trip settings")');

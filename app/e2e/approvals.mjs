@@ -33,7 +33,7 @@ const shareAs = async role => {
 };
 
 await page.goto('http://localhost:8093/');
-await page.click('text=Plan your own trip');
+await page.click('text=Plan it myself');
 await sheet.getByLabel('Stop 1').fill('Lisbon');
 await sheet.getByText('Create').click();
 await page.waitForSelector('.tabs');

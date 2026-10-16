@@ -23,7 +23,7 @@ const sheet = page.locator('.sheet-wrap').last();
 const stored = () => page.evaluate(() => JSON.parse(localStorage.getItem('wrongtrain')).trips[0]);
 
 await page.goto('http://localhost:8095/');
-await page.click('text=Plan your own trip');
+await page.click('text=Plan it myself');
 await sheet.getByLabel('Stop 1').fill('Kyoto');
 await sheet.getByText('Create').click();
 await page.waitForSelector('.tabs');

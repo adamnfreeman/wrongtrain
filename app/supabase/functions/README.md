@@ -43,6 +43,20 @@ provider or run our own Overpass.
 Deploy it with step 4 below, using `suggest-nearby` in place of `file-note`. It uses the same
 `ANTHROPIC_API_KEY` secret.
 
+## plan-trip: "Plan a trip for me"
+
+The welcome screen's planner asks a few questions (where, when, how long, who and where each
+starts from, budget, tastes, pace, planned or loose days, food needs), then calls this function
+in three steps so each fits the time limit: `outline` (cities, nights, how to get between them),
+then for each city `research` (Claude with web search, for current hotels, food and sights) and
+`build` (the notes as hotels, places and days in JSON). `_shared/planner.ts` has the prompts and
+schemas; `src/model/planner.ts` turns the result into a trip. Research stops at 2 minutes and
+uses what it found.
+
+It needs sign-in, not a shared trip: plans are counted per person in `ai_plans` (5 a month for
+now; `claim_plan` in `schema.sql`). Deploy it with step 4 below, using `plan-trip`. It uses the
+same `ANTHROPIC_API_KEY` secret.
+
 ## Setting it up
 
 Do these once, in this order. The app works without them: notes just stay as notes, and

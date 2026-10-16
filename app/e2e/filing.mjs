@@ -21,7 +21,7 @@ const stored = () => page.evaluate(() => JSON.parse(localStorage.getItem('wrongt
 /* a trip of our own to share */
 await ctx.route(/supabase\.co/, r => r.abort('internetdisconnected'));
 await page.goto('http://localhost:8094/');
-await page.click('text=Plan your own trip');
+await page.click('text=Plan it myself');
 const sheet = page.locator('.sheet-wrap').last();
 await sheet.getByLabel('Stop 1').fill('Lisbon');
 await sheet.getByText('Create').click();
