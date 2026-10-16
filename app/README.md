@@ -8,8 +8,20 @@ npm install
 npm run dev     # local preview
 npm run build   # typecheck and production build into dist/
 npm test        # unit tests for the trip model and editing
-npm run e2e     # build, then drive every screen and the editor in headless Chromium
+npm run e2e     # build, then drive every screen, the editor and sharing in headless Chromium
+npm run e2e:live  # sharing, joining and live updates against the real Supabase project
 ```
+
+`e2e:live` signs in three throwaway anonymous users, so "Allow anonymous sign-ins" must be on
+in Supabase while it runs; it deletes everything it creates. Behind a proxy, run it with
+`NODE_USE_ENV_PROXY=1`.
+
+## Shared trips
+
+`supabase/schema.sql` sets up the database: paste it into the Supabase SQL Editor and run it
+(safe to run again). `supabase/test/run.sh` checks its access rules on a local Postgres.
+`src/sync/` keeps shared trips in step: saves carry the version they were based on, a refused
+save is merged (`model/merge.ts`) and sent again, and other people's saves arrive live.
 
 The browser tests need Python 3 (for a local web server) and Playwright's Chromium;
 screenshots land in `e2e/out/`.
@@ -26,4 +38,4 @@ screenshots land in `e2e/out/`.
   Days always stay consecutive: inserting or deleting a day re-dates the ones after it.
 - `src/ui/editors.tsx` – the edit sheets: new trip, trip settings, day, leg, place, to-do.
 
-Trips are saved in localStorage on the phone. Group sync comes next.
+Trips are saved in localStorage on the phone; shared ones also sync through Supabase.

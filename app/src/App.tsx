@@ -11,17 +11,31 @@ import { Phrases } from './ui/phrases';
 import { Search } from './ui/search';
 import { CopySampleSheet, DayEditor, LegEditor, NewTripSheet, PlaceEditor, TodoEditor, TripSettings, type Edit } from './ui/editors';
 import { makeSample } from './model/sample';
+import { AccountLine, JoinSheet, SyncLine, joinCodeFromLink } from './ui/account';
+import { setMyName } from './sync/engine';
 
 export default function App() {
   const { trips, activeId, me } = useStore();
   const trip = trips.find(t => t.id === activeId);
-  return trip ? <TripApp key={trip.id} trip={trip} me={me} /> : <Welcome trips={trips} />;
+  /* an invite link (…#join=CODE) opens the join sheet over whatever is showing */
+  const [join, setJoin] = useState(joinCodeFromLink);
+  useEffect(() => {
+    const f = () => { const c = joinCodeFromLink(); if (c) setJoin(c); };
+    window.addEventListener('hashchange', f);
+    return () => window.removeEventListener('hashchange', f);
+  }, []);
+  return (
+    <>
+      {trip ? <TripApp key={trip.id} trip={trip} me={me} /> : <Welcome trips={trips} />}
+      {join && <JoinSheet initial={join} close={() => setJoin('')} />}
+    </>
+  );
 }
 
 /* ---------- welcome ---------- */
 
 function Welcome({ trips }: { trips: Trip[] }) {
-  const [sheet, setSheet] = useState<'new' | 'copy' | null>(null);
+  const [sheet, setSheet] = useState<'new' | 'copy' | 'join' | null>(null);
   const sample = useMemo(() => trips.find(t => t.sample) || makeSample(new Date()), [trips]);
   return (
     <div className="wrap" style={{ paddingBottom: 40 }}>
@@ -37,7 +51,9 @@ function Welcome({ trips }: { trips: Trip[] }) {
         <button className="gobtn" style={{ width: '100%' }} onClick={openSample}>Explore a sample trip</button>
         <button className="gobtn ghost" style={{ width: '100%' }} onClick={() => setSheet('new')}>Plan your own trip</button>
         <p className="hint">The sample is a made-up ten days through Kyoto, Nara, Osaka and Tokyo, set so that today is day two. Like it? <button className="linkbtn" onClick={() => setSheet('copy')}>Start from the sample</button> and change it to suit you.</p>
+        <button className="gobtn ghost" style={{ width: '100%' }} onClick={() => setSheet('join')}>Join a trip with a code</button>
         {sheet === 'new' && <NewTripSheet close={() => setSheet(null)} />}
+        {sheet === 'join' && <JoinSheet close={() => setSheet(null)} />}
         {sheet === 'copy' && <CopySampleSheet src={sample} close={() => setSheet(null)} />}
         {trips.length > 0 && (
           <section className="sec">
@@ -52,6 +68,7 @@ function Welcome({ trips }: { trips: Trip[] }) {
             </ul>
           </section>
         )}
+        <div className="foot"><AccountLine /></div>
       </div>
     </div>
   );
@@ -149,16 +166,18 @@ function Footer({ trip, me, onSettings }: { trip: Trip; me: string; onSettings: 
   const [name, setName] = useState(me);
   return (
     <div className="foot">
+      <SyncLine trip={trip} />
       <p>
         {trip.sample ? 'This is the sample trip. Ticks and notes are saved on this phone only. ' : 'Saved on this phone. '}
         <button className="linkbtn" onClick={() => selectTrip(null)}>All trips</button>
         {trip.sample && <> · <button className="linkbtn" onClick={resetSample}>Start the sample over</button></>}
         {' · '}<button className="linkbtn" onClick={onSettings}>Trip settings</button>
       </p>
+      <AccountLine />
       <label className="lbl" htmlFor="me">Your name, for notes and ticks</label>
       <div className="sbar" style={{ marginTop: 6 }}>
         <div className="sin"><input id="me" className="search" style={{ paddingRight: 12 }} value={name} placeholder={trip.travelers[0] ? `e.g. ${trip.travelers[0]}` : 'Your name'}
-          onChange={e => setName(e.target.value)} onBlur={() => setMe(name)} onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} /></div>
+          onChange={e => setName(e.target.value)} onBlur={() => { setMe(name); if (name.trim()) void setMyName(name.trim()); }} onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} /></div>
       </div>
     </div>
   );

@@ -10,6 +10,7 @@ import { addTrip, deleteTrip, getState, patchTrip } from '../model/store';
 import { KIND_LABEL, cityOf, indexTrip } from '../model/trip';
 import { addDays, longDate, todayIn } from '../model/time';
 import { PACKS } from '../phrases';
+import { Sharing } from './account';
 import { Check, Choice, DeleteButton, Field, Lines, PinPicker, Segs, Sheet, Swatches, Text, ZonePicker, guessZone, phoneZone, zoneLabel } from './form';
 
 export type Edit =
@@ -277,11 +278,13 @@ export function TripSettings({ trip, close }: Props) {
   };
   return (
     <Sheet title="Trip settings" onCancel={close} onSave={commit}
-      footer={<DeleteButton label="Delete this trip" confirmText={`Delete “${trip.name}” from this phone? This cannot be undone.`} onDelete={() => { close(); deleteTrip(trip.id); }} />}>
+      footer={!getState().sync[trip.id] && <DeleteButton label="Delete this trip" confirmText={`Delete “${trip.name}” from this phone? This cannot be undone.`} onDelete={() => { close(); deleteTrip(trip.id); }} />}>
       <Text label="Trip name" value={name} onChange={setName} />
       <Text label="First day" type="date" value={start} onChange={setStartDate} hint={trip.days.length ? `${trip.days.length} days, ending ${longDate(addDays(start, trip.days.length - 1))}. Moving the first day moves the whole trip.` : undefined} />
       <Text label="Who's going" value={people} onChange={setPeople} placeholder="Names, separated by commas" />
       <Choice label="Phrases" value={pack} onChange={setPack} options={packOptions} hint="The language on the Phrases tab." />
+      <h3 className="fsec">Sharing</h3>
+      <Sharing trip={trip} onLeft={close} />
       <h3 className="fsec">Destinations</h3>
       <ul className="sheet">
         {dests.map(d => {

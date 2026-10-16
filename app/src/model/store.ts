@@ -1,19 +1,31 @@
 /* Trips saved on this phone.
 
    Everything lives in one localStorage record so it opens instantly and works with no signal.
-   Group sync will sit behind the same actions later: screens call these functions and never
-   touch storage themselves. */
+   Screens call these functions and never touch storage themselves. For a shared trip, the sync
+   engine (sync/engine.ts) hears about every change through onTripChange and sends it on. */
 import { useSyncExternalStore } from 'react';
 import type { Trip } from './types';
 import { addDays, daysBetween, todayIn } from './time';
 import { newId } from './trip';
 import { makeSample } from './sample';
 
+/** What this phone knows about a shared trip's server copy. */
+export interface SyncInfo {
+  /** Server version this phone's copy is based on. */
+  version: number;
+  /** The server copy at that version, for merging when someone else saves first. */
+  base: Trip;
+  /** Changed here since the last save reached the server. */
+  dirty: boolean;
+}
+
 interface State {
   trips: Trip[];
   activeId: string | null;
   /** Your display name on this phone, used for notes and ticks. */
   me: string;
+  /** Shared trips, by id. A trip with no entry lives only on this phone. */
+  sync: Record<string, SyncInfo>;
 }
 
 const KEY = 'wrongtrain';
@@ -22,15 +34,24 @@ const listeners = new Set<() => void>();
 function load(): State {
   try {
     const s = JSON.parse(localStorage.getItem(KEY) || 'null') as State | null;
-    if (s && Array.isArray(s.trips)) return { ...s, trips: s.trips.map(t => (t.sample ? keepSampleCurrent(t) : t)) };
+    if (s && Array.isArray(s.trips)) return { ...s, sync: s.sync || {}, trips: s.trips.map(t => (t.sample ? keepSampleCurrent(t) : t)) };
   } catch { /* storage blocked or corrupt: start empty */ }
-  return { trips: [], activeId: null, me: '' };
+  return { trips: [], activeId: null, me: '', sync: {} };
 }
 
 let state: State = load();
 
 function save() {
   try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* full or blocked: keep going in memory */ }
+}
+
+let changeHook: ((tripId: string) => void) | null = null;
+/** The sync engine registers here to hear about every change to a trip. */
+export const onTripChange = (f: (tripId: string) => void) => { changeHook = f; };
+
+/** Low-level write for the sync engine: trips and sync records together. */
+export function setSynced(trips: Trip[], sync: Record<string, SyncInfo>, activeId = state.activeId) {
+  set({ trips, sync, activeId });
 }
 
 function set(next: Partial<State>) {
@@ -60,6 +81,7 @@ function keepSampleCurrent(t: Trip): Trip {
 /** Applies a change to one trip and saves it. Every edit goes through here. */
 export function patchTrip(id: string, f: (t: Trip) => Trip) {
   set({ trips: state.trips.map(t => (t.id === id ? { ...f(t), updatedAt: new Date().toISOString() } : t)) });
+  changeHook?.(id);
 }
 
 /* ---------- actions ---------- */
@@ -83,8 +105,10 @@ export function addTrip(t: Trip) {
   set({ trips: [...state.trips, t], activeId: t.id });
 }
 
+/** Removes a trip from this phone (a shared trip stays online for everyone else). */
 export function deleteTrip(id: string) {
-  set({ trips: state.trips.filter(t => t.id !== id), activeId: state.activeId === id ? null : state.activeId });
+  const sync = { ...state.sync }; delete sync[id];
+  set({ trips: state.trips.filter(t => t.id !== id), activeId: state.activeId === id ? null : state.activeId, sync });
 }
 
 export const setMe = (me: string) => set({ me: me.trim() });

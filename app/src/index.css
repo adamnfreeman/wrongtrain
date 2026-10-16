@@ -274,3 +274,13 @@ select.input { background-image: linear-gradient(45deg, transparent 50%, var(--m
 .swatch[aria-checked="true"] { box-shadow: 0 0 0 3px var(--ink) }
 .pinmap { height: 240px; min-height: 240px; margin-top: 0 }
 .destedit { margin-top: 6px; padding-top: 4px; border-top: 1px dashed var(--rule) }
+
+/* ---------- sharing ---------- */
+.syncline { margin: 0 0 8px; font-weight: 600; color: var(--ok) }
+.syncline.waiting, .syncline.signedout { color: var(--muted) }
+.syncline.error { color: var(--warn) }
+.syncline.saving { color: var(--muted) }
+.acct { margin-top: 10px }
+.invite { margin-top: 14px; padding: 14px; background: var(--card); border: 1px solid var(--rule); border-radius: 12px; text-align: center }
+.code { font: 700 34px/1.2 var(--f-data); letter-spacing: .12em; margin: 8px 0 }
+.chipbtn:disabled { opacity: .5; cursor: default }
