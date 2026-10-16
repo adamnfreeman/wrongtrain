@@ -115,11 +115,27 @@ Next:
 9. **Wallet and Phrases extras** (asked for Oct 16): a currency calculator (type an amount in
    either currency; rates already come from Frankfurter for Money); more phrase languages
    (packs in `src/phrases`); starring phrases so favourites sit at the top, and reordering them.
-10. Later: Sign in with Apple (needs the developer account), universal links so invite links
+10. **Look and feel fixes** (asked for Oct 16, for later): move "The whole route" to the Trip
+    page (not Days); the Days slider still doesn't sit right at the top on the phone (check in
+    the Simulator, which has the notch); the swipe between pages bounces on some pages, such as
+    Phrases (make it the same on every page, or take it out); put Today's sections back unfolded
+    (folding felt less natural than expected).
+11. Later: Sign in with Apple (needs the developer account), universal links so invite links
    open the app, a city list for guessing time zones (Kyoto, Florence and similar don't match
    an IANA zone name), editing the "Before you go" guides.
+
+## Working together
+
+Two people work on this at once: Adam (adam@thefreemans.io, the technical side) and Andrea
+(andrea@thefreemans.io, design). So that neither overwrites the other:
+
+- Never commit straight to `app`. Start a branch off `app` for each piece of work
+  (`andrea/…` or `adam/…`), and bring it in with a pull request into `app`.
+- Before starting, pull the latest `app`. Look and feel lives mostly in `src/index.css` and
+  `src/ui/`; tell the other person before a big change there.
+- Design work needs only `npm run dev` in a browser; Xcode is only for putting it on a phone.
 
 ## Conventions
 
 - Plain, specific wording in the UI and in comments; comments explain why.
-- Commit as Adam (adam@thefreemans.io).
+- Commit as whoever is doing the work (their own name and @thefreemans.io email).
