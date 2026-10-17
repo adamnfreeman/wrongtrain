@@ -82,6 +82,12 @@ on a Mac.
   on and is sent every minute or after 30 m (`trip_locations`, written only through
   `share_location`, seen only by people on the trip and only until then). Friends show on the map
   with their picture, in a list with distance and directions. Not in the Japan edition.
+- Photos (Photos tab, after Days; `PhotosPage` in `src/ui/photos.tsx`, `src/sync/photos.ts`): the
+  whole group's photos by day or by person, also under each day. In the viewer people heart a
+  photo (`photo_hearts`, once each), comment (`photo_comments`; the writer or an organizer
+  removes one) and Share it through the phone's share sheet (Instagram, Messages, Save Image;
+  `sharePath` in `src/sync/files.ts`). Hearts and comments are kept on the phone to show offline,
+  but need signal to add. The sample has made-up ones. Not in the Japan edition.
 - Profile pictures (`src/ui/avatar.tsx`): chosen on Account & settings, cropped and shrunk on the
   phone to a ~10 KB JPEG, kept on the phone and on each trip you're on (`trip_members.avatar`,
   readable only by people on that trip). Shown on the corner button, the people list and group
@@ -160,7 +166,7 @@ Touch nothing else on `main`. GitHub Pages updates within a couple of minutes.
 ## Waiting to be switched on (Adam, when ready; not now)
 
 Built and tested, but they need the website-account steps before they work on shared trips:
-- Run the updated `schema.sql` in Supabase (levels of say, profile pictures, where everyone is, invites, deleting shared trips, joiners on Who's going; also item 1 below).
+- Run the updated `schema.sql` in Supabase again (Oct 17: hearts and comments on photos; earlier: levels of say, profile pictures, where everyone is, invites, deleting shared trips, joiners on Who's going; also item 1 below).
 - Deploy the ideas box (`file-note`; item 2 below).
 - Change email (Account & settings → Change email, `ChangeEmailSheet` in `src/ui/account.tsx`):
   in Supabase, Authentication → Emails → "Change email address", make the message show the code
@@ -211,9 +217,6 @@ Next:
    look (it's Adam's quick take: huge time, leave-by box, big ticket and directions buttons). Then:
    live platforms and gates (needs a train or flight info service), a "get there" step list,
    a notification when it opens with the app closed (needs the iOS app and push).
-17. **A photo section** (asked for Oct 16): one place for the whole group's photos from the trip
-   (today they sit under each day, `src/ui/photos.tsx`, rows in `trip_photos`): browse by day or
-   person, see who added what, save to your phone.
 19. **Freemium and how to pay for the AI** (asked for Oct 16; to discuss before building).
    Claude calls cost real money (planner, ideas box, Something nearby). Options to weigh: a free
    tier with limits plus a per-trip pass (`trip_passes` exists), a subscription, or both, and
@@ -231,7 +234,6 @@ Next:
 23. **Places, broken down**: pick a category (with icons, like "Something nearby") and a
    location, instead of one long overwhelming list; for food, types of food (icons would do).
 24. **"Something nearby" moods**: "Coffee & cake" becomes just "Coffee"; an icon for each mood.
-25. **Photos as their own page**, with comments and hearts (builds on 17).
 32. **Adding things should be the star** (Adam: a big feature is "add anything and it lands in the
    right place"). Today it's tucked into To do as Group notes. Give it its own page or a
    prominent way in from everywhere (see VISION.md, "Just say it").

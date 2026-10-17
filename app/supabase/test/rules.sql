@@ -188,11 +188,27 @@ insert into trip_photos (trip_id, path, thumb, taken_at) values ('t3', 't3/p1.jp
 select pg_temp.ok((select author_name from trip_photos where path = 't3/p1.jpg') = 'Cat', 'a photo added shows the name she has on the trip');
 select pg_temp.ok(pg_temp.fails($$insert into trip_photos (trip_id, path, thumb) values ('t3', 'other/p.jpg', 'other/p.t.jpg')$$), 'a photo must be stored under its trip');
 select pg_temp.ok(pg_temp.fails($$update trip_photos set path = 't3/other.jpg'$$), 'a photo''s file cannot be swapped');
+insert into photo_hearts (photo_id, trip_id) select id, 't3' from trip_photos where path = 't3/p1.jpg';
+select pg_temp.ok((select author_name from photo_hearts) = 'Cat', 'someone on the trip hearts a photo, under her trip name');
+select pg_temp.ok(pg_temp.fails($$insert into photo_hearts (photo_id, trip_id) select id, 't3' from trip_photos where path = 't3/p1.jpg'$$), '... once');
+insert into photo_comments (photo_id, trip_id, text) select id, 't3', 'Love this' from trip_photos where path = 't3/p1.jpg';
+select pg_temp.ok((select author_name from photo_comments where text = 'Love this') = 'Cat', '... and comments on it');
+select pg_temp.ok(pg_temp.fails($$insert into photo_comments (photo_id, trip_id, text) select id, 't3', '' from trip_photos where path = 't3/p1.jpg'$$), 'an empty comment is refused');
+select pg_temp.ok(pg_temp.fails($$insert into photo_comments (photo_id, trip_id, text) select id, 'nope', 'x' from trip_photos where path = 't3/p1.jpg'$$), 'a comment must be on the photo''s own trip');
+select pg_temp.ok(pg_temp.fails($$update photo_comments set text = 'changed'$$), 'a comment cannot be rewritten');
 
 select pg_temp.act('');
 select pg_temp.ok((select count(*) from storage.objects where bucket_id = 'trip-files') = 0, 'signed out, no trip files can be seen');
 select pg_temp.act('ana');
 select pg_temp.ok((select count(*) from trip_photos) = 1 and (select count(*) from storage.objects where name like 't3/%') = 1, 'the owner sees the trip''s photos and files');
+select pg_temp.ok((select count(*) from photo_hearts) = 1 and (select count(*) from photo_comments) = 1, 'the owner sees hearts and comments');
+delete from photo_hearts;
+select pg_temp.ok((select count(*) from photo_hearts) = 1, '... but cannot take back someone else''s heart');
+delete from photo_comments;
+select pg_temp.ok((select count(*) from photo_comments) = 0, '... and can remove a comment');
+select pg_temp.act('');
+select pg_temp.ok((select count(*) from photo_hearts) = 0, 'signed out, no hearts can be seen');
+select pg_temp.act('ana');
 delete from trip_photos where path = 't3/p1.jpg';
 delete from storage.objects where name = 't3/scan.jpg';
 select pg_temp.ok((select count(*) from trip_photos) = 0 and (select count(*) from storage.objects where name like 't3/%') = 0, '... and can remove ones others added');

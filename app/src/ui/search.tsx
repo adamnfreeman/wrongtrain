@@ -5,7 +5,7 @@ import { Empty } from './bits';
 import { useApp, type Tab } from './ctx';
 
 const ORDER: Group[] = ['Days', 'Transit', 'Places', 'Map', 'Phrases', 'To do', 'Notes'];
-const FIRST: Record<Tab, Group[]> = { today: ['Days'], days: ['Days'], transit: ['Transit'], places: ['Places'], map: ['Places'], phrases: ['Phrases'], wallet: ['To do'], trip: ['Days', 'Places'], prep: ['To do', 'Notes'], now: ['Transit', 'Days'] };
+const FIRST: Record<Tab, Group[]> = { today: ['Days'], days: ['Days'], photos: ['Days'], transit: ['Transit'], places: ['Places'], map: ['Places'], phrases: ['Phrases'], wallet: ['To do'], trip: ['Days', 'Places'], prep: ['To do', 'Notes'], now: ['Transit', 'Days'] };
 const OPEN: Record<NonNullable<Entry['go']>, string> = { transit: 'Transit', places: 'Places', prep: 'To do', phrases: 'Phrases to hear it', map: 'Map' };
 
 /** Marks each search term inside the text. */

@@ -327,7 +327,7 @@ select.input { background-image: linear-gradient(45deg, transparent 50%, var(--m
 .pview .linkbtn.bad { color: #ff9a93 }
 .pview-bar, .pview-foot { display: flex; align-items: center; gap: 12px; padding: 10px 16px; font-size: 14px }
 .pview-bar span { flex: 1; text-align: center; color: #bbb }
-.pview-img { flex: 1; display: grid; place-items: center; overflow: hidden }
+.pview-img { flex: 1; min-height: 0; display: grid; place-items: center; overflow: hidden }
 .pview-img img { max-width: 100%; max-height: 100%; object-fit: contain }
 
 .themesw { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 16px }
@@ -546,3 +546,25 @@ select.input { background-image: linear-gradient(45deg, transparent 50%, var(--m
 .crop { position: relative; margin: 14px auto 10px; border-radius: 999px; overflow: hidden; touch-action: none; background: #000; cursor: grab }
 .crop img { position: absolute; left: 50%; top: 50%; max-width: none; user-select: none; pointer-events: none }
 .cropzoom { display: block; width: 240px; margin: 0 auto }
+
+/* Photos page and viewer (ui/photos.tsx) */
+.pthumb .phearts { position: absolute; right: 6px; bottom: 6px; font: 700 11px/1 var(--f-body); font-style: normal; color: #fff;
+  background: rgba(0,0,0,.55); padding: 4px 6px; border-radius: 999px }
+.pview-who { display: flex; gap: 10px; align-items: flex-start; padding: 10px 16px 4px }
+.pview-who b { display: block; font-size: 15px }
+.pview-who small { display: block; color: #aaa; font-size: 12px; margin-top: 2px }
+.pview-who span { display: block; font-size: 14px; margin-top: 4px; color: #ddd }
+.pview-acts { display: flex; align-items: center; gap: 8px; padding: 6px 12px }
+.pview-acts .linkbtn { font-size: 26px; padding: 0 10px }
+.pact { appearance: none; border: 1px solid #333; background: #111; color: #fff; border-radius: 999px; padding: 8px 14px;
+  font: 600 14px/1 var(--f-body); display: inline-flex; align-items: center; gap: 6px; cursor: pointer }
+.pact span { font-size: 18px; line-height: 1 }
+.pact.on { border-color: #ff5a7a }
+.pact[aria-pressed="true"] span { color: #ff5a7a }
+.pview-liked { margin: 0; padding: 0 16px 6px; color: #bbb; font-size: 13px }
+.pview-talk { max-height: 38vh; overflow-y: auto; padding: 4px 16px 10px; border-top: 1px solid #222 }
+.pcomment { display: flex; gap: 8px; align-items: flex-start; padding: 6px 0 }
+.pcomment p { margin: 0; flex: 1; font-size: 14px; line-height: 1.35 }
+.pcomment .linkbtn { color: #888; font-size: 13px }
+.pcomment-new { display: flex; gap: 8px; align-items: center; padding-top: 6px }
+.pcomment-new input { flex: 1; background: #1a1a1a; border: 1px solid #333; color: #fff; border-radius: 999px; padding: 10px 14px; font: 15px var(--f-body) }

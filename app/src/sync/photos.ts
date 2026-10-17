@@ -25,17 +25,26 @@ export interface Photo {
   created_at?: string;
   /** Still on this phone, waiting for signal. */
   local?: boolean;
+  /** A sample photo: a drawing in public/sample, shown as it is. */
+  src?: string;
 }
+
+export interface Heart { photo_id: string; user_id: string; author_name: string }
+export interface Comment { id: string; photo_id: string; user_id: string | null; author_name: string; text: string; created_at: string }
+/** Hearts and comments for one trip's photos. */
+export interface Talk { hearts: Heart[]; comments: Comment[] }
+
 
 const CACHE = 'wt-photos', QUEUE = 'wt-photo-queue';
 const load = <T,>(k: string, d: T): T => { try { return JSON.parse(localStorage.getItem(k) || 'null') ?? d; } catch { return d; } };
 const keepJson = (k: string, v: unknown) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* full */ } };
 
 let rows: Record<string, Photo[]> = load(CACHE, {});
+let talk: Record<string, Talk> = load('wt-photo-talk', {});
 let queue: Photo[] = load(QUEUE, []);
 const listeners = new Set<() => void>();
-let snap = { rows, queue };
-const changed = () => { snap = { rows, queue }; keepJson(CACHE, rows); keepJson(QUEUE, queue); listeners.forEach(l => l()); };
+let snap = { rows, queue, talk };
+const changed = () => { snap = { rows, queue, talk }; keepJson(CACHE, rows); keepJson(QUEUE, queue); keepJson('wt-photo-talk', talk); listeners.forEach(l => l()); };
 
 /** Photos for a trip, oldest first: the group's, plus yours still waiting to go. */
 export function usePhotos(tripId: string): Photo[] {
@@ -54,7 +63,66 @@ export async function refresh(tripId: string) {
   rows = { ...rows, [tripId]: data as Photo[] };
   changed();
   void fetchMissing((data as Photo[]).map(p => p.thumb));
+  void refreshTalk(tripId);
 }
+
+/* ---------- hearts and comments ---------- */
+
+/** Hearts and comments on a trip's photos, kept on the phone so they show with no signal. */
+export function useTalk(tripId: string): Talk {
+  const s = useSyncExternalStore(l => { listeners.add(l); return () => listeners.delete(l); }, () => snap);
+  return s.talk[tripId] || NO_TALK;
+}
+const NO_TALK: Talk = { hearts: [], comments: [] };
+
+export async function refreshTalk(tripId: string) {
+  if (!getState().sync[tripId] || !navigator.onLine) return;
+  const [h, c] = await Promise.all([
+    supabase.from('photo_hearts').select('photo_id, user_id, author_name').eq('trip_id', tripId),
+    supabase.from('photo_comments').select('id, photo_id, user_id, author_name, text, created_at').eq('trip_id', tripId).order('created_at'),
+  ]);
+  if (h.error || c.error) return;
+  talk = { ...talk, [tripId]: { hearts: h.data as Heart[], comments: c.data as Comment[] } };
+  changed();
+}
+
+const setTalk = (tripId: string, f: (t: Talk) => Talk) => { talk = { ...talk, [tripId]: f(talk[tripId] || NO_TALK) }; changed(); };
+const offline = () => new Error('Hearts and comments need signal. Try again in a moment.');
+
+/** Hearts a photo, or takes the heart back. Shown straight away; undone if it can't be saved. */
+export async function toggleHeart(p: Photo, me: { id: string; name: string }) {
+  const had = (talk[p.trip_id] || NO_TALK).hearts.some(h => h.photo_id === p.id && h.user_id === me.id);
+  const without = (t: Talk) => ({ ...t, hearts: t.hearts.filter(h => !(h.photo_id === p.id && h.user_id === me.id)) });
+  const withIt = (t: Talk) => ({ ...without(t), hearts: [...without(t).hearts, { photo_id: p.id, user_id: me.id, author_name: me.name }] });
+  setTalk(p.trip_id, had ? without : withIt);
+  if (p.src) return; // the sample's hearts stay on this phone
+  if (!navigator.onLine) { setTalk(p.trip_id, had ? withIt : without); throw offline(); }
+  const { error } = had
+    ? await supabase.from('photo_hearts').delete().eq('photo_id', p.id).eq('user_id', me.id)
+    : await supabase.from('photo_hearts').insert({ photo_id: p.id, trip_id: p.trip_id });
+  if (error && !/duplicate/i.test(error.message)) { setTalk(p.trip_id, had ? withIt : without); throw error; }
+}
+
+export async function addComment(p: Photo, text: string, me: { id: string; name: string }) {
+  const clean = text.trim().slice(0, 500);
+  if (!clean) return;
+  if (p.src) { setTalk(p.trip_id, t => ({ ...t, comments: [...t.comments, { id: crypto.randomUUID(), photo_id: p.id, user_id: me.id, author_name: me.name, text: clean, created_at: new Date().toISOString() }] })); return; }
+  if (!navigator.onLine) throw offline();
+  const { data, error } = await supabase.from('photo_comments').insert({ photo_id: p.id, trip_id: p.trip_id, text: clean }).select().single();
+  if (error) throw error;
+  setTalk(p.trip_id, t => ({ ...t, comments: [...t.comments, data as Comment] }));
+}
+
+export async function deleteComment(tripId: string, c: Comment, sample = false) {
+  if (!sample) {
+    const { error } = await supabase.from('photo_comments').delete().eq('id', c.id);
+    if (error) throw error;
+  }
+  setTalk(tripId, t => ({ ...t, comments: t.comments.filter(x => x.id !== c.id) }));
+}
+
+/** The sample's hearts and comments, made up and kept on this phone, so the page can be tried. */
+export function seedSampleTalk(tripId: string, seed: Talk) { if (!talk[tripId]) { talk = { ...talk, [tripId]: seed }; changed(); } }
 
 /** Adds photos to the trip, each filed under the day it was taken (or the day shown). */
 export async function addPhotos(trip: Trip, files: File[], dayId: string | undefined, onEach?: (n: number) => void) {

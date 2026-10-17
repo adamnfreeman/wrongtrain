@@ -81,7 +81,7 @@ for (const scheme of ['light', 'dark']) {
     /* drag the sheet one page along, as a finger would, and let it settle */
     const drag = by => page.evaluate(b => { const g = document.querySelector('.pager'); g.scrollTo({ left: g.scrollLeft + b * g.clientWidth }); }, by);
     await drag(1); await wait(600);
-    check(await page.locator('.tab[aria-current="page"]:has-text("Map")').count() === 1, 'dragging the sheet left from Days lands on the next page, Map');
+    check(await page.locator('.tab[aria-current="page"]:has-text("Photos")').count() === 1, 'dragging the sheet left from Days lands on the next page, Photos');
     await drag(-2); await wait(600);
     check(await page.locator('.tab[aria-current="page"]:has-text("Today")').count() === 1, '... and dragging it back lands on Today');
     /* dragging the bottom bar takes the sheet with it, and wherever it stops is the open page */
@@ -98,7 +98,7 @@ for (const scheme of ['light', 'dark']) {
     check(sheetAt === from + 3, `the sheet follows the bar as it is dragged (page ${sheetAt}, from ${from})`);
     await page.evaluate(() => { const row = document.querySelector('.tabs-in'); row.dispatchEvent(new TouchEvent('touchend', { bubbles: true, touches: [], changedTouches: [new Touch({ identifier: 2, target: row, clientX: 20, clientY: 800 })] })); });
     await wait(700);
-    check(await page.locator('.tab[aria-current="page"]:has-text("Places")').count() === 1, '... and where it stops, three along, Places is open');
+    check(await page.locator('.tab[aria-current="page"]:has-text("Map")').count() === 1, '... and where it stops, three along, Map is open');
     await open('Places');
     await page.click('#view >> text=Veg-friendly only');
     const nonVeg = await page.locator('#results .pill:has-text("Not veg")').count();

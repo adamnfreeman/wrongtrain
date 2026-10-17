@@ -570,6 +570,56 @@ end $$;
 drop trigger if exists photo_author on public.trip_photos;
 create trigger photo_author before insert on public.trip_photos for each row execute function public.photo_author();
 
+-- ---------- hearts and comments on photos ----------
+--
+-- Anyone on the trip hearts a photo (once each) and comments on it. Each row carries the trip, so
+-- the rules can check membership directly; it must be the photo's own trip.
+create table if not exists public.photo_hearts (
+  photo_id  uuid not null references public.trip_photos (id) on delete cascade,
+  trip_id   text not null references public.trips (id) on delete cascade,
+  user_id   uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  author_name text not null default '',
+  created_at timestamptz not null default now(),
+  primary key (photo_id, user_id)
+);
+create index if not exists photo_hearts_trip on public.photo_hearts (trip_id);
+alter table public.photo_hearts enable row level security;
+drop policy if exists "members see hearts" on public.photo_hearts;
+create policy "members see hearts" on public.photo_hearts for select using (public.is_member(trip_id));
+drop policy if exists "members heart photos" on public.photo_hearts;
+create policy "members heart photos" on public.photo_hearts for insert to authenticated
+  with check (public.is_member(trip_id) and user_id = auth.uid()
+    and exists (select 1 from public.trip_photos p where p.id = photo_id and p.trip_id = photo_hearts.trip_id));
+drop policy if exists "take back your heart" on public.photo_hearts;
+create policy "take back your heart" on public.photo_hearts for delete to authenticated using (user_id = auth.uid());
+revoke update on public.photo_hearts from anon, authenticated;
+drop trigger if exists heart_author on public.photo_hearts;
+create trigger heart_author before insert on public.photo_hearts for each row execute function public.photo_author();
+
+create table if not exists public.photo_comments (
+  id          uuid primary key default gen_random_uuid(),
+  photo_id    uuid not null references public.trip_photos (id) on delete cascade,
+  trip_id     text not null references public.trips (id) on delete cascade,
+  user_id     uuid default auth.uid() references auth.users (id) on delete set null,
+  author_name text not null default '',
+  text        text not null check (char_length(text) between 1 and 500),
+  created_at  timestamptz not null default now()
+);
+create index if not exists photo_comments_trip on public.photo_comments (trip_id, created_at);
+alter table public.photo_comments enable row level security;
+drop policy if exists "members see comments" on public.photo_comments;
+create policy "members see comments" on public.photo_comments for select using (public.is_member(trip_id));
+drop policy if exists "members comment on photos" on public.photo_comments;
+create policy "members comment on photos" on public.photo_comments for insert to authenticated
+  with check (public.is_member(trip_id) and user_id = auth.uid()
+    and exists (select 1 from public.trip_photos p where p.id = photo_id and p.trip_id = photo_comments.trip_id));
+drop policy if exists "who wrote it, or an organizer, removes a comment" on public.photo_comments;
+create policy "who wrote it, or an organizer, removes a comment" on public.photo_comments for delete to authenticated
+  using (user_id = auth.uid() or coalesce(public.my_role(trip_id), '') in ('owner', 'organizer'));
+revoke update on public.photo_comments from anon, authenticated;
+drop trigger if exists comment_author on public.photo_comments;
+create trigger comment_author before insert on public.photo_comments for each row execute function public.photo_author();
+
 -- ---------- where everyone is (friend finder) ----------
 --
 -- Someone on a trip can share where they are, for as long as they choose (an hour, the day, the
@@ -626,6 +676,14 @@ exception when duplicate_object then null;
 end $$;
 do $$ begin
   alter publication supabase_realtime add table public.trip_photos;
+exception when duplicate_object then null;
+end $$;
+do $$ begin
+  alter publication supabase_realtime add table public.photo_hearts;
+exception when duplicate_object then null;
+end $$;
+do $$ begin
+  alter publication supabase_realtime add table public.photo_comments;
 exception when duplicate_object then null;
 end $$;
 do $$ begin

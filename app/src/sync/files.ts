@@ -172,6 +172,35 @@ export async function openFile(path: string, name: string) {
   window.open(URL.createObjectURL(b), '_blank', 'noopener');
 }
 
+/** Shares a stored file through the phone's share sheet (Instagram, Messages, Save Image…). */
+export async function sharePath(path: string, name: string, text = '') {
+  const b = await getFile(path);
+  if (!b) throw new Error('That photo is not on this phone yet. Try again with signal.');
+  if (native) {
+    const { Filesystem, Directory } = await import('@capacitor/filesystem');
+    const { Share } = await import('@capacitor/share');
+    const { uri } = await Filesystem.getUri({ path: 'files/' + path, directory: Directory.Data });
+    await Share.share({ title: name, text: text || undefined, files: [uri] }).catch(() => {});
+    return;
+  }
+  await shareBlob(b, name, text);
+}
+
+/** Shares a file made on the spot. In a browser that can't share files, it opens in a new tab. */
+export async function shareBlob(b: Blob, name: string, text = '') {
+  if (native) {
+    const { Filesystem, Directory } = await import('@capacitor/filesystem');
+    const { Share } = await import('@capacitor/share');
+    const data = await new Promise<string>(ok => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.readAsDataURL(b); });
+    const { uri } = await Filesystem.writeFile({ path: 'share/' + name, data, directory: Directory.Cache, recursive: true });
+    await Share.share({ title: name, text: text || undefined, files: [uri] }).catch(() => {});
+    return;
+  }
+  const f = new File([b], name, { type: b.type });
+  if (navigator.canShare?.({ files: [f] })) await navigator.share({ files: [f], text: text || undefined }).catch(() => {});
+  else window.open(URL.createObjectURL(b), '_blank', 'noopener');
+}
+
 /* ---------- photos ---------- */
 
 /** A smaller JPEG: phone-screen sharp, a fraction of the size. Files that are not images pass through. */
