@@ -92,9 +92,10 @@ on a Mac.
   for your Japan page name and passcode and saves to the Desktop; run it again after sheet
   changes). The file holds booking numbers and logins: never put it in the repo.
 
-- Testing the planner cheaply: test mode in the app, `plan_cache`, and the `PLANNER_MODEL`
-  (now `claude-haiku-5-5`) and `PLAN_TESTERS` secrets; see `app/supabase/functions/README.md`.
-  **Before launch:** delete `PLANNER_MODEL` (back to the best model) and hide the test mode switch.
+- Testing the planner cheaply: test mode (replays a saved plan; the switch shows only under
+  `npm run dev` since Oct 16, `canTest` in `src/sync/planner.ts`), `plan_cache`, and the
+  `PLANNER_MODEL` (now `claude-haiku-5-5`) and `PLAN_TESTERS` secrets; see
+  `app/supabase/functions/README.md`. **Before launch:** delete `PLANNER_MODEL` (back to the best model).
 
 ## Commands (in `app/`)
 
