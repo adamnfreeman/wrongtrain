@@ -30,6 +30,7 @@ await ctx.route(/supabase\.co/, async r => {
     if (b.token !== '123456') return r.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ code: 403, error_code: 'otp_expired', msg: 'Token has expired or is invalid' }) });
     return json({ ...session, user: user('adam@wrongtrain.lol') });
   }
+  if (/\/rest\/v1\/trip_members/.test(u) && m === 'PATCH') { asked.push({ avatar: JSON.parse(r.request().postData()).avatar }); return r.fulfill({ status: 204, body: '' }); }
   if (/\/rest\/v1\//.test(u)) return json([]);
   return r.abort('internetdisconnected');
 });
@@ -42,6 +43,17 @@ await page.waitForSelector('text=Explore a sample trip');
 
 await page.click('.acctbtn');
 await page.waitForSelector('.sheet-wrap >> text=Signed in as');
+
+/* a profile picture: chosen, shrunk to a small square, shown, and put on your trips */
+await page.setInputFiles('input[aria-label="Profile photo"]', 'public/apple-touch-icon.png');
+await page.waitForSelector('.photopick img.avatar');
+const pic = await page.getAttribute('.photopick img.avatar', 'src');
+check(/^data:image\/jpeg;base64,/.test(pic) && pic.length < 60000, `the photo becomes a small JPEG (${Math.round(pic.length / 1024)} KB as text)`);
+check(asked.some(a => a.avatar === pic), '... and goes on your trips');
+check(await page.locator('.acctbtn.pic img').count() > 0, 'the corner button shows it');
+await page.click('.photopick button:has-text("Remove")');
+await page.waitForSelector('.photopick .avatar.initials');
+check(asked.some(a => a.avatar === null), 'Remove takes it off again');
 await page.click('.sheet-wrap button:has-text("Change email")');
 const sheet = page.locator('.sheet-wrap').last();
 await sheet.getByLabel('New email').fill('adam@example.com');

@@ -227,3 +227,14 @@ select public.set_member_role('t9', '00000000-0000-0000-0000-00000000000c', 'con
 select pg_temp.act('cat');
 select pg_temp.ok(public.save_trip('t9', (select data from trips where id = 't9') || '{"places":[{"id":"p1"}]}', 1) = 2, 'Ana makes her a contributor: now she adds a place');
 select pg_temp.ok(pg_temp.fails($$select public.save_trip('t9', '{"name":"Porto"}', 2)$$), '... but renaming the trip is a request');
+
+-- profile pictures: your own, as a small JPEG, seen only by people on your trips
+select pg_temp.act('cat');
+update trip_members set avatar = 'data:image/jpeg;base64,AAAA' where user_id = auth.uid();
+select pg_temp.ok((select avatar from trip_members where trip_id = 't9' and user_id = auth.uid()) = 'data:image/jpeg;base64,AAAA', 'Cat sets her profile picture');
+select pg_temp.ok(pg_temp.fails($$update trip_members set avatar = 'javascript:alert(1)' where user_id = auth.uid()$$), '... only as a JPEG picture');
+select pg_temp.ok(pg_temp.fails($$update trip_members set avatar = 'data:image/jpeg;base64,' || repeat('A', 70000) where user_id = auth.uid()$$), '... and a small one');
+update trip_members set avatar = 'data:image/jpeg;base64,BBBB' where user_id <> auth.uid();
+select pg_temp.act('ana');
+select pg_temp.ok((select avatar from trip_members where trip_id = 't9' and user_id = auth.uid()) is null, 'nobody can set someone else''s picture');
+select pg_temp.ok((select avatar from trip_members where trip_id = 't9' and user_id = '00000000-0000-0000-0000-00000000000c') = 'data:image/jpeg;base64,AAAA', 'Ana, on a trip with Cat, sees her picture');
