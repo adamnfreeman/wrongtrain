@@ -256,6 +256,16 @@ Next:
    corner of each page (`.acctbtn` in `src/index.css`, `AccountButton` in `src/ui/account.tsx`),
    over whatever header that page has, and is missing on Days. Give it one fixed home that every
    page leaves room for (or a place in the bottom bar), with Andrea.
+39. **The sample trip shows everything** (`src/model/sample.ts`): made-up friends (with
+   pictures, some sharing where they are on the map), photos with comments and hearts, a
+   Right now moment you can see (it's off for the sample today because it would come and go
+   with the clock; give the sample a pretend "now" instead), tickets and documents in the
+   Wallet, expenses and who owes whom, and phrases. So someone exploring it sees what the app does.
+40. **A translator** (asked for Oct 16): type or paste text in one language and get it in
+   another (Spanish to English and so on), next to Phrases. Options: Claude (good, but it costs
+   per use and needs the AI limits in 21), the phone's own translation (free, works offline on
+   iOS with downloaded languages, needs the iOS app), or a translation API. Camera text
+   (menus, signs) would be the next step.
 
 ## Working together
 
