@@ -197,6 +197,24 @@ Next:
    left of Today; when nothing is happening, the button isn't there at all. To settle: how long
    the window is for each kind of thing, and how often it may open by itself (once per thing,
    so closing it sticks).
+17. **A photo section** (asked for Oct 16): one place for the whole group's photos from the trip
+   (today they sit under each day, `src/ui/photos.tsx`, rows in `trip_photos`): browse by day or
+   person, see who added what, save to your phone.
+18. **Profile pictures** (asked for Oct 16): a photo for each person, shown wherever names are
+   (notes, members, who ticked what, the friend finder).
+19. **Freemium and how to pay for the AI** (asked for Oct 16; to discuss before building).
+   Claude calls cost real money (planner, ideas box, Something nearby). Options to weigh: a free
+   tier with limits plus a per-trip pass (`trip_passes` exists), a subscription, or both, and
+   affiliate income (VISION.md). Decide which features are paid.
+20. **Cancel an invite** (asked for Oct 16): removing someone who has joined already works
+   (People and sharing, `removeMember`); also let the owner cancel an invite code nobody has
+   used yet, so a forwarded link stops working.
+21. **Nobody uses WrongTrain as free Claude on our key** (asked for Oct 16). Today: AI runs only in
+   Edge Functions with fixed jobs (file a note, plan a trip, pick nearby places), each with a
+   structured answer, and uses are capped (`ai_uses` per trip, `ai_plans` per person per 30
+   days). Before launch: review every function for prompt injection (a note or trip text that
+   tries to make Claude do other work), cap input sizes, rate-limit per person as well as per
+   trip, and set a monthly spend alert and hard limit in the Anthropic console.
 
 ## Working together
 
