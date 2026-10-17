@@ -484,3 +484,27 @@ select.input { background-image: linear-gradient(45deg, transparent 50%, var(--m
 .leaflet-marker-icon.friend span { color: #fff; font: 700 14px var(--f-display) }
 .sharing-on { font-size: 14px; font-weight: 600; color: var(--ok, var(--ink)); align-self: center }
 #friends .item-h .avatar { margin-right: 8px }
+
+/* Right now (ui/rightnow.tsx): only what you need, big and obvious. A first version. */
+.rn { padding-top: 18px; display: grid; gap: 18px }
+.rn-kind { font: 700 14px/1 var(--f-display); letter-spacing: .12em; text-transform: uppercase; color: var(--muted) }
+.rn-title { font: 900 clamp(34px, 11vw, 52px)/1.02 var(--f-display); margin: 0; text-wrap: balance }
+.rn-time { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap }
+.rn-clock { font: 900 clamp(56px, 19vw, 88px)/.95 var(--f-display); letter-spacing: -.02em }
+.rn-count { font: 700 22px var(--f-display); color: var(--muted) }
+.rn-count.soon { color: var(--warn) }
+.rn-leave { background: var(--card); border: 1px solid var(--rule); border-radius: 16px; padding: 16px 18px; display: grid; gap: 4px }
+.rn-leave span { font: 600 15px var(--f-body); color: var(--muted) }
+.rn-leave b { font: 900 40px/1.05 var(--f-display) }
+.rn-leave small { font-size: 15px; color: var(--muted) }
+.rn-leave.now { border-color: var(--warn); box-shadow: inset 0 0 0 1px var(--warn) }
+.rn-leave.now b { color: var(--warn) }
+.rn-facts { margin: 0; display: grid; gap: 12px }
+.rn-facts div { display: grid; gap: 2px }
+.rn-facts dt { font: 700 12.5px var(--f-display); letter-spacing: .1em; text-transform: uppercase; color: var(--muted) }
+.rn-facts dd { margin: 0; font: 700 22px/1.25 var(--f-display) }
+.rn-actions { display: grid; gap: 10px }
+.rn-btn { appearance: none; display: block; text-align: center; text-decoration: none; border-radius: 14px; padding: 18px; font: 800 20px var(--f-display); border: 1px solid var(--rule); background: var(--card); color: var(--ink); cursor: pointer }
+.rn-btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink) }
+.rn-next { color: var(--muted); font-size: 16px; margin: 4px 0 0 }
+.tab.tab-now { color: var(--warn) }
