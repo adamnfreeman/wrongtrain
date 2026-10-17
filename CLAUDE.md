@@ -69,6 +69,10 @@ on a Mac.
   `src/ui/account.tsx`). Sign in/out, change email (a code to the new address), your name, Appearance (`src/ui/theme.tsx`) and the build
   number and time (set in `vite.config.ts`), so you can tell whether a phone has the latest.
 
+- Profile pictures (`src/ui/avatar.tsx`): chosen on Account & settings, cropped and shrunk on the
+  phone to a ~10 KB JPEG, kept on the phone and on each trip you're on (`trip_members.avatar`,
+  readable only by people on that trip). Shown on the corner button, the people list and group
+  notes (matched by name); initials in a coloured circle otherwise.
 - Trip files: "Open a trip file" on the welcome screen reads a trip saved as JSON
   (`src/model/tripFile.ts`); opening a newer file of the same trip updates it and keeps ticks,
   notes and the wallet. `node legacy/to-app.mjs` turns the Japan 2026 sheet into one (it asks
@@ -120,7 +124,7 @@ Touch nothing else on `main`. GitHub Pages updates within a couple of minutes.
 ## Waiting to be switched on (Adam, when ready; not now)
 
 Built and tested, but they need the website-account steps before they work on shared trips:
-- Run the updated `schema.sql` in Supabase (levels of say; also item 1 below).
+- Run the updated `schema.sql` in Supabase (levels of say, profile pictures; also item 1 below).
 - Deploy the ideas box (`file-note`; item 2 below).
 - Change email (Account & settings → Change email, `ChangeEmailSheet` in `src/ui/account.tsx`):
   in Supabase, Authentication → Emails → "Change email address", make the message show the code
@@ -191,8 +195,6 @@ Next:
 17. **A photo section** (asked for Oct 16): one place for the whole group's photos from the trip
    (today they sit under each day, `src/ui/photos.tsx`, rows in `trip_photos`): browse by day or
    person, see who added what, save to your phone.
-18. **Profile pictures** (asked for Oct 16): a photo for each person, shown wherever names are
-   (notes, members, who ticked what, the friend finder).
 19. **Freemium and how to pay for the AI** (asked for Oct 16; to discuss before building).
    Claude calls cost real money (planner, ideas box, Something nearby). Options to weigh: a free
    tier with limits plus a per-trip pass (`trip_passes` exists), a subscription, or both, and

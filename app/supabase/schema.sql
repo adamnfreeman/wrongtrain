@@ -106,8 +106,14 @@ drop policy if exists "members update their own name" on public.trip_members;
 create policy "members update their own name" on public.trip_members for update
   using (user_id = auth.uid()) with check (user_id = auth.uid());
 -- ... and only the name: roles change through set_member_role
+-- each person's profile picture: a small square JPEG (about 15 KB) made on their phone, kept as a
+-- data URL with each trip they're on, so only people on the same trip can see it
+alter table public.trip_members add column if not exists avatar text;
+alter table public.trip_members drop constraint if exists trip_members_avatar_check;
+alter table public.trip_members add constraint trip_members_avatar_check
+  check (avatar is null or (length(avatar) < 60000 and avatar like 'data:image/jpeg;base64,%'));
 revoke update on public.trip_members from anon, authenticated;
-grant update (name) on public.trip_members to authenticated;
+grant update (name, avatar) on public.trip_members to authenticated;
 
 drop policy if exists "members read requests" on public.trip_requests;
 create policy "members read requests" on public.trip_requests for select using (public.is_member(trip_id));

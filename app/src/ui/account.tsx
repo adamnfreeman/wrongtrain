@@ -1,5 +1,5 @@
 /* Sign-in, Account & settings, sharing a trip with the group, joining one with a code, and the save status line. */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Trip } from '../model/types';
 import { getState, setMe, useStore } from '../model/store';
 import { changeEmail, createInvite, deleteAccount, verifyEmailChange, errText, joinTrip, leaveTrip, members, removeMember, setMyName, shareTrip, signOut, sendCode, useSync, verifyCode, type Member, isSignedIn } from '../sync/engine';
@@ -8,6 +8,7 @@ import { shareBase } from '../native';
 import { ROLES } from '../model/rules';
 import { RoleControl, RuleSetting } from './requests';
 import { ThemeSwitch } from './theme';
+import { Avatar, makeAvatar, myAvatar, saveMyAvatar, useMyAvatar } from './avatar';
 import { JAPAN } from '../edition';
 import { savedCreds } from '../sheet/live';
 
@@ -145,6 +146,7 @@ export function Sharing({ trip, onLeft }: { trip: Trip; onLeft: () => void }) {
               {people.map(p => (
                 <li key={p.user_id}>
                   <div className="item-h">
+                    <Avatar name={p.name || '?'} src={p.user_id === uid ? myAvatar() || p.avatar : p.avatar} size={30} />
                     <span className="item-n">{p.name || 'Someone'}{p.user_id === uid ? ' (you)' : ''}</span>
                     <span className="grow" />
                     <RoleControl trip={trip} p={p} owner={owner && p.user_id !== uid} onError={setMsg}
@@ -206,10 +208,12 @@ export function SyncLine({ trip }: { trip: Trip }) {
 /** The round button in the top corner of every page, opening Account & settings. */
 export function AccountButton({ trip }: { trip?: Trip }) {
   const [open, setOpen] = useState(false);
+  const pic = useMyAvatar();
   return (
     <>
-      <button className="acctbtn" aria-label="Account & settings" onClick={() => setOpen(true)}>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.6" /><path d="M5 19.5c1.2-3.4 3.8-5 7-5s5.8 1.6 7 5" /></svg>
+      <button className={'acctbtn' + (pic ? ' pic' : '')} aria-label="Account & settings" onClick={() => setOpen(true)}>
+        {pic ? <img src={pic} alt="" />
+          : <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.6" /><path d="M5 19.5c1.2-3.4 3.8-5 7-5s5.8 1.6 7 5" /></svg>}
       </button>
       {open && <AccountSheet trip={trip} close={() => setOpen(false)} />}
     </>
@@ -243,6 +247,7 @@ function AccountSheet({ trip, close }: { trip?: Trip; close: () => void }) {
       </section>
       <section className="sec">
         <div className="sec-h"><h2>You</h2></div>
+        <PhotoPicker name={name || me} />
         <Text label="Your name, for notes and ticks" value={name} onChange={setName}
           placeholder={trip?.travelers[0] ? `e.g. ${trip.travelers[0]}` : 'Your name'} />
       </section>
@@ -263,6 +268,30 @@ function AccountSheet({ trip, close }: { trip?: Trip; close: () => void }) {
       {signIn && <SignInSheet close={() => setSignIn(false)} />}
       {newEmail && sync.session && <ChangeEmailSheet now={sync.session.user.email || ''} close={() => setNewEmail(false)} />}
     </Sheet>
+  );
+}
+
+/** Your profile picture: choose one from the phone, change it, or take it off. */
+function PhotoPicker({ name }: { name: string }) {
+  const pic = useMyAvatar();
+  const input = useRef<HTMLInputElement>(null);
+  const [msg, setMsg] = useState('');
+  const pick = async (f: File | undefined) => {
+    if (!f) return;
+    setMsg('');
+    try { await saveMyAvatar(await makeAvatar(f)); } catch (e) { setMsg(e instanceof Error ? e.message : errText(e)); }
+    if (input.current) input.current.value = '';
+  };
+  return (
+    <div className="photopick">
+      <Avatar name={name || '?'} src={pic} size={64} />
+      <div className="chips" style={{ marginTop: 0 }}>
+        <button type="button" className="chipbtn" onClick={() => input.current?.click()}>{pic ? 'Change photo' : 'Add a photo'}</button>
+        {pic && <button type="button" className="chipbtn" onClick={() => void saveMyAvatar(null).catch(e => setMsg(errText(e)))}>Remove</button>}
+      </div>
+      <input ref={input} type="file" accept="image/*" hidden aria-label="Profile photo" onChange={e => void pick(e.target.files?.[0])} />
+      {msg && <p className="geomsg bad" role="alert">{msg}</p>}
+    </div>
   );
 }
 

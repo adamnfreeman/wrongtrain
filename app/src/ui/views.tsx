@@ -6,6 +6,7 @@ import { longDate, shortDate, stamp } from '../model/time';
 import { onToday } from '../model/next';
 import { addNote, toggleNote, getState } from '../model/store';
 import { JAPAN } from '../edition';
+import { Avatar, useAvatarFor } from './avatar';
 import { Requests } from './requests';
 import { useSync } from '../sync/engine';
 import { canFile, dismissFiling, fileNote, undoFile, useFilings, type NoteFiling } from '../sync/filing';
@@ -216,6 +217,10 @@ export function Prep() {
   );
 }
 
+function NoteFace({ tripId, name }: { tripId: string; name: string }) {
+  return <Avatar name={name} src={useAvatarFor(tripId, name)} size={20} />;
+}
+
 function Notes() {
   const { ix } = useApp();
   const { session } = useSync();
@@ -239,7 +244,7 @@ function Notes() {
     <li key={n.id} className={'todo' + (n.done ? ' done' : '')}>
       <button className="box" role="checkbox" aria-checked={n.done} aria-label={(n.done ? 'Reopen: ' : 'Mark dealt with: ') + n.text} disabled={JAPAN} onClick={() => toggleNote(t.id, n.id)}>{n.done ? '✓' : ''}</button>
       <div>
-        <div className="kick">{n.author} · {stamp(n.at)}</div><p className="item-d">{n.text}</p>
+        <div className="kick notewho"><NoteFace tripId={t.id} name={n.author} />{n.author} · {stamp(n.at)}</div><p className="item-d">{n.text}</p>
         {filings[n.id] ? <Filed tripId={t.id} noteId={n.id} f={filings[n.id]} />
           : <>
             {n.filed && <p className="filed">{n.filed}</p>}

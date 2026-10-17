@@ -14,7 +14,7 @@
 import { createClient, type RealtimeChannel, type Session } from '@supabase/supabase-js';
 import { useSyncExternalStore } from 'react';
 import type { Trip } from '../model/types';
-import { getState, onTripChange, onTripGate, setSynced, type SyncInfo } from '../model/store';
+import { getState, onTripChange, onTripGate, pref, setSynced, type SyncInfo } from '../model/store';
 import { applyChange, changeOf, joinLevel, verdict, type Change, type Role, type Rule } from '../model/rules';
 import { merge3, same } from '../model/merge';
 import { receive, saved, type Remote } from './core';
@@ -387,6 +387,7 @@ export async function shareTrip(id: string): Promise<void> {
   setInfo(id, { version: 1, base: trip, dirty: false, rule: 'open', role: 'owner' });
   /* the level of say picked when the trip was made: open unless they chose otherwise */
   if (trip.say && trip.say !== 'open') await setTripRule(id, trip.say).catch(() => {});
+  shareMyAvatar();
   setTripStatus(id, 'saved');
   listen();
 }
@@ -409,12 +410,13 @@ export async function joinTrip(code: string): Promise<string> {
   const s = getState(); setSynced(s.trips, { ...s.sync, [id]: { ...s.sync[id], rule: remote.rule || 'open', role: s.sync[id]?.role || joinLevel(remote.rule).role } }, id);
   listen();
   void fetchRequests().catch(() => {});
+  shareMyAvatar();
   return id;
 }
 
-export interface Member { user_id: string; name: string; role: Role }
+export interface Member { user_id: string; name: string; role: Role; avatar?: string | null }
 export async function members(id: string): Promise<Member[]> {
-  const { data, error } = await supabase.from('trip_members').select('user_id, name, role').eq('trip_id', id).order('joined_at');
+  const { data, error } = await supabase.from('trip_members').select('user_id, name, role, avatar').eq('trip_id', id).order('joined_at');
   if (error) throw error;
   return (data || []) as Member[];
 }
@@ -422,6 +424,16 @@ export async function members(id: string): Promise<Member[]> {
 export async function setMyName(name: string) {
   if (!signedIn()) return;
   await supabase.from('trip_members').update({ name }).eq('user_id', status.session!.user.id);
+}
+
+/** Your picture goes on a trip you've just shared or joined. */
+const shareMyAvatar = () => { const a = pref<string | null>('avatar', null); if (a) void setMyAvatar(a).catch(() => {}); };
+
+/** Puts your profile picture (or none) on every trip you're on; see ui/avatar.tsx. */
+export async function setMyAvatar(avatar: string | null) {
+  if (!signedIn()) return;
+  const { error } = await supabase.from('trip_members').update({ avatar }).eq('user_id', status.session!.user.id);
+  if (error) throw error;
 }
 
 /** Leaves a shared trip; your copy is removed from this phone. */

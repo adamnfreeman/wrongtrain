@@ -467,3 +467,13 @@ select.input { background-image: linear-gradient(45deg, transparent 50%, var(--m
 .sayopt b { font: 700 15.5px/1.3 var(--f-display) }
 .sayopt span { font-size: 13.5px; color: var(--muted) }
 .sayopt[aria-checked="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink) }
+
+/* profile pictures (ui/avatar.tsx) */
+.avatar { flex: none; border-radius: 999px; object-fit: cover; display: inline-grid; place-items: center; vertical-align: middle }
+.avatar.initials { background: hsl(var(--av) 45% 42%); color: #fff; font: 700 1em/1 var(--f-display); letter-spacing: .02em }
+.acctbtn.pic { padding: 0; overflow: hidden; border-color: transparent }
+.acctbtn.pic img { width: 100%; height: 100%; object-fit: cover; display: block }
+.photopick { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 4px }
+.photopick .geomsg { flex-basis: 100% }
+.notewho { display: flex; align-items: center; gap: 6px }
+.sheet .item-h .avatar { margin-right: 8px }
