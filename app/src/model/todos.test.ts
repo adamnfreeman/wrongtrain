@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { checkDone, tick, visibleTodos } from './todos';
 import { makeSample } from './sample';
+import type { Trip } from './types';
 
-const trip = () => {
+const trip = (): Trip => {
   const t = makeSample(new Date('2027-04-12T09:00:00Z'));
   return { ...t, todos: [
     { id: 'g', group: 'Before the trip', text: 'Visit Japan Web', done: false, everyone: true },
