@@ -3,11 +3,12 @@ import { useEffect, useRef, useState } from 'react';
 import type { Trip } from '../model/types';
 import { getState, setMe, useStore } from '../model/store';
 import { changeEmail, createInvite, deleteAccount, verifyEmailChange, errText, joinTrip, leaveTrip, members, removeMember, setMyName, shareTrip, signOut, sendCode, useSync, verifyCode, type Member, isSignedIn } from '../sync/engine';
-import { DeleteButton, Sheet, Text } from './form';
+import { Check, DeleteButton, Sheet, Text } from './form';
 import { shareBase } from '../native';
 import { ROLES } from '../model/rules';
 import { RoleControl, RuleSetting } from './requests';
 import { ThemeSwitch } from './theme';
+import { canTest, isTestMode, setTestMode } from '../sync/planner';
 import { Avatar, makeAvatar, myAvatar, saveMyAvatar, useMyAvatar } from './avatar';
 import { JAPAN } from '../edition';
 import { savedCreds } from '../sheet/live';
@@ -254,6 +255,7 @@ function AccountSheet({ trip, close }: { trip?: Trip; close: () => void }) {
       <section className="sec">
         <div className="sec-h"><h2>Settings</h2></div>
         <ThemeSwitch />
+        {canTest && <TestModeSwitch />}
       </section>
       <section className="sec">
         <div className="sec-h"><h2>About</h2></div>
@@ -269,6 +271,14 @@ function AccountSheet({ trip, close }: { trip?: Trip; close: () => void }) {
       {newEmail && sync.session && <ChangeEmailSheet now={sync.session.user.email || ''} close={() => setNewEmail(false)} />}
     </Sheet>
   );
+}
+
+/** The trip planner's test mode: replays the last plan made on this phone instead of planning a
+    new one, free and quick (sync/planner.ts). */
+function TestModeSwitch() {
+  const [on, setOn] = useState(isTestMode);
+  return <Check label="Test mode" checked={on} onChange={v => { setOn(v); setTestMode(v); }}
+    hint="Plan a trip for me replays the last plan made on this phone instead of making a new one. Free and quick, for trying things out." />;
 }
 
 /** Your profile picture: choose one from the phone, change it, or take it off. */
