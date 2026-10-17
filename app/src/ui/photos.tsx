@@ -10,6 +10,9 @@ import { addPhotos, deletePhoto, usePhotos, type Photo } from '../sync/photos';
 import { useSync } from '../sync/engine';
 import { SecH } from './bits';
 import { useApp } from './ctx';
+import { Avatar } from './avatar';
+import { PictureView } from './picture';
+import { SAMPLE_PEOPLE, SAMPLE_PHOTOS } from '../model/sample';
 
 export function DayPhotos({ d }: { d: Day }) {
   const { ix, edit } = useApp();
@@ -24,7 +27,7 @@ export function DayPhotos({ d }: { d: Day }) {
     try { await addPhotos(ix.trip, files, d.id, n => setBusy(`Adding ${n} of ${files.length}…`)); setBusy(''); }
     catch { setBusy('Some photos could not be added.'); }
   };
-  if (ix.trip.sample) return null;
+  if (ix.trip.sample) return <SamplePhotos d={d} />;
   return (
     <section className="sec" id="photos">
       <SecH title="Photos"><span className="kicker">{mine.length || ''}</span></SecH>
@@ -45,6 +48,27 @@ export function DayPhotos({ d }: { d: Day }) {
         </>
       )}
       {open != null && mine[open] && <Viewer list={mine} at={open} onMove={setOpen} onClose={() => setOpen(null)} />}
+    </section>
+  );
+}
+
+/** The sample's photos: drawings standing in for the group's, with who took them. */
+function SamplePhotos({ d }: { d: Day }) {
+  const list = SAMPLE_PHOTOS.filter(p => p.day === d.id);
+  const [open, setOpen] = useState<number | null>(null);
+  if (!list.length) return null;
+  const p = open != null ? list[open] : null;
+  return (
+    <section className="sec" id="photos">
+      <SecH title="Photos"><span className="kicker">{list.length}</span></SecH>
+      <div className="pgrid">{list.map((x, i) => (
+        <button key={x.src} className="pthumb" onClick={() => setOpen(i)} aria-label={`Photo by ${x.by}`}>
+          <img src={x.src} alt="" loading="lazy" />
+          <i className="pby"><Avatar name={x.by} src={SAMPLE_PEOPLE.find(q => q.name === x.by)?.avatar} size={22} /></i>
+        </button>
+      ))}</div>
+      <p className="note">In the sample, the photos are drawings. On your own shared trips, everyone's photos from each day show here.</p>
+      {p && <PictureView src={p.src} title={`${p.by}: ${p.caption}`} close={() => setOpen(null)} />}
     </section>
   );
 }

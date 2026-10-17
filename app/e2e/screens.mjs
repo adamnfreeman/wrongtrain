@@ -86,6 +86,8 @@ for (const scheme of ['light', 'dark']) {
     check(await page.locator('.tab[aria-current="page"]:has-text("Today")').count() === 1, '... and dragging it back lands on Today');
     /* dragging the bottom bar takes the sheet with it, and wherever it stops is the open page */
     await wait(500);
+    /* the sample has a Right now page before Today, so count from wherever Today is */
+    const from = await page.evaluate(() => { const g = document.querySelector('.pager'); return Math.round(g.scrollLeft / g.clientWidth); });
     await page.evaluate(() => {
       const row = document.querySelector('.tabs-in');
       row.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, touches: [new Touch({ identifier: 2, target: row, clientX: 200, clientY: 800 })] }));
@@ -93,7 +95,7 @@ for (const scheme of ['light', 'dark']) {
     });
     await wait(150);
     const sheetAt = await page.evaluate(() => { const g = document.querySelector('.pager'); return Math.round(g.scrollLeft / g.clientWidth * 10) / 10; });
-    check(sheetAt === 3, `the sheet follows the bar as it is dragged (page ${sheetAt})`);
+    check(sheetAt === from + 3, `the sheet follows the bar as it is dragged (page ${sheetAt}, from ${from})`);
     await page.evaluate(() => { const row = document.querySelector('.tabs-in'); row.dispatchEvent(new TouchEvent('touchend', { bubbles: true, touches: [], changedTouches: [new Touch({ identifier: 2, target: row, clientX: 20, clientY: 800 })] })); });
     await wait(700);
     check(await page.locator('.tab[aria-current="page"]:has-text("Wallet")').count() === 1, '... and where it stops, three along, Wallet is open');

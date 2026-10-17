@@ -5,6 +5,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { pref, setPref, getState } from '../model/store';
 import { members, setMyAvatar, useSync, type Member } from '../sync/engine';
+import { SAMPLE_PEOPLE } from '../model/sample';
 
 /* ---------- yours ---------- */
 
@@ -54,6 +55,7 @@ function peopleOnce(id: string): Promise<Member[]> {
 
 /** The people on a shared trip, with their pictures; kept on the phone for when there's no signal. */
 export function useTripPeople(tripId: string): Member[] {
+  const sample = !!getState().trips.find(t => t.id === tripId)?.sample;
   const { session } = useSync();
   const shared = !!getState().sync[tripId];
   const [people, setPeople] = useState<Member[]>(() => cached(tripId));
@@ -70,7 +72,7 @@ export function useTripPeople(tripId: string): Member[] {
     }).catch(() => {});
     return () => { live = false; };
   }, [tripId, shared, session]);
-  return people;
+  return sample ? SAMPLE_PEOPLE : people;
 }
 
 /** The picture for a name on a trip: yours if it's your name, else whoever on the trip has it. */

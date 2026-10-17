@@ -86,6 +86,13 @@ on a Mac.
   phone to a ~10 KB JPEG, kept on the phone and on each trip you're on (`trip_members.avatar`,
   readable only by people on that trip). Shown on the corner button, the people list and group
   notes (matched by name); initials in a coloured circle otherwise.
+- The sample trip ("Explore a sample trip", `src/model/sample.ts`) demos everything: four made-up
+  friends with pictures (`SAMPLE_PEOPLE`), two of them on the map (`sampleSpots`), photos
+  (drawings in `public/sample/`), Claude's filed notes, tickets, a booking and insurance in the
+  Wallet (pictures, opened in the app by `PictureView`), expenses in yen and dollars with
+  settling up, and a Right now train that always leaves about 35 minutes after you look
+  (`freshenSample`, leg `l-now`; Right now doesn't open by itself in the sample). An older saved
+  sample without these is replaced when the app loads.
 - Trip files: "Open a trip file" on the welcome screen reads a trip saved as JSON
   (`src/model/tripFile.ts`); opening a newer file of the same trip updates it and keeps ticks,
   notes and the wallet. `node legacy/to-app.mjs` turns the Japan 2026 sheet into one (it asks
@@ -260,11 +267,6 @@ Next:
    corner of each page (`.acctbtn` in `src/index.css`, `AccountButton` in `src/ui/account.tsx`),
    over whatever header that page has, and is missing on Days. Give it one fixed home that every
    page leaves room for (or a place in the bottom bar), with Andrea.
-39. **The sample trip shows everything** (`src/model/sample.ts`): made-up friends (with
-   pictures, some sharing where they are on the map), photos with comments and hearts, a
-   Right now moment you can see (it's off for the sample today because it would come and go
-   with the clock; give the sample a pretend "now" instead), tickets and documents in the
-   Wallet, expenses and who owes whom, and phrases. So someone exploring it sees what the app does.
 40. **A translator** (asked for Oct 16): type or paste text in one language and get it in
    another (Spanish to English and so on), next to Phrases. Options: Claude (good, but it costs
    per use and needs the AI limits in 21), the phone's own translation (free, works offline on

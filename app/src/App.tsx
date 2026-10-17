@@ -191,14 +191,16 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
   const [tick, setTick] = useState(0);
   useEffect(() => { const t = window.setInterval(() => setTick(x => x + 1), 30_000); return () => clearInterval(t); }, []);
   const rn = useMemo(() => {
-    if (!now.cur || trip.sample) return { m: null, next: null };
+    if (!now.cur) return { m: null, next: null };
     const c = liveCtx(ix, now.cur, geo.pos), m = rightNow(ix, c);
     return { m, next: m ? after(ix, c, m) : null };
-  }, [ix, now.cur, geo.pos, tick, trip.sample]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [ix, now.cur, geo.pos, tick]); // eslint-disable-line react-hooks/exhaustive-deps
   /* it opens by itself once for each thing; when the thing is over, back to Today */
   useEffect(() => {
     const id = rn.m?.id;
     if (!id) { if (tabNow.current === 'now') go('today'); return; }
+    /* the sample opens on Today; its Right now tab is there to try */
+    if (trip.sample) return;
     const seen = pref<string[]>('rightnow-seen', []);
     if (!seen.includes(id)) { setPref('rightnow-seen', [...seen.slice(-50), id]); go('now'); }
   }, [rn.m?.id, go]); // eslint-disable-line react-hooks/exhaustive-deps

@@ -8,6 +8,7 @@ import { dirLink, fmtDist, mapsLink } from '../model/trip';
 import { usePrivateDocs } from '../model/privateDocs';
 import { openFile } from '../sync/files';
 import { useApp } from './ctx';
+import { PictureView } from './picture';
 
 const KIND = { flight: 'Your flight', ride: 'Your ride', event: 'Coming up' } as const;
 
@@ -20,9 +21,10 @@ export function RightNow({ moment: m, next }: { moment: Moment | null; next: Mom
   const { ix } = useApp();
   const mine = usePrivateDocs(ix.trip.id);
   const [msg, setMsg] = useState('');
+  const [pic, setPic] = useState<{ src: string; title: string } | null>(null);
   if (!m) return <p className="hint" style={{ marginTop: 40 }}>Nothing coming up right now.</p>;
 
-  const docs = [...(ix.trip.docs || []), ...mine].filter(d => d.file && d.for &&
+  const docs = [...(ix.trip.docs || []), ...mine].filter(d => (d.file || d.picture) && d.for &&
     ((m.leg && d.for.kind === 'leg' && d.for.id === m.leg.id) || (m.item && d.for.kind === 'plan' && d.for.id === m.item.id)));
   const leaveIn = m.leaveBy - (m.at - m.inMin);
   const pinned = m.place && m.place.lat != null && m.place.lng != null ? m.place : null;
@@ -58,7 +60,7 @@ export function RightNow({ moment: m, next }: { moment: Moment | null; next: Mom
 
       <div className="rn-actions">
         {docs.map(d => (
-          <button key={d.id} className="rn-btn primary" onClick={() => openFile(d.file!.path, d.file!.name).catch(e => setMsg((e as Error).message))}>
+          <button key={d.id} className="rn-btn primary" onClick={() => d.picture ? setPic({ src: d.picture, title: d.title }) : openFile(d.file!.path, d.file!.name).catch(e => setMsg((e as Error).message))}>
             Show {d.kind === 'ticket' ? 'ticket' : d.title}
           </button>
         ))}
@@ -67,6 +69,7 @@ export function RightNow({ moment: m, next }: { moment: Moment | null; next: Mom
       </div>
       {msg && <p className="geomsg bad" role="alert">{msg}</p>}
 
+      {pic && <PictureView src={pic.src} title={pic.title} close={() => setPic(null)} />}
       {next && <p className="rn-next">Then: <b>{next.title}</b> at {fmtT(next.at)}</p>}
     </div>
   );
