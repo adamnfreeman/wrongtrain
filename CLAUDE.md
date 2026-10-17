@@ -197,9 +197,10 @@ Next:
 11. Later: Sign in with Apple (needs the developer account), universal links so invite links
    open the app, a city list for guessing time zones (Kyoto, Florence and similar don't match
    an IANA zone name), editing the "Before you go" guides.
-14. **Tapping a tab** (asked for Oct 16): the tapped button slides to the centre of the bottom
-   bar, and the pages swipe quickly across to that page (now they glide slowly or jump).
-   `TripApp` in `src/App.tsx`, the pager and bar scroll code.
+14. **The open page's tab is always in the middle of the bottom bar** (asked again Oct 16, still
+   wrong on the phone): tap Map while Places is in the middle and Map slides to the middle; today
+   it stays where it was, and the next scroll jumps back to Places, which is confusing. The pages
+   swipe quickly across to match. `TripApp` in `src/App.tsx`, the pager and bar scroll code.
 16. **Right now, next steps** (first version built Oct 16; see "Right now" above). For Andrea: the
    look (it's Adam's quick take: huge time, leave-by box, big ticket and directions buttons). Then:
    live platforms and gates (needs a train or flight info service), a "get there" step list,
@@ -313,6 +314,15 @@ Next:
    OpenStreetMap / MapTiler), so check that first. Alternatives: open routing on GTFS data
    (Transitous / MOTIS), HERE Public Transit, and in Japan NAVITIME or Ekispert, which also know
    platform numbers.
+54. **Paid, at a glance** (Wallet → Money → Settle up): a debt marked paid disappears, which
+   feels like it was never added. Keep it, with a PAID stamp (or similar) over it.
+55. **Right now, bolder** (Adam likes the sizes): the "Kyoto → Uji" title in a colour (yellow-ish,
+   but "Leave now" already uses the warning yellow, so pick a distinct accent), and an overall
+   bolder feel. With Andrea (see 16).
+56. **Something nearby, more prominent, with ratings**: give it a bigger place (its own tab or the
+   top of Today), and show ratings. Google ratings come from the Places API (paid per request;
+   its terms require Google's attribution, and Google data shown on a map must be on a Google
+   map, so in a list is fine). Alternatives: Foursquare or Yelp ratings.
 
 ## Working together
 
