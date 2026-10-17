@@ -1,8 +1,10 @@
 /* "Something nearby" on the Today screen: pick a mood, see five places around you, save any to
-   Ideas. See sync/nearby.ts for where the places come from. */
+   Ideas. See sync/nearby.ts for where the places come from. In the Japan edition the trip is the
+   sheet's, replaced every few minutes, so a place goes to the sheet as a group note for its filer. */
 import { useState } from 'react';
 import type { PlaceKind } from '../model/types';
-import { patchTrip } from '../model/store';
+import { addNote, patchTrip } from '../model/store';
+import { JAPAN } from '../edition';
 import { dirLink, fmtDist, newId, travel } from '../model/trip';
 import { fmtDur } from '../model/time';
 import { MOODS, type Mood } from '../../supabase/functions/_shared/nearby.ts';
@@ -34,6 +36,15 @@ export function Nearby() {
   if (mood && geo.pos && !found && !busy && !msg) void look(mood);
 
   const save = (s: Suggestion) => {
+    if (JAPAN) {
+      const m = MOODS.find(x => x.key === mood)!;
+      const city = ix.trip.destinations.find(d => d.id === now.cur?.destinationId)?.name;
+      addNote(ix.trip.id, `Add ${s.name} (${s.what}, ${fmtDist(s.dist)} from where we were${city ? ' in ' + city : ''}) to the ${city ? city + ' ' : ''}${m.label.toLowerCase()} ideas. `
+        + `Found with Something nearby. Coordinates: ${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}.`
+        + (s.website ? ` Website: ${s.website}` : '') + (s.why ? ` Why: ${s.why}` : ''));
+      setSaved({ ...saved, [s.id]: true });
+      return;
+    }
     patchTrip(ix.trip.id, t => ({
       ...t,
       places: [...t.places, {
@@ -73,8 +84,8 @@ export function Nearby() {
                   {s.why && <p className="item-d">{s.why}</p>}
                   <div className="meta">
                     <Ext href={dirLink(s, tr.mode)}>Directions</Ext>
-                    {saved[s.id] ? <span>Saved to Ideas</span>
-                      : <button type="button" className="linkbtn" onClick={() => save(s)}>Save to Ideas</button>}
+                    {saved[s.id] ? <span role="status">{JAPAN ? "Sent to the sheet; it'll be filed in a minute" : 'Saved to Ideas'}</span>
+                      : <button type="button" className="linkbtn" onClick={() => save(s)}>{JAPAN ? 'Add to the trip' : 'Save to Ideas'}</button>}
                   </div>
                 </li>
               );

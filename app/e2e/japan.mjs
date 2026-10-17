@@ -12,7 +12,11 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const srv = spawn('python3', ['-m', 'http.server', '8099', '--bind', '127.0.0.1'], { cwd: DIST, stdio: 'ignore' });
 await wait(1000);
 const browser = await chromium.launch({ args: ['--no-proxy-server'] });
-const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, timezoneId: 'Asia/Tokyo' });
+const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, timezoneId: 'Asia/Tokyo',
+  geolocation: { latitude: 35.6595, longitude: 139.7005 }, permissions: ['geolocation'] });
+await ctx.route(/overpass-api\.de/, r => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ elements: [
+  { type: 'node', id: 1, lat: 35.6612, lon: 139.7012, tags: { amenity: 'restaurant', name: 'Ichiran Ramen', cuisine: 'ramen' } },
+] }) }));
 const asked = [];
 let offline = false;
 await ctx.route(/script\.google\.com/, r => {
@@ -66,6 +70,16 @@ await page.click('button:has-text("Add note")');
 await page.waitForTimeout(300);
 check(asked.some(a => a.action === 'note' && a.text === 'Add a sento near the hotel'), 'a group note goes to the sheet');
 check(/Saved to the Group Notes tab/.test(await page.locator('#view').textContent()), 'and says where it went');
+
+/* Something nearby: the trip is the sheet's, so a place goes to it as a note for the filer */
+await page.click('.tab:has-text("Today")');
+await page.click('#nearby >> button:has-text("Food")');
+await page.waitForSelector('#nearby .sheet li', { timeout: 10000 });
+await page.click('#nearby >> button:has-text("Add to the trip")');
+await page.waitForTimeout(300);
+const placed = asked.find(a => a.action === 'note' && /Ichiran Ramen/.test(a.text));
+check(!!placed && /^Add Ichiran Ramen \(.*\) to the .*food ideas\. Found with Something nearby\. Coordinates: 35\.66120, 139\.70120\./.test(placed.text), `Something nearby's Add to the trip sends a note (${placed && placed.text})`);
+check(/Sent to the sheet; it'll be filed in a minute/.test(await page.locator('#nearby').textContent()), 'and says it went to the sheet');
 
 await page.reload();
 await page.waitForSelector('.tab:has-text("Today")');
