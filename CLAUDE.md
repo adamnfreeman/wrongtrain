@@ -252,6 +252,10 @@ Next:
 37. **A new tagline** (Adam: "Every trip is a line" isn't for him). It's the welcome screen's
    heading (`Welcome` in `src/App.tsx`). Find one that says what WrongTrain does for a group of
    friends (see VISION.md), with Andrea.
+38. **The profile button sits in odd spots** (Adam, on the phone). It floats in the top-right
+   corner of each page (`.acctbtn` in `src/index.css`, `AccountButton` in `src/ui/account.tsx`),
+   over whatever header that page has, and is missing on Days. Give it one fixed home that every
+   page leaves room for (or a place in the bottom bar), with Andrea.
 
 ## Working together
 
