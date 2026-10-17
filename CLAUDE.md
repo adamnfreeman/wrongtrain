@@ -301,6 +301,16 @@ Next:
    destination, say which language(s) people speak there (by region where it matters: Brussels
    French and Dutch, Flanders Dutch, Wallonia French), how far English gets you, and offer that
    phrase pack. On the trip overview, the Before you go guides and Phrases; the planner can add it.
+52. **Line symbols and live transit** (Adam): show each train or metro line the way the city does:
+   Tokyo's coloured circles with a letter (Ginza line: orange "G", stations "G09"), Seoul and
+   Taipei's coloured line codes, Paris's numbered circles, London's line colours, New York's
+   coloured letter and number bullets. Most transit data carries a line's short name and colours
+   (GTFS route_short_name, route_color, route_text_color). For live routes on Right now (which
+   line, which direction, stops, departure): Google's Routes API with transit gives line names,
+   colours and vehicle icons, but its terms likely require showing it with a Google map (we use
+   OpenStreetMap / MapTiler), so check that first. Alternatives: open routing on GTFS data
+   (Transitous / MOTIS), HERE Public Transit, and in Japan NAVITIME or Ekispert, which also know
+   platform numbers.
 
 ## Working together
 
