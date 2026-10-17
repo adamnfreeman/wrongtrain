@@ -160,7 +160,13 @@ function Style({ a, up }: Q) {
       <div className="field">
         <span className="flabel">Budget</span>
         <div className="chips" style={{ marginTop: 0 }}>{[1, 2, 3, 4, 5].map(n => (
-          <button key={n} type="button" className="chipbtn plain" aria-pressed={a.budget === n} onClick={() => up({ budget: n })}>{dollars(n)}</button>
+          <button key={n} type="button" className="chipbtn plain" aria-pressed={n >= a.budget && n <= (a.budgetTop || a.budget)}
+            onClick={() => {
+              /* one tap picks a level; a tap on another level makes it a range; a tap after that starts again */
+              const top = a.budgetTop || a.budget;
+              if (top === a.budget && n !== a.budget) up({ budget: Math.min(n, a.budget), budgetTop: Math.max(n, a.budget) });
+              else up({ budget: n, budgetTop: undefined });
+            }}>{dollars(n)}</button>
         ))}</div>
         <p className="fhint">{['Shoestring: hostels and street food', 'Careful: simple hotels, cheap eats', 'Comfortable: good hotels, a few nice meals', 'Treat yourselves: nice hotels and restaurants', 'The best: luxury hotels, top restaurants'][a.budget - 1]}</p>
       </div>

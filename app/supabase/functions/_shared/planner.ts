@@ -29,6 +29,10 @@ export const DAY_STYLES = [
 ] as const;
 export const DIETS = ['Vegetarian', 'Vegan', 'Pescatarian', 'Gluten-free', 'Halal', 'Kosher', 'No pork', 'Nut allergy'] as const;
 
+/** "$$" or, for a range, "$$ to $$$$". */
+export const budgetWords = (a: { budget: number; budgetTop?: number }) =>
+  a.budgetTop && a.budgetTop > a.budget ? `${dollars(a.budget)} to ${dollars(a.budgetTop)}` : dollars(a.budget);
+
 export interface Answers {
   /** "Japan", "Italy and Greece", "somewhere warm in March" */
   where: string;
@@ -42,6 +46,8 @@ export interface Answers {
   travelers: { name: string; from: string }[];
   /** 1 to 5, like $ to $$$$$ */
   budget: number;
+  /** the top of a budget range ("a cheap hotel is fine, a nicer one if it's there"); unset for one level */
+  budgetTop?: number;
   styles: string[];
   vibes: string[];
   pace: (typeof PACES)[number]['value'];
@@ -64,7 +70,7 @@ function answersText(a: Answers): string {
     `When: ${a.start ? `starting ${a.start}` : 'dates not fixed'}${a.whenNote.trim() ? ` (${a.whenNote.trim()})` : ''}`,
     `Length: ${a.days} days, door to door`,
     `People: ${Math.max(1, who.length)}${who.length ? ' – ' + who.map(t => `${t.name.trim() || 'someone'}${t.from.trim() ? ` from ${t.from.trim()}` : ''}`).join('; ') : ''}`,
-    `Budget: ${dollars(a.budget)} out of $$$$$`,
+    `Budget: ${budgetWords(a)} out of $$$$$`,
     a.vibes?.length && `Vibe: ${a.vibes.join(', ')}`,
     a.styles.length && `Into: ${a.styles.join(', ')}`,
     `Pace: ${a.pace}`,
@@ -158,7 +164,7 @@ export const RESEARCH_SYSTEM = `You are WrongTrain's trip planner, researching o
 They are adults travelling without children, and would rather avoid places full of kids. Prefer adults-only hotels or ones without a family focus (no kids' clubs, water parks or family resorts); for food and drink, places with a grown-up feel; skip attractions aimed at children; and note quieter times to visit popular sights.
 
 Find, for this group's budget, tastes and food needs:
-- Hotels: three good options at different prices (one at their budget, one cheaper, one nicer), close enough to each other that people at different hotels can meet up easily. Name the area and why it suits.
+- Hotels: three good options at different prices (one at their budget, one cheaper, one nicer; for a budget range, spread them across the range), close enough to each other that people at different hotels can meet up easily. Name the area and why it suits.
 - Food: about eight places across the stay, a mix of quick and sit-down, with what to order. If anyone has food needs (e.g. vegetarian), make sure several fit them and say which.
 - Sights and things to do: about eight, matched to their interests, with any that need booking ahead and roughly how long each takes. Include one or two day trips if the stay is long enough.
 - Events on their exact dates: search for festivals, parades, religious celebrations, concerts, big sports matches, markets and public holidays in and near this place while they are there. These are often the best memories of a trip, so look properly; give the date, time and place, and whether tickets are needed. Note crowds or closures they cause.
@@ -206,7 +212,7 @@ export const BUILD_SYSTEM = `You turn a trip planner's research notes for one st
 
 export function buildPrompt(s: StopAsk, notes: string): string {
   const d = stopDates(s.outline, s.index);
-  return `Group: ${s.answers.travelers.length} people, budget ${dollars(s.answers.budget)}, pace ${s.answers.pace}, days ${s.answers.dayStyle}${s.answers.diets.length ? `, food needs: ${s.answers.diets.join(', ')}` : ''}.
+  return `Group: ${s.answers.travelers.length} people, budget ${budgetWords(s.answers)}, pace ${s.answers.pace}, days ${s.answers.dayStyle}${s.answers.diets.length ? `, food needs: ${s.answers.diets.join(', ')}` : ''}.
 Stop: ${s.outline.stops[s.index].city}. Dates, one day each: ${d.dates.join(', ')}.
 
 Research notes:

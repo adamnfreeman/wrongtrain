@@ -1,7 +1,7 @@
 /* The full-screen "planning your trip" screen: rows of icons sliding by, chosen from the vibe,
    interests, food needs and destination, with a line that changes every few seconds. It holds
    still for people who have Reduce Motion on. */
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode, useRef } from 'react';
 import type { Answers } from '../../supabase/functions/_shared/planner.ts';
 import { countryOf, partnerCards, type PartnerCard } from '../model/partners';
 import { COUNTRY_LANG, PACKS } from '../phrases';
@@ -66,15 +66,23 @@ function cardsFor(a: Answers, city?: string): Card[] {
 function Cards({ answers, city }: { answers: Answers; city?: string }) {
   const cards = useMemo(() => cardsFor(answers, city), [answers, city]);
   const [i, setI] = useState(0);
-  const [held, setHeld] = useState(false);
+  /* looking at a card holds it for a while, then they move on again */
+  const [heldAt, setHeldAt] = useState(0);
+  const setHeld = (_: boolean) => setHeldAt(Date.now());
+  const held = heldAt > 0;
+  useEffect(() => { if (!heldAt) return; const t = setTimeout(() => setHeldAt(0), 20000); return () => clearTimeout(t); }, [heldAt]);
+  const touch = useRef(0);
   useEffect(() => { const p = cards.find(c => c.kind === 'phrase'); if (p && p.kind === 'phrase') void loadClips(p.pack); }, [cards]);
-  /* move on every 8 seconds, unless they are looking at one */
-  useEffect(() => { if (held || cards.length < 2) return; const t = setInterval(() => setI(x => (x + 1) % cards.length), 8000); return () => clearInterval(t); }, [held, cards.length]);
+  /* move on every 12 seconds, unless they are looking at one; coming back to the app starts them again */
+  useEffect(() => { if (held || cards.length < 2) return; const t = setInterval(() => setI(x => (x + 1) % cards.length), 12000); return () => clearInterval(t); }, [held, cards.length]);
+  useEffect(() => { const f = () => { if (!document.hidden) setHeldAt(0); }; document.addEventListener('visibilitychange', f); return () => document.removeEventListener('visibilitychange', f); }, []);
   if (!cards.length) return null;
   const c = cards[i % cards.length];
   return (
     <div className="pcard-wrap">
-      <div className="pcard" key={i} onClick={() => setHeld(true)}>
+      <div className="pcard" key={i} onClick={() => setHeld(true)}
+        onTouchStart={e => { touch.current = e.touches[0].clientX; }}
+        onTouchEnd={e => { const dx = e.changedTouches[0].clientX - touch.current; if (Math.abs(dx) > 50) { setHeld(true); setI(x => (x + (dx < 0 ? 1 : cards.length - 1)) % cards.length); } }}>
         {c.kind === 'phrase' ? (
           <>
             <div className="kick">While you wait: a phrase in {c.pack.name}</div>
