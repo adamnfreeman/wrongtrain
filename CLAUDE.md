@@ -10,9 +10,14 @@ wrongtrain.lol, a single HTML file reading the trip from a Google Sheet.
 ## Branches: be careful with `main`
 
 - **`main` is the live website** (GitHub Pages, custom domain wrongtrain.lol):
-  - `/` is the **Japan 2026 page**, in real use for a trip from Oct 26 to Nov 8, 2026.
-    `index.html` + `sw.js` (offline support) + `phrases-audio.json`. Do not change it
-    without asking; it must keep working with no signal.
+  - `/` is the **Japan edition of the app** (since Oct 16, 2026), in real use for the Japan
+    trip from Oct 26 to Nov 8, 2026: `index.html`, `assets/`, `japan-sw.js` + `sw.js` (the same
+    offline worker; `sw.js` is the old page's worker name, so phones that had it move over),
+    `precache.json`, `phrases/`. It must keep working with no signal; don't change it without asking.
+  - `/classic/` is the **old Japan page** (single HTML file, its own `sw.js`), kept as the
+    backup. To switch back: copy `classic/index.html`, `classic/sw.js` and
+    `classic/phrases-audio.json` to the root.
+  - `/japan/` sends anyone with the test link on to `/`.
   - `/app/` is a **test copy of the WrongTrain build**, published by hand (see below).
 - **`app` is where WrongTrain is developed.** The app lives in `app/`; the Japan page's
   source is kept in `legacy/` for reference.
@@ -92,8 +97,14 @@ the sheet. The plan is changed in the sheet: Edit buttons say so (`SheetOnly` in
 No Wallet tab and no shared-trip sync. Works offline through `public/japan-sw.js`. Tested by
 `e2e/japan.mjs`, which plays the sheet's script.
 
-To publish: build it on `app`, then on `main` replace the `japan/` folder with `app/dist-japan/` and
-push. Touch nothing else on `main`. The Japan page at `/` stays until Adam says to swap.
+To publish: build it on `app` (`npm run build:japan`), then on `main` replace the site root's
+`index.html`, `assets/`, `japan-sw.js`, `precache.json`, `favicon.svg` and `phrases/` with those
+from `app/dist-japan/`, and copy `japan-sw.js` over `sw.js` too. Leave `CNAME`, `app/`,
+`classic/` and `japan/` alone. People coming from the old page keep their sign-in and saved trip
+(`oldPageTrip` in `src/sheet/live.ts`).
+
+The sheet's own script (Code.gs, and Filer.gs, which files each group note within a minute) is
+kept in `legacy/apps-script/`; the running copy lives in the sheet.
 
 ## Publishing the test copy at wrongtrain.lol/app/
 

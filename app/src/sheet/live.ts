@@ -13,11 +13,28 @@ export { TRIP_ID };
 export interface Creds { name: string; code: string }
 const KEY = 'wt-japan-auth';
 
+/* The old Japan page (same site, before this edition took its place) kept the sign-in as
+   "trip-auth" and the last copy of the sheet as "trip-raw". Reading them means nobody has to
+   sign in again, and the trip shows even when the first open after the swap has no signal. */
+const OLD_AUTH = 'trip-auth', OLD_RAW = 'trip-raw';
+const readJSON = (k: string) => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch { return null; } };
+
 export function savedCreds(): Creds | null {
-  try { const c = JSON.parse(localStorage.getItem(KEY) || 'null'); return c?.name && c?.code ? c : null; } catch { return null; }
+  const c = readJSON(KEY) || readJSON(OLD_AUTH);
+  return c?.name && c?.code ? { name: String(c.name), code: String(c.code) } : null;
+}
+
+/** The trip from the old page's saved copy of the sheet, if there is one. */
+export function oldPageTrip(): Trip | null {
+  const raw = readJSON(OLD_RAW);
+  if (!raw || !Array.isArray(raw.tabs)) return null;
+  try { const parsed = parseTrip(raw); return parsed.days.length ? toTrip(parsed) : null; } catch { return null; }
 }
 export function saveCreds(c: Creds | null) {
-  try { if (c) localStorage.setItem(KEY, JSON.stringify(c)); else localStorage.removeItem(KEY); } catch { /* ignore */ }
+  try {
+    if (c) localStorage.setItem(KEY, JSON.stringify(c));
+    else { localStorage.removeItem(KEY); localStorage.removeItem(OLD_AUTH); localStorage.removeItem(OLD_RAW); }
+  } catch { /* ignore */ }
 }
 
 /** Plain-words trouble, for the screen. kind 'signin' means the name and passcode no longer work. */

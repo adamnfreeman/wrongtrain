@@ -4,11 +4,17 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Trip } from '../model/types';
 import { getState, onNoteAdd, onTodoToggle, patchTrip, replaceTrip, setMe, useStore } from '../model/store';
-import { forgetTick, loadTrip, noteOnSheet, rememberNote, rememberTick, saveCreds, savedCreds, SheetError, SHEET_URL, tickOnSheet, TRIP_ID, withPending, type Creds } from '../sheet/live';
+import { forgetTick, loadTrip, oldPageTrip, noteOnSheet, rememberNote, rememberTick, saveCreds, savedCreds, SheetError, SHEET_URL, tickOnSheet, TRIP_ID, withPending, type Creds } from '../sheet/live';
 import { Sheet } from './form';
 import { Toast } from './requests';
 
 const EVERY = 5 * 60_000;
+
+/** Run once at startup: someone coming from the old Japan page sees its saved copy of the trip
+    straight away (even with no signal); the fresh one from the sheet follows. */
+export function seedFromOldPage() {
+  if (savedCreds() && !getState().trips.some(t => t.id === TRIP_ID)) { const t = oldPageTrip(); if (t) replaceTrip(t); }
+}
 
 export function JapanApp({ TripApp }: { TripApp: (p: { trip: Trip; me: string }) => ReactNode }) {
   const { trips, me } = useStore();

@@ -21,9 +21,21 @@ const parseTrip = (): Plugin => ({
   },
 })
 
+/* The files the Japan edition saves on the phone the first time it opens (public/japan-sw.js),
+   so it works with no signal from then on: the code and the Latin fonts. The Japanese font comes
+   in hundreds of small pieces and is saved piece by piece as it's used. */
+const precacheList = (): Plugin => ({
+  name: 'precache-list',
+  apply: 'build',
+  generateBundle(_, bundle) {
+    const files = Object.keys(bundle).filter(f => /\.(js|css)$/.test(f) || (/\.woff2$/.test(f) && !/zen-kaku/.test(f)))
+    this.emitFile({ type: 'asset', fileName: 'precache.json', source: JSON.stringify(files) })
+  },
+})
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), parseTrip()],
+  plugins: [react(), parseTrip(), precacheList()],
   /* relative paths, so one build works at wrongtrain.lol/app/ and inside the iOS app */
   base: './',
   define: { __BUILD__: JSON.stringify(BUILD) },
