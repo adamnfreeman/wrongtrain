@@ -11,7 +11,7 @@
    the secret: see supabase/functions/README.md. */
 import Anthropic from 'npm:@anthropic-ai/sdk@0.132.1';
 import { createClient } from 'npm:@supabase/supabase-js@2.118.0';
-import { FILING_SCHEMA, SYSTEM_PROMPT, emptyToNull, isFiling, notePrompt, type Filing } from '../_shared/filing.ts';
+import { FILING_SCHEMA, SYSTEM_PROMPT, buildNotePrompt, emptyToNull, isFiling, unalias, type Filing } from '../_shared/filing.ts';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -59,16 +59,15 @@ Deno.serve(async req => {
 
   try {
     const today = new Date().toISOString().slice(0, 10);
+    const { prompt, back } = buildNotePrompt(row.data, { text, author: String(body.note?.author || '') }, owner, today);
     const msg = await anthropic.beta.messages.create({
-      model: 'claude-opus-5-5',
+      /* Haiku: filing a note is routine; far cheaper than Opus, which cost 8¢ a note (Oct 17) */
+      model: 'claude-haiku-5-5',
       max_tokens: 16000,
       /* a routine job: keep it quick and cheap */
       output_config: { effort: 'low', format: { type: 'json_schema', schema: FILING_SCHEMA } },
-      /* if Claude declines, the API retries on a fallback model in the same call */
-      betas: ['server-side-fallback-2026-07-01'],
-      fallbacks: 'default',
       system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: notePrompt(row.data, { text, author: String(body.note?.author || '') }, owner, today) }],
+      messages: [{ role: 'user', content: prompt }],
     });
     if (msg.stop_reason === 'refusal') throw new Error('Claude declined to file this note.');
     if (msg.stop_reason === 'max_tokens') throw new Error('The answer was cut off.');
@@ -76,7 +75,7 @@ Deno.serve(async req => {
     const filing = out && out.type === 'text' ? (JSON.parse(out.text) as unknown) : null;
     if (!isFiling(filing)) throw new Error('The answer was not in the expected form.');
     await admin.from('ai_uses').update({ input_tokens: msg.usage.input_tokens, output_tokens: msg.usage.output_tokens }).eq('id', useId);
-    return reply(200, { ...emptyToNull(filing as Filing), left });
+    return reply(200, { ...unalias(emptyToNull(filing as Filing), back), left });
   } catch (e) {
     /* a failed call does not count against the trip */
     await admin.rpc('refund_ai_use', { use_id: useId });

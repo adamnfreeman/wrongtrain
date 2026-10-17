@@ -12,8 +12,8 @@
    Costs while testing:
    - The same request twice (same model, step and everything sent) is answered from plan_cache,
      with no call to Claude.
-   - The PLANNER_MODEL secret picks the model: unset for the best plans, claude-haiku-5-5 for
-     cheap test runs (about a fortieth of the price). */
+   - The PLANNER_MODEL secret picks the model: unset for Sonnet (good plans for much less than
+     Opus), claude-opus-5-5 for the best, claude-haiku-5-5 for cheap test runs. */
 import Anthropic from 'npm:@anthropic-ai/sdk@0.132.1';
 import { createClient } from 'npm:@supabase/supabase-js@2.118.0';
 import {
@@ -32,7 +32,7 @@ const reply = (status: number, body: unknown) =>
 
 const anthropic = new Anthropic(); // reads ANTHROPIC_API_KEY
 const MODELS = ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5'];
-const MODEL = MODELS.includes(Deno.env.get('PLANNER_MODEL') || '') ? Deno.env.get('PLANNER_MODEL')! : 'claude-opus-5-5';
+const MODEL = MODELS.includes(Deno.env.get('PLANNER_MODEL') || '') ? Deno.env.get('PLANNER_MODEL')! : 'claude-sonnet-5-5';
 const HAIKU = MODEL.includes('haiku');
 /* if Claude declines, the API retries on a fallback model in the same call (not offered for Haiku) */
 const FALLBACK = HAIKU ? {} : { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' } as const;

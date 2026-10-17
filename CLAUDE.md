@@ -299,6 +299,12 @@ Next:
    top of Today), and show ratings. Google ratings come from the Places API (paid per request;
    its terms require Google's attribution, and Google data shown on a map must be on a Google
    map, so in a list is fine). Alternatives: Foursquare or Yelp ratings.
+57. **Archive trips** as well as delete: an archived trip leaves the list (and, shared, everyone's
+   Today) but can be brought back, with its photos, money and notes kept, e.g. past trips.
+58. **Budget per kind, in the planner** ("advanced"): set a level for each, e.g. flights cheap,
+   hotels expensive, food cheap, sightseeing medium; it feeds the plan (see 44, the range).
+59. **Edit a group note** (Adam, Oct 17): today a note can't be changed once it's added. Let the
+   person who wrote it fix it (and decide what happens to anything Claude already filed from it).
 
 ## Working together
 
@@ -308,6 +314,7 @@ Two people work on this at once: Adam (adam@thefreemans.io, the technical side) 
 - They use four commands (`.claude/skills/`) and don't need to know git:
   `/start <what>` begins a piece of work on its own branch, `/save` backs it up to GitHub,
   `/catchup` brings in the other person's finished work, `/done` checks it and adds it to `app`.
+  `/todo <what>` just adds something to the to-do list (here and on the sheet), without working on it.
 - Never commit straight to `app`; `/done` merges into it after the build and tests pass.
 - **The project sheet** ("WrongTrain project: to-dos, changelog, accounts"; also has the
   Accounts list of every service and the Working together steps; never passwords or keys,

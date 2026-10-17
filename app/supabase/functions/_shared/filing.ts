@@ -104,7 +104,7 @@ What you can do:
 Leave the note open (done false, no changes) only when you truly can't tell what it means or where it goes, or it is a question for the group rather than something to file. For a chain or a place with no city given, pick the sensible destination and day and say so in the reply.
 
 Rules:
-- Use only ids that appear in the trip. Never invent a day or destination id.
+- Use only ids that appear in the trip. Never invent a day or destination id. A new place's key is a word of your own such as "new-1", never shaped like the trip's ids (P1, D2, I3, L4).
 - Do not give coordinates, opening hours or prices; they are checked separately. Leave link empty unless the note itself gives a link.
 - Do not add something the trip already has; say so in the reply instead.
 - If the note asks for several things, file each one; set done to false only if part of it can't be placed, and say which.
@@ -157,12 +157,75 @@ export function compactTrip(t: TripLike, ownerName = '') {
   };
 }
 
-/** The user message: the trip, today's date and the note. */
-export function notePrompt(trip: TripLike, note: { text: string; author: string }, ownerName: string, today: string): string {
+/** compactTrip as plain lines, about half the tokens of the same thing as JSON (no repeated keys,
+    quotes or braces). Each section says its columns once; an empty column is left blank. */
+export function tripText(c: ReturnType<typeof compactTrip>): string {
+  const row = (...v: unknown[]) => v.map(x => (x == null || x === false ? '' : x === true ? 'yes' : String(x))).join(' | ').replace(/( \| )+$/, '');
+  const out: string[] = [`Trip: ${c.name}`];
+  if (c.owner) out.push(`Owner: ${c.owner}`);
+  if (c.travelers.length) out.push(`Travelers: ${c.travelers.join(', ')}`);
+  out.push('', 'Destinations (id | name | country):', ...c.destinations.map(d => row(d.id, d.name, d.country)));
+  out.push('', 'Days (id | date | destination | travel | title | summary | stay id | stay name), each with its plan items (id | time | text):');
+  for (const d of c.days) {
+    out.push(row(d.id, d.date, d.destination, d.travel, d.title, d.summary, d.stay?.id, d.stay?.name));
+    for (const p of d.plan) out.push('  - ' + row(p.id, p.time, p.text));
+  }
+  if (c.legs.length) out.push('', 'Travel (id | date | from | to | mode | how | depart | arrive | status):', ...c.legs.map(l => row(l.id, l.day, l.from, l.to, l.mode, l.how, l.depart, l.arrive, l.status)));
+  const byDest = new Map<string, typeof c.places>();
+  for (const p of c.places) { const k = p.destination || 'No destination'; byDest.set(k, [...(byDest.get(k) || []), p]); }
+  out.push('', 'Places (id | name | kind | area | wishlist | days), by destination:');
+  for (const [dest, ps] of byDest) out.push(`${dest}:`, ...ps.map(p => '  ' + row(p.id, p.name, p.kind, p.area, p.wishlist, p.days?.join(' '))));
+  out.push('', `To-do groups: ${c.todoGroups.join(', ')}`);
+  if (c.todos.length) out.push('Open to-dos:', ...c.todos.map(t => '  ' + t));
+  return out.join('\n');
+}
+
+/** Swaps the trip's ids for short tags (P1 for places, D1 days, I1 plan items, L1 travel): ids like
+    "p-teamlab-biovortex-kyoto" repeat the name and were a large part of each note's cost. back maps
+    a tag to the real id, for unalias. Destination ids are already short and stay as they are. */
+export function shortIds(c: ReturnType<typeof compactTrip>) {
+  const back = new Map<string, string>(), to = new Map<string, string>();
+  const tag = (prefix: string, id: string) => {
+    let t = to.get(id);
+    if (!t) { t = `${prefix}${to.size + 1}`; to.set(id, t); back.set(t, id); }
+    return t;
+  };
+  const places = c.places.map(p => ({ ...p, id: tag('P', p.id) }));
+  const days = c.days.map(d => ({
+    ...d, id: tag('D', d.id), stay: d.stay ? { ...d.stay, id: tag('P', d.stay.id) } : undefined,
+    plan: d.plan.map(p => ({ ...p, id: p.id ? tag('I', p.id) : p.id })),
+  }));
+  const legs = c.legs.map(l => ({ ...l, id: tag('L', l.id) }));
+  return { c: { ...c, places, days, legs }, back };
+}
+
+const ID_FIELDS = ['placeId', 'dayId', 'legId', 'itemId'] as const;
+
+/** Claude's answer with the short tags turned back into the trip's ids. New places' keys are left alone. */
+export function unalias(f: Filing, back: Map<string, string>): Filing {
+  const real = (v: unknown) => (typeof v === 'string' && back.has(v) ? back.get(v)! : v);
+  return {
+    ...f,
+    changes: f.changes.map(c => {
+      const x = { ...c } as Record<string, unknown>;
+      for (const k of ID_FIELDS) if (k in x) x[k] = real(x[k]);
+      if (Array.isArray(x.dayIds)) x.dayIds = x.dayIds.map(real);
+      return x as unknown as FiledChange;
+    }),
+  };
+}
+
+/** The user message (the trip with short ids, today's date and the note), and the map back to real ids. */
+export function buildNotePrompt(trip: TripLike, note: { text: string; author: string }, ownerName: string, today: string) {
+  const { c, back } = shortIds(compactTrip(trip, ownerName));
+  return { prompt: notePrompt(c, note, today), back };
+}
+
+function notePrompt(c: ReturnType<typeof compactTrip>, note: { text: string; author: string }, today: string): string {
   return `Today is ${today}.
 
 <trip>
-${JSON.stringify(compactTrip(trip, ownerName))}
+${tripText(c)}
 </trip>
 
 <note author=${JSON.stringify(note.author || 'Someone')}>

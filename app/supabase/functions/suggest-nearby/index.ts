@@ -67,12 +67,11 @@ Deno.serve(async req => {
 
   try {
     const msg = await anthropic.beta.messages.create({
-      model: 'claude-opus-5-5',
+      /* Haiku: a quick choice from a short list; far cheaper than Opus, which cost 8¢ a note (Oct 17) */
+      model: 'claude-haiku-5-5',
       max_tokens: 4000,
       /* a quick choice from a short list */
       output_config: { effort: 'low', format: { type: 'json_schema', schema: PICKS_SCHEMA } },
-      betas: ['server-side-fallback-2026-07-01'],
-      fallbacks: 'default',
       system: NEARBY_SYSTEM,
       messages: [{ role: 'user', content: nearbyPrompt(mood, localTime, candidates) }],
     });

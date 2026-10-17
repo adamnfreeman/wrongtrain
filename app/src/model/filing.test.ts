@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { addPart, hasPlanPart, planIsIn, planPart, prepareFiling, undoFiling, type Filing } from './filing';
 import { needsApproval, verdict } from './rules';
 import { makeSample } from './sample';
-import { compactTrip, emptyToNull, FILING_SCHEMA, isFiling, notePrompt } from '../../supabase/functions/_shared/filing.ts';
+import { buildNotePrompt, compactTrip, emptyToNull, FILING_SCHEMA, isFiling, unalias } from '../../supabase/functions/_shared/filing.ts';
 
 const trip = () => makeSample(new Date('2027-04-12T09:00:00Z'));
 const place = (o: Partial<Extract<Filing['changes'][number], { type: 'place' }>> = {}) => ({
@@ -149,7 +149,7 @@ describe('what the function sends Claude', () => {
   });
 
   it('puts the note after the trip, marked as the traveler’s', () => {
-    const p = notePrompt(trip(), { text: 'Add Ichiran', author: 'Ben' }, 'Adam', '2027-04-12');
+    const { prompt: p } = buildNotePrompt(trip(), { text: 'Add Ichiran', author: 'Ben' }, 'Adam', '2027-04-12');
     expect(p).toMatch(/Today is 2027-04-12/);
     expect(p.indexOf('<trip>')).toBeLessThan(p.indexOf('<note author="Ben">'));
   });
@@ -259,5 +259,21 @@ describe('the filing schema the API accepts', () => {
   it('turns empty extras back into null', () => {
     const f = emptyToNull({ reply: '', done: true, changes: [{ type: 'todo', group: 'Before', text: 'Book', details: '', when: 'May' }] } as never);
     expect(f.changes[0]).toMatchObject({ details: null, when: 'May' });
+  });
+});
+
+describe('short ids in the prompt', () => {
+  it('sends tags instead of ids and turns them back in the answer', () => {
+    const t = trip();
+    const { prompt, back } = buildNotePrompt(t, { text: 'x', author: 'Ben' }, 'Adam', '2027-04-12');
+    const place = t.places[0], day = t.days[0];
+    expect(prompt).not.toContain(` ${place.id} |`);
+    const pTag = [...back].find(([, id]) => id === place.id)![0], dTag = [...back].find(([, id]) => id === day.id)![0];
+    const f = unalias({ reply: '', done: true, changes: [
+      { type: 'plan', dayId: dTag, text: 'Go', time: null, end: null, fixed: false, placeId: pTag },
+      { type: 'stay', dayIds: [dTag], placeId: 'new-key' },
+    ] } as never, back);
+    expect(f.changes[0]).toMatchObject({ dayId: day.id, placeId: place.id });
+    expect(f.changes[1]).toMatchObject({ dayIds: [day.id], placeId: 'new-key' });
   });
 });
