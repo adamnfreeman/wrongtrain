@@ -14,7 +14,9 @@ await wait(1000);
 const browser = await chromium.launch({ args: ['--no-proxy-server'] });
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, timezoneId: 'Asia/Tokyo' });
 const asked = [];
+let offline = false;
 await ctx.route(/script\.google\.com/, r => {
+  if (offline) return r.abort('internetdisconnected');
   const q = new URL(r.request().url()).searchParams;
   asked.push(Object.fromEntries(q));
   const body = q.get('code') !== 'right' ? { ok: false, error: 'signin' }
@@ -69,10 +71,40 @@ await page.reload();
 await page.waitForSelector('.tab:has-text("Today")');
 check(true, 'stays signed in, with the trip, after a reload');
 
+/* no signal: once it has been opened, it opens again with the trip */
+await page.evaluate(() => navigator.serviceWorker.ready);
+await page.waitForTimeout(1500);
+offline = true; await ctx.setOffline(true);
+await page.reload();
+await page.waitForSelector('.tab:has-text("Today")', { timeout: 15000 }).catch(() => {});
+check(await page.locator('.tab:has-text("Today")').count() === 1, 'opens with no signal after one visit');
+await page.click('.tab:has-text("Days")');
+check(/plan/i.test(await page.locator('#view').textContent()), 'and shows the days with no signal');
+offline = false; await ctx.setOffline(false);
+
+await page.click('.tab:has-text("Today")');
 await page.click('#view .acctbtn');
 await page.click('.sheet-wrap button:has-text("Sign out")');
 await page.waitForSelector('#jn');
 check(true, 'signs out from Account & settings');
+
+/* someone who used the old Japan page on this phone: already signed in, and the trip shows from
+   its saved copy even when the first open has no signal */
+const ctx2 = await browser.newContext({ viewport: { width: 390, height: 844 } });
+await ctx2.route(/script\.google\.com/, r => r.abort('internetdisconnected'));
+await ctx2.route(/supabase\.co/, r => r.abort('internetdisconnected'));
+await ctx2.addInitScript(raw => {
+  if (sessionStorage.getItem('seeded')) return;
+  sessionStorage.setItem('seeded', '1');
+  localStorage.setItem('trip-auth', JSON.stringify({ name: 'Andrea', code: 'right', shown: 'Andrea' }));
+  localStorage.setItem('trip-raw', JSON.stringify(raw));
+}, RAW);
+const page2 = await ctx2.newPage();
+page2.on('pageerror', e => errors.push('old page: ' + e.message));
+await page2.goto('http://localhost:8099/');
+await page2.waitForSelector('.tab:has-text("Today")', { timeout: 15000 }).catch(() => {});
+check(await page2.locator('.tab:has-text("Today")').count() === 1, 'coming from the old page: no sign-in, trip shows with no signal');
+await ctx2.close();
 
 check(errors.length === 0, 'no script errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
 await browser.close();

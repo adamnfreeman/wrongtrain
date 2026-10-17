@@ -25,6 +25,8 @@ const [{ default: App }, { pullAll, startSync }] = await Promise.all([import('./
 /* The Japan edition reads its one trip from the Google Sheet, not from shared trips; it keeps
    working with no signal through its own service worker (public/japan-sw.js). */
 if (JAPAN) {
+  const { seedFromOldPage } = await import('./ui/japan')
+  seedFromOldPage()
   if ('serviceWorker' in navigator) void navigator.serviceWorker.register('./japan-sw.js').catch(() => {})
 } else {
   startSync()
