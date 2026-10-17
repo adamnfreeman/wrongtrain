@@ -201,7 +201,8 @@ Next:
 19. **Freemium and how to pay for the AI** (asked for Oct 16; to discuss before building).
    Claude calls cost real money (planner, ideas box, Something nearby). Options to weigh: a free
    tier with limits plus a per-trip pass (`trip_passes` exists), a subscription, or both, and
-   affiliate income (VISION.md). Decide which features are paid.
+   affiliate income (VISION.md). Decide which features are paid. Also: how many AI trip plans
+   come free (today the cap is 5 a month per person, in `claim_plan`); one free plan, then paid?
 20. **Cancel an invite** (asked for Oct 16): removing someone who has joined already works
    (People and sharing, `removeMember`); also let the owner cancel an invite code nobody has
    used yet, so a forwarded link stops working.
@@ -219,7 +220,8 @@ Next:
 24. **"Something nearby" moods**: "Coffee & cake" becomes just "Coffee"; an icon for each mood.
 25. **Photos as their own page**, with comments and hearts (builds on 17).
 26. **Tab order**: Wallet goes between Transit and Phrases.
-27. **Currency converter in Wallet → Money** (also in 9).
+27. **Currency converter in Wallet → Money** (also in 9), showing the rate plainly both ways, e.g.
+   "¥1,000 = $6.70" and "$10 = ¥1,493", big enough to read at a till.
 28. **Trip settings: first and last day** shown and changeable there.
 29. **"Who's going" fills itself**: today it's names typed in Trip settings, used to split money,
    and it doesn't grow when someone joins with a code. Add people who join automatically (their
@@ -242,6 +244,11 @@ Next:
    for an idle afternoon, a hotel on a night with no stay) rather than ads. Rules to keep it
    honest: always labelled, never only paid options (show the best choice even when it pays
    nothing), never ranked by commission.
+35. **Deleting trips, clearly**: today "Delete this trip" is only in Trip settings, and only for a
+   trip that isn't shared (a shared one has "Leave"). Make it easy to find (e.g. from All trips),
+   and for a shared trip let the owner delete it for everyone, with a clear warning.
+36. **The logo** (for Andrea): the simple line logo feels a bit like a gummy worm. Try it on a
+   diagonal, and see whether it says "trip" and "train" enough on its own.
 
 ## Working together
 
