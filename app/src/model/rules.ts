@@ -1,15 +1,16 @@
 /* Who may change what on a shared trip, and requests for changes that need the owner's OK.
 
-   The owner picks a rule for the trip:
-   - open: everyone changes everything directly
-   - approve (the default): anyone can add ideas, places, to-dos, notes, documents and expenses
-     and tick things off;
-     removing anything, or changing the plan itself (days, times, travel, stays, which day a
-     place is on, the trip's name, dates and destinations), becomes a request
-   - all: every change by someone else is a request, except leaving a note
+   Each person has a level of say (their role):
+   - organizer: changes anything and decides requests, like the owner
+   - editor ("can change anything"): changes anything directly
+   - contributor ("can add ideas"): adds ideas, places, to-dos, notes, documents and expenses and
+     ticks things off; removing anything, or changing the plan itself (days, times, travel, stays,
+     which day a place is on, the trip's name, dates and destinations), becomes a request
+   - viewer ("look and leave notes"): only leaves notes
 
-   On top of the rule, each person has a role. Owners and organizers change everything directly
-   and decide requests; viewers only leave notes.
+   The trip's rule is the level people get when they join, chosen when the trip is made (LEVELS,
+   in plain and funny words); the owner can change anyone's level after. 'all' is from before
+   levels were per person, and counts as 'approve'.
 
    supabase/schema.sql enforces the same rule on every save (change_needs_approval), so these
    functions decide what the app offers, and the database makes sure of it. Keep the two in step. */
@@ -17,18 +18,27 @@ import type { Trip } from './types';
 import { merge3, same } from './merge';
 import { longDate, fmtHM } from './time';
 
-export type Rule = 'open' | 'approve' | 'all';
-export type Role = 'owner' | 'organizer' | 'editor' | 'viewer';
+export type Rule = 'open' | 'approve' | 'look' | 'all';
+export type Role = 'owner' | 'organizer' | 'editor' | 'contributor' | 'viewer';
 
-export const RULES: { value: Rule; label: string; hint: string }[] = [
-  { value: 'approve', label: 'Approve changes', hint: 'Anyone can add ideas, places, to-dos and notes. Removing things or changing the plan (days, times, travel, stays) waits for your OK.' },
-  { value: 'open', label: 'Open', hint: 'Everyone on the trip changes anything, straight away.' },
-  { value: 'all', label: 'Approve everything', hint: 'Every change by someone else waits for your OK. Notes still go straight in.' },
+/** The three levels of say, as offered when a trip is made and for each person after. */
+export const LEVELS: { rule: Exclude<Rule, 'all'>; role: 'editor' | 'contributor' | 'viewer'; label: string; pitch: string; hint: string }[] = [
+  { rule: 'open', role: 'editor', label: 'Can change anything',
+    pitch: "My friends are chill and know what they're doing",
+    hint: 'No approvals. Anyone changes anything, straight away.' },
+  { rule: 'approve', role: 'contributor', label: 'Can add ideas',
+    pitch: "Some of these people shouldn't be allowed near the hotels",
+    hint: 'They add ideas, places, to-dos and notes. Changing the itinerary (days, times, travel, stays) or removing things waits for your OK.' },
+  { rule: 'look', role: 'viewer', label: 'Look and leave notes',
+    pitch: 'My mother-in-law is trying to run this trip and nobody wants her to',
+    hint: 'They see everything and leave notes. Nothing else.' },
 ];
+/** The level a trip's rule gives people when they join. */
+export const joinLevel = (rule: Rule | undefined) => LEVELS.find(l => l.rule === (rule === 'all' ? 'approve' : rule || 'open'))!;
+
 export const ROLES: { value: Exclude<Role, 'owner'>; label: string; hint: string }[] = [
-  { value: 'organizer', label: 'Organizer', hint: 'Changes anything and approves requests.' },
-  { value: 'editor', label: 'Editor', hint: 'Follows the trip rule.' },
-  { value: 'viewer', label: 'Viewer', hint: 'Sees everything, leaves notes.' },
+  { value: 'organizer', label: 'Organizer', hint: 'Changes anything and approves requests, like you.' },
+  ...LEVELS.map(l => ({ value: l.role, label: l.label, hint: l.hint })),
 ];
 
 export const canDecide = (role: Role) => role === 'owner' || role === 'organizer';
@@ -38,14 +48,15 @@ const OPEN_KEYS = ['notes', 'todos', 'todoGroups', 'places', 'docs', 'expenses',
 
 type Verdict = 'ok' | 'request' | 'blocked';
 
-/** What happens to an edit from someone with this role, on a trip with this rule. */
-export function verdict(before: Trip, after: Trip, rule: Rule, role: Role): Verdict {
-  if (canDecide(role) || (rule === 'open' && role === 'editor')) return 'ok';
-  if (!needsApproval(before, after, role === 'viewer' ? 'all' : rule)) return 'ok';
-  return role === 'viewer' ? 'blocked' : 'request';
+/** What happens to an edit from someone at this level. Mirrors change_needs_approval in schema.sql. */
+export function verdict(before: Trip, after: Trip, role: Role): Verdict {
+  if (canDecide(role) || role === 'editor') return 'ok';
+  if (!needsApproval(before, after, role === 'contributor' ? 'approve' : 'all')) return 'ok';
+  return role === 'contributor' ? 'request' : 'blocked';
 }
 
-/** True when the edit goes beyond what the rule lets anyone do directly. Mirrors change_needs_approval in schema.sql. */
+/** True when the edit goes beyond what this much say allows directly: 'approve' for a contributor,
+    'all' (only notes) for a viewer. */
 export function needsApproval(before: Trip, after: Trip, rule: Rule): boolean {
   if (rule === 'open') return false;
   const free: readonly string[] = rule === 'all' ? ['notes'] : OPEN_KEYS;

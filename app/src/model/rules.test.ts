@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyChange, changeOf, describe as words, needsApproval, verdict } from './rules';
+import { applyChange, changeOf, describe as words, joinLevel, needsApproval, verdict } from './rules';
 import { deleteDay, deletePlace, insertDay, saveTodo, setStart } from './edit';
 import { makeSample } from './sample';
 import type { Trip } from './types';
@@ -66,17 +66,26 @@ describe('the other rules', () => {
 describe('verdict', () => {
   const t = trip(), cut = deleteDay(t, t.days[1].id);
   const note = { ...t, notes: [...t.notes, { id: 'n1', author: 'Vi', text: 'Hi', at: '', done: false }] };
-  it('owners and organizers change anything directly', () => {
-    expect(verdict(t, cut, 'all', 'owner')).toBe('ok');
-    expect(verdict(t, cut, 'all', 'organizer')).toBe('ok');
+  const idea = { ...t, places: [...t.places, { id: 'px', name: 'Gelato', kind: 'food' as const, wishlist: true }] };
+  it('owners, organizers and editors ("can change anything") change anything directly', () => {
+    expect(verdict(t, cut, 'owner')).toBe('ok');
+    expect(verdict(t, cut, 'organizer')).toBe('ok');
+    expect(verdict(t, cut, 'editor')).toBe('ok');
   });
-  it('editors follow the rule', () => {
-    expect(verdict(t, cut, 'approve', 'editor')).toBe('request');
-    expect(verdict(t, cut, 'open', 'editor')).toBe('ok');
+  it('contributors ("can add ideas") add directly and ask for plan changes', () => {
+    expect(verdict(t, idea, 'contributor')).toBe('ok');
+    expect(verdict(t, cut, 'contributor')).toBe('request');
   });
-  it('viewers only leave notes, whatever the rule', () => {
-    expect(verdict(t, note, 'open', 'viewer')).toBe('ok');
-    expect(verdict(t, cut, 'open', 'viewer')).toBe('blocked');
+  it('viewers ("look and leave notes") only leave notes', () => {
+    expect(verdict(t, note, 'viewer')).toBe('ok');
+    expect(verdict(t, idea, 'viewer')).toBe('blocked');
+    expect(verdict(t, cut, 'viewer')).toBe('blocked');
+  });
+  it('a trip set up with a rule gives that level to people who join; open by default', () => {
+    expect(joinLevel(undefined).role).toBe('editor');
+    expect(joinLevel('approve').role).toBe('contributor');
+    expect(joinLevel('all').role).toBe('contributor');
+    expect(joinLevel('look').role).toBe('viewer');
   });
 });
 

@@ -24,11 +24,14 @@ create table if not exists public.trips (
   updated_at  timestamptz not null default now(),
   updated_by  uuid references auth.users (id) on delete set null
 );
--- open: anyone changes anything; approve: additions go in, removals and plan changes are requests;
--- all: every change but a note is a request. See src/model/rules.ts.
-alter table public.trips add column if not exists rule text not null default 'approve';
+-- How much say people get when they join (chosen when the trip is made; each person's level can
+-- be changed after): open, they change anything (editor); approve, they add ideas and plan
+-- changes are requests (contributor); look, they read and leave notes (viewer). 'all' is from
+-- before levels were per person and counts as approve. See src/model/rules.ts.
+alter table public.trips add column if not exists rule text not null default 'open';
+alter table public.trips alter column rule set default 'open';
 alter table public.trips drop constraint if exists trips_rule_check;
-alter table public.trips add constraint trips_rule_check check (rule in ('open', 'approve', 'all'));
+alter table public.trips add constraint trips_rule_check check (rule in ('open', 'approve', 'all', 'look'));
 
 create table if not exists public.trip_members (
   trip_id    text not null references public.trips (id) on delete cascade,
@@ -39,10 +42,19 @@ create table if not exists public.trip_members (
   primary key (trip_id, user_id)
 );
 create index if not exists trip_members_user on public.trip_members (user_id);
--- owner: one per trip; organizer: changes anything and decides requests; editor: follows the
--- trip rule; viewer: reads and leaves notes
+-- owner: one per trip; organizer: changes anything and decides requests; editor: changes anything;
+-- contributor: adds ideas, places, to-dos and notes, and asks for plan changes; viewer: reads and
+-- leaves notes.
+-- Before contributors existed, an editor followed the trip rule; on trips that asked for approval
+-- those editors become contributors, once (this runs only while the old check is in place).
+do $$ begin
+  if exists (select 1 from pg_constraint where conname = 'trip_members_role_check' and pg_get_constraintdef(oid) not like '%contributor%') then
+    update public.trip_members m set role = 'contributor'
+      from public.trips t where t.id = m.trip_id and m.role = 'editor' and t.rule <> 'open';
+  end if;
+end $$;
 alter table public.trip_members drop constraint if exists trip_members_role_check;
-alter table public.trip_members add constraint trip_members_role_check check (role in ('owner', 'organizer', 'editor', 'viewer'));
+alter table public.trip_members add constraint trip_members_role_check check (role in ('owner', 'organizer', 'editor', 'contributor', 'viewer'));
 
 -- Changes waiting for an owner or organizer. before and after hold only the parts of the trip
 -- the change touches; the app replays them on top of the trip as it is when approved.
@@ -107,15 +119,15 @@ language sql stable security definer set search_path = public as $$
   select role from trip_members where trip_id = t and user_id = auth.uid();
 $$;
 
--- Whether going from old_data to new_data needs an owner's OK, for someone with this role under this rule.
--- Mirrors needsApproval and verdict in src/model/rules.ts: keep the two in step.
+-- Whether going from old_data to new_data needs an owner's OK, for someone with this role. The
+-- role carries the person's level (trip_rule is no longer used here; it sets the level people
+-- join with). Mirrors needsApproval and verdict in src/model/rules.ts: keep the two in step.
 create or replace function public.change_needs_approval(old_data jsonb, new_data jsonb, trip_rule text, member_role text)
 returns boolean language plpgsql immutable set search_path = public as $$
-declare k text; free text[]; r text := trip_rule;
+declare k text; free text[]; r text;
 begin
-  if member_role in ('owner', 'organizer') then return false; end if;
-  if member_role = 'viewer' then r := 'all'; end if;
-  if r = 'open' then return false; end if;
+  if member_role in ('owner', 'organizer', 'editor') then return false; end if;
+  r := case when member_role = 'contributor' then 'approve' else 'all' end;
   free := case when r = 'all' then array['notes'] else array['notes', 'todos', 'todoGroups', 'places', 'docs', 'expenses', 'settlements', 'venmo'] end;
   -- anything outside the free parts changed
   for k in select jsonb_object_keys(old_data) union select jsonb_object_keys(new_data) loop
@@ -232,7 +244,7 @@ returns void language plpgsql security definer set search_path = public as $$
 declare t text := trip_id;
 begin
   if my_role(t) is distinct from 'owner' then raise exception 'only the owner can do that'; end if;
-  if role not in ('organizer', 'editor', 'viewer') then raise exception 'unknown role'; end if;
+  if role not in ('organizer', 'editor', 'contributor', 'viewer') then raise exception 'unknown role'; end if;
   update trip_members m set role = set_member_role.role where m.trip_id = t and m.user_id = member and m.role <> 'owner';
   if not found then raise exception 'not someone you can change'; end if;
 end $$;
@@ -263,7 +275,10 @@ begin
   select i.trip_id into t from invites i
     where i.code = upper(replace(invite_code, ' ', '')) and i.expires_at > now();
   if t is null then raise exception 'invite not found or expired'; end if;
-  insert into trip_members (trip_id, user_id, name, role) values (t, auth.uid(), coalesce(member_name, ''), 'editor')
+  -- newcomers get the level the trip was set up with
+  insert into trip_members (trip_id, user_id, name, role)
+    values (t, auth.uid(), coalesce(member_name, ''),
+            (select case tr.rule when 'open' then 'editor' when 'look' then 'viewer' else 'contributor' end from trips tr where tr.id = t))
     on conflict (trip_id, user_id) do update set name = excluded.name;
   return t;
 end $$;

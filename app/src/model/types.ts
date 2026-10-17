@@ -38,6 +38,9 @@ export interface Trip {
   currency?: string;
   /** Venmo usernames, by traveller name, for "Pay with Venmo". */
   venmo?: Record<string, string>;
+  /** How much say people get when they join, picked when the trip is made (model/rules.ts). It's
+      applied when the trip is shared; after that the trip's rule online is what counts. */
+  say?: 'open' | 'approve' | 'look';
   /** Set on the built-in sample, which may pretend you are on the trip right now. */
   sample?: boolean;
   createdAt: string;

@@ -254,7 +254,7 @@ function Notes() {
  <p className="note">{JAPAN
         ? 'More than a to-do list: this is how things get added to the trip. Leave a note with what you want added (a shop, somewhere to eat, a sight, something to pack). It goes to the Group Notes tab in the sheet and is filed within about an hour.'
         : claude
-        ? 'Leave a note with something to add: somewhere to eat, a sight, a shop, something to book or pack. WrongTrain files it into the trip for everyone. Changes to plans already made wait for the owner.'
+        ? 'Leave a note with something to add: somewhere to eat, a sight, a shop, something to book or pack. WrongTrain files it into the trip for everyone: places, days, travel, to-dos.'
         : 'Ideas, questions and things to add, for everyone on the trip to see.'}{why && <> {why}</>}</p>
       <textarea className="search notebox" id="gnote" rows={3} maxLength={600} value={draft} onChange={e => setDraft(e.target.value)}
         placeholder={claude ? 'For example: add the ramen place near the hotel to Nov 3' : 'For example: can we fit in a sentō one evening?'} aria-label="Your note" />

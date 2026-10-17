@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { addPart, hasPlanPart, planIsIn, planPart, prepareFiling, undoFiling, type Filing } from './filing';
-import { needsApproval } from './rules';
+import { needsApproval, verdict } from './rules';
 import { makeSample } from './sample';
 import { compactTrip, FILING_SCHEMA, isFiling, notePrompt } from '../../supabase/functions/_shared/filing.ts';
 
@@ -171,5 +171,75 @@ describe('what the function sends Claude', () => {
     expect(isFiling(filing([place()]))).toBe(true);
     expect(isFiling({ changes: [{ type: 'delete' }], reply: '', done: true })).toBe(false);
     expect(isFiling({ reply: 'x' })).toBe(false);
+  });
+});
+
+describe('travel, stays and changes to the plan', () => {
+  it('adds a flight, updates one the trip has, and undoes both', () => {
+    const t = trip(), leg = t.legs[0];
+    const x = prepareFiling(t, 'n2', filing([
+      { type: 'leg', legId: null, dayId: t.days.at(-1)!.id, from: 'Haneda', to: 'New York JFK', mode: 'flight', how: 'Flight JL 4', depart: '19:45', arrive: null, status: 'booked', details: null },
+      { type: 'leg', legId: leg.id, dayId: leg.dayId || null, from: leg.from, to: leg.to, mode: leg.mode, how: 'Haruka 56, Green Car', depart: '20:46', arrive: '22:03', status: 'booked', details: 'Seats 5A-6B' },
+      { type: 'leg', legId: null, dayId: 'nope', from: '', to: 'Nowhere', mode: 'rocket' as never, how: '', depart: '9am', arrive: null, status: 'todo', details: null },
+    ]));
+    expect(x.legs).toHaveLength(1);
+    expect(x.legs[0]).toMatchObject({ from: 'Haneda', to: 'New York JFK', mode: 'flight', depart: '19:45', status: 'booked' });
+    expect(x.legEdits).toHaveLength(1);
+    const after = planPart(addPart(t, x), x);
+    expect(after.legs.find(l => l.id === leg.id)).toMatchObject({ how: 'Haruka 56, Green Car', depart: '20:46', details: 'Seats 5A-6B' });
+    expect(planIsIn(after, x)).toBe(true);
+    const undone = undoFiling(after, x);
+    expect(undone.legs).toEqual(t.legs);
+  });
+
+  it('moves, rewords and takes off plan items, and puts them back on undo', () => {
+    const t = trip(), d = t.days.find(x => x.plan.length >= 2)!, [a, b] = d.plan;
+    const x = prepareFiling(t, 'n2', filing([
+      { type: 'planEdit', dayId: d.id, itemId: a.id, text: null, time: '07:00', end: null, remove: false },
+      { type: 'planEdit', dayId: d.id, itemId: b.id, text: null, time: null, end: null, remove: true },
+      { type: 'planEdit', dayId: d.id, itemId: 'nope', text: 'Ghost', time: null, end: null, remove: false },
+    ]));
+    expect(x.planEdits).toHaveLength(2);
+    const after = planPart(t, x), day = after.days.find(y => y.id === d.id)!;
+    expect(day.plan.find(i => i.id === a.id)?.time).toBe('07:00');
+    expect(day.plan.some(i => i.id === b.id)).toBe(false);
+    expect(planIsIn(after, x)).toBe(true);
+    expect(undoFiling(after, x).days.find(y => y.id === d.id)!.plan.map(i => i.id).sort()).toEqual(d.plan.map(i => i.id).sort());
+  });
+
+  it('sets where people stay, with a hotel added in the same note', () => {
+    const t = trip(), days = t.days.slice(0, 2).map(d => d.id);
+    const x = prepareFiling(t, 'n2', filing([
+      place({ key: 'h1', name: 'Hotel Gracery Shinjuku', kind: 'stay', destinationId: 'tok' }),
+      { type: 'stay', dayIds: days, placeId: 'h1' },
+    ]));
+    expect(x.stays.map(s => s.dayId)).toEqual(days);
+    const after = planPart(addPart(t, x), x);
+    expect(after.days.slice(0, 2).every(d => d.stayId === x.places[0].id)).toBe(true);
+    expect(undoFiling(after, x).days.slice(0, 2).map(d => d.stayId)).toEqual(t.days.slice(0, 2).map(d => d.stayId));
+  });
+
+  it('goes straight in for someone who can change anything; a request for someone who can add ideas', () => {
+    const t = trip(), d = t.days.find(x => x.plan.length)!;
+    const x = prepareFiling(t, 'n2', filing([{ type: 'planEdit', dayId: d.id, itemId: d.plan[0].id, text: null, time: '06:30', end: null, remove: false }]));
+    const after = planPart(t, x);
+    expect(verdict(t, after, 'editor')).toBe('ok');
+    expect(verdict(t, after, 'contributor')).toBe('request');
+  });
+
+  it('copes with filings saved before travel and stays existed', () => {
+    const t = trip(), x = prepareFiling(t, 'n2', filing([place()]));
+    const old = { ...x } as Partial<typeof x>;
+    delete old.legs; delete old.legEdits; delete old.stays; delete old.planEdits;
+    expect(hasPlanPart(old as typeof x)).toBe(false);
+    expect(() => undoFiling(addPart(t, old as typeof x), old as typeof x)).not.toThrow();
+  });
+
+  it('shows Claude the travel, stays and plan item ids it may change', () => {
+    const c = compactTrip(trip());
+    expect(c.legs.length).toBeGreaterThan(0);
+    expect(c.days[0].plan[0]).toHaveProperty('id');
+    expect(c.days.some(d => d.stay?.name)).toBe(true);
+    expect(JSON.stringify(FILING_SCHEMA)).toContain('planEdit');
   });
 });

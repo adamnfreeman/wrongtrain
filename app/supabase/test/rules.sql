@@ -29,6 +29,8 @@ select pg_temp.ok(pg_temp.fails($$insert into trips (id, owner, data) values ('x
 select pg_temp.ok(public.save_trip('t1', '{"name":"Italy 2"}', 1) = 2, 'save with the current version succeeds (now 2)');
 select pg_temp.ok(public.save_trip('t1', '{"name":"stale"}', 1) = -1, 'save from an old version is refused');
 select pg_temp.ok((select data->>'name' from trips where id = 't1') = 'Italy 2', 'a refused save changes nothing');
+select pg_temp.ok((select rule from trips where id = 't1') = 'open', 'a new trip lets people change anything by default');
+select public.set_trip_rule('t1', 'approve');
 create temp table code as select public.create_invite('t1') as c;
 grant select on code to authenticated;
 select pg_temp.ok((select length(c) from code) = 8, 'invite code has 8 characters');
@@ -47,10 +49,9 @@ select pg_temp.act('ben');
 select pg_temp.ok(public.join_trip(lower((select c from code)), 'Ben') = 't1', 'Ben joins with the code, typed in lower case');
 select pg_temp.ok((select count(*) from trips) = 1, 'Ben can now read the trip');
 select pg_temp.ok((select count(*) from trip_members) = 2, 'Ben sees both people on it');
-select pg_temp.ok((select rule from trips where id = 't1') = 'approve', 'a new trip asks for approval by default');
-select pg_temp.ok((select role from trip_members where user_id = auth.uid()) = 'editor', 'Ben joins as an editor');
+select pg_temp.ok((select role from trip_members where user_id = auth.uid()) = 'contributor', 'Ben joins as a contributor, the level Ana set (add ideas, ask for plan changes)');
 
--- under "approve", Ben adds things directly and asks for the rest
+-- as a contributor, Ben adds things directly and asks for the rest
 create function pg_temp.d() returns jsonb language sql as $$ select data from trips where id = 't1' $$;
 create function pg_temp.v() returns bigint language sql as $$ select version from trips where id = 't1' $$;
 create function pg_temp.save(j jsonb) returns bigint language sql as $$ select public.save_trip('t1', j, pg_temp.v()) $$;
@@ -115,14 +116,8 @@ select pg_temp.act('ben');
 select pg_temp.ok(pg_temp.save(pg_temp.d() || '{"name":"Italia"}') > 0, 'an organizer changes anything directly');
 select pg_temp.act('ana');
 select public.set_member_role('t1', '00000000-0000-0000-0000-00000000000b', 'editor');
-select public.set_trip_rule('t1', 'all');
 select pg_temp.act('ben');
-select pg_temp.ok(pg_temp.fails($$select pg_temp.save(pg_temp.d() || '{"todos":[{"id":"x1","done":false}]}')$$), 'under "all", even ticking a to-do is a request');
-select pg_temp.ok(pg_temp.save(pg_temp.d() || '{"notes":[{"id":"n1","text":"Sento?"},{"id":"n2","text":"Gelato"},{"id":"n3","text":"Ok"}]}') > 0, '... but notes go straight in');
-select pg_temp.act('ana');
-select public.set_trip_rule('t1', 'open');
-select pg_temp.act('ben');
-select pg_temp.ok(pg_temp.save(pg_temp.d() - 'places') > 0, 'under "open", an editor can remove things');
+select pg_temp.ok(pg_temp.save(pg_temp.d() - 'places') > 0, 'an editor (can change anything) removes things directly, whatever the trip was set up with');
 select pg_temp.ok(pg_temp.save(pg_temp.d() || '{"name":"Italy 3"}') > 0, '... and rename the trip');
 select pg_temp.ok(pg_temp.fails($$select public.remove_member('t1', '00000000-0000-0000-0000-00000000000a')$$), 'Ben cannot remove the owner');
 update trip_members set name = 'Benjamin' where user_id = auth.uid();
@@ -171,16 +166,17 @@ select pg_temp.ok(not exists (select 1 from trips where id = 't1'), 'and a trip 
 select pg_temp.ok(exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'trips'), 'trips are published for live updates');
 select pg_temp.ok(exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'trip_requests'), '... and so are requests');
 
--- documents, expenses, files and photos, on a new trip: Ana owns it, Cat joins as an editor
+-- documents, expenses, files and photos, on a new trip: Ana owns it, Cat joins as a contributor
 select pg_temp.act('ana');
 select public.share_trip('t3', '{"name":"Japan"}', 'Ana');
+select public.set_trip_rule('t3', 'approve');
 create temp table code3 as select public.create_invite('t3') as c;
 grant select on code3 to authenticated;
 select pg_temp.act('cat');
 select public.join_trip((select c from code3), 'Cat');
 create function pg_temp.d3() returns jsonb language sql as $$ select data from trips where id = 't3' $$;
 create function pg_temp.save3(j jsonb) returns bigint language sql as $$ select public.save_trip('t3', j, (select version from trips where id = 't3')) $$;
-select pg_temp.ok(pg_temp.save3(pg_temp.d3() || '{"docs":[{"id":"d1","title":"JR Pass"}],"expenses":[{"id":"e1","amount":30}],"settlements":[{"id":"s1"}],"venmo":{"Cat":"cat-c"}}') > 0, 'an editor adds a ticket, an expense, a payment and her Venmo name directly');
+select pg_temp.ok(pg_temp.save3(pg_temp.d3() || '{"docs":[{"id":"d1","title":"JR Pass"}],"expenses":[{"id":"e1","amount":30}],"settlements":[{"id":"s1"}],"venmo":{"Cat":"cat-c"}}') > 0, 'a contributor adds a ticket, an expense, a payment and her Venmo name directly');
 select pg_temp.ok(pg_temp.fails($$select pg_temp.save3(pg_temp.d3() || '{"docs":[]}')$$), '... but removing a ticket needs approval');
 select pg_temp.ok(pg_temp.fails($$select pg_temp.save3(pg_temp.d3() || '{"expenses":[]}')$$), '... and so does removing an expense');
 select pg_temp.ok(pg_temp.fails($$select pg_temp.save3(pg_temp.d3() || '{"currency":"JPY"}')$$), '... or changing the trip''s currency');
@@ -215,3 +211,19 @@ select pg_temp.ok((public.claim_plan('00000000-0000-0000-0000-00000000000a', 100
 select public.claim_plan_step(((select p from plans) ->> 'id')::uuid, '00000000-0000-0000-0000-00000000000a', 100, 50);
 select pg_temp.ok((select steps from ai_plans where id = ((select p from plans) ->> 'id')::uuid) = 1, 'a step counts against the plan, with its tokens');
 select pg_temp.ok(pg_temp.fails($$select public.claim_plan_step(((select p from plans) ->> 'id')::uuid, '00000000-0000-0000-0000-00000000000c', 0, 0)$$), 'nobody else can use someone''s plan');
+
+-- the level people join with follows how the trip was set up
+select pg_temp.act('ana');
+select public.share_trip('t9', '{"name":"Lisbon"}', 'Ana');
+select public.set_trip_rule('t9', 'look');
+create temp table code9 as select public.create_invite('t9') as c;
+grant select on code9 to authenticated;
+select pg_temp.act('cat');
+select public.join_trip((select c from code9), 'Cat');
+select pg_temp.ok((select role from trip_members where trip_id = 't9' and user_id = auth.uid()) = 'viewer', 'on a trip set to "look", Cat joins able to look and leave notes');
+select pg_temp.ok(pg_temp.fails($$select public.save_trip('t9', (select data from trips where id = 't9') || '{"places":[{"id":"p1"}]}', 1)$$), '... and cannot add a place');
+select pg_temp.act('ana');
+select public.set_member_role('t9', '00000000-0000-0000-0000-00000000000c', 'contributor');
+select pg_temp.act('cat');
+select pg_temp.ok(public.save_trip('t9', (select data from trips where id = 't9') || '{"places":[{"id":"p1"}]}', 1) = 2, 'Ana makes her a contributor: now she adds a place');
+select pg_temp.ok(pg_temp.fails($$select public.save_trip('t9', '{"name":"Porto"}', 2)$$), '... but renaming the trip is a request');

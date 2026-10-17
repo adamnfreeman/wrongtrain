@@ -11,6 +11,7 @@ import { KIND_LABEL, cityOf, indexTrip } from '../model/trip';
 import { addDays, longDate, todayIn } from '../model/time';
 import { PACKS } from '../phrases';
 import { Sharing } from './account';
+import { SayPicker } from './requests';
 import { Check, Choice, DeleteButton, Field, Lines, PinPicker, Segs, Sheet, Swatches, Text, ZonePicker, guessZone, phoneZone, zoneLabel } from './form';
 
 export type Edit =
@@ -334,12 +335,13 @@ export function NewTripSheet({ close }: { close: () => void }) {
   const [people, setPeople] = useState('');
   const [stops, setStops] = useState<Stop[]>([{ name: '', timeZone: phoneZone(), nights: 3 }]);
   const [zoneOpen, setZoneOpen] = useState<number | null>(null);
+  const [say, setSay] = useState<'open' | 'approve' | 'look'>('open');
   const upStop = (k: number, p: Partial<Stop>) => setStops(stops.map((s, j) => (j === k ? { ...s, ...p } : s)));
   const named = stops.filter(s => s.name.trim());
   const nights = named.reduce((n, s) => n + Math.max(1, s.nights), 0);
   const pack = named.some(s => s.timeZone === 'Asia/Tokyo') ? 'ja' : undefined;
   const create = () => {
-    addTrip(newTrip({ name: name || named.map(s => s.name.trim()).join(', '), start, stops: named, travelers: people.split(',').map(s => s.trim()).filter(Boolean), phrasePack: pack }));
+    addTrip({ ...newTrip({ name: name || named.map(s => s.name.trim()).join(', '), start, stops: named, travelers: people.split(',').map(s => s.trim()).filter(Boolean), phrasePack: pack }), say });
     close();
   };
   return (
@@ -366,6 +368,7 @@ export function NewTripSheet({ close }: { close: () => void }) {
       <div className="chips"><button type="button" className="chipbtn" onClick={() => setStops([...stops, { name: '', timeZone: stops[stops.length - 1]?.timeZone || phoneZone(), nights: 2 }])}>+ Add a stop</button></div>
       {named.length > 0 && <p className="fhint">{nights + 1} days: {nights} nights away, plus the day you travel home{pack ? '. Japanese phrases are switched on.' : '.'}</p>}
       <Text label="Who's going" value={people} onChange={setPeople} placeholder="Names, separated by commas" />
+      <SayPicker value={say} onChange={setSay} />
       <Field label="Next">
         <p className="fhint" style={{ marginTop: 0 }}>You get an empty day for each night. Fill them in from the Days tab with Edit day, and add places, legs and to-dos as you go.</p>
       </Field>

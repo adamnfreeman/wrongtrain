@@ -26,6 +26,7 @@ const check = (c, m) => { if (!c) failures++; console.log((c ? 'PASS ' : 'FAIL '
 await page.goto('http://localhost:8097/');
 await page.waitForSelector('text=Open a trip file');
 await page.setInputFiles('input[aria-label="Trip file"]', { name: 'bad.json', mimeType: 'application/json', buffer: Buffer.from('{"nope":1}') });
+await page.waitForSelector('[role=alert]:has-text("not a trip file")', { timeout: 5000 }).catch(() => {});
 check(await page.locator('[role=alert]:has-text("not a trip file")').count() === 1, 'a file that is not a trip says so');
 
 await page.setInputFiles('input[aria-label="Trip file"]', FILE);
