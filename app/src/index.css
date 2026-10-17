@@ -539,3 +539,8 @@ select.input { background-image: linear-gradient(45deg, transparent 50%, var(--m
 .ttag { background: var(--tc) }
 .ttag-pick[aria-pressed="true"] { background: var(--tc); border-color: var(--tc); color: #fff }
 .checks { font-size: 13px; color: var(--muted); margin-top: 2px }
+
+/* placing a profile photo in the circle (CropSheet in ui/account.tsx) */
+.crop { position: relative; margin: 14px auto 10px; border-radius: 999px; overflow: hidden; touch-action: none; background: #000; cursor: grab }
+.crop img { position: absolute; left: 50%; top: 50%; max-width: none; user-select: none; pointer-events: none }
+.cropzoom { display: block; width: 240px; margin: 0 auto }
