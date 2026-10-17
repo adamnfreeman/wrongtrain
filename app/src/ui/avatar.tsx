@@ -40,6 +40,16 @@ export async function makeAvatar(file: Blob): Promise<string> {
 const cacheKey = (id: string) => 'wt-people-' + id;
 const cached = (id: string): Member[] => { try { return JSON.parse(localStorage.getItem(cacheKey(id)) || '[]'); } catch { return []; } };
 
+/* one request per trip a minute, however many notes and lists ask for it */
+const asked = new Map<string, { at: number; p: Promise<Member[]> }>();
+function peopleOnce(id: string): Promise<Member[]> {
+  const a = asked.get(id);
+  if (a && Date.now() - a.at < 60_000) return a.p;
+  const p = members(id); asked.set(id, { at: Date.now(), p });
+  p.catch(() => asked.delete(id));
+  return p;
+}
+
 /** The people on a shared trip, with their pictures; kept on the phone for when there's no signal. */
 export function useTripPeople(tripId: string): Member[] {
   const { session } = useSync();
@@ -48,7 +58,7 @@ export function useTripPeople(tripId: string): Member[] {
   useEffect(() => {
     if (!shared || !session) return;
     let live = true;
-    members(tripId).then(m => {
+    peopleOnce(tripId).then(m => {
       if (!live) return;
       setPeople(m);
       try { localStorage.setItem(cacheKey(tripId), JSON.stringify(m)); } catch { /* full: show without */ }
@@ -62,8 +72,8 @@ export function useTripPeople(tripId: string): Member[] {
 export function useAvatarFor(tripId: string, name: string): string | null {
   const people = useTripPeople(tripId), me = useMyAvatar(), myName = getState().me;
   const n = name.trim().toLowerCase();
-  if (me && n && n === myName.trim().toLowerCase()) return me;
-  return people.find(p => p.name.trim().toLowerCase() === n)?.avatar || null;
+  if (me && n && n === (myName || '').trim().toLowerCase()) return me;
+  return (n && people.find(p => (p.name || '').trim().toLowerCase() === n)?.avatar) || null;
 }
 
 /* ---------- the circle ---------- */
