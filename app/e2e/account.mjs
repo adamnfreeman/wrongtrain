@@ -30,7 +30,11 @@ await ctx.route(/supabase\.co/, async r => {
     if (b.token !== '123456') return r.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ code: 403, error_code: 'otp_expired', msg: 'Token has expired or is invalid' }) });
     return json({ ...session, user: user('adam@wrongtrain.lol') });
   }
-  if (/\/rest\/v1\/trip_members/.test(u) && m === 'PATCH') { asked.push({ avatar: JSON.parse(r.request().postData()).avatar }); return r.fulfill({ status: 204, body: '' }); }
+  if (/\/rest\/v1\/trip_members/.test(u) && m === 'PATCH') {
+    /* the first time, the database hasn't been updated yet: the error Adam saw */
+    if (!asked.some(a => 'avatar' in a)) { asked.push({ avatar: 'refused' }); return r.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ code: 'PGRST204', message: "Could not find the 'avatar' column of 'trip_members' in the schema cache" }) }); }
+    asked.push({ avatar: JSON.parse(r.request().postData()).avatar }); return r.fulfill({ status: 204, body: '' });
+  }
   if (/\/rest\/v1\//.test(u)) return json([]);
   return r.abort('internetdisconnected');
 });
@@ -52,6 +56,10 @@ await page.getByLabel('Test mode').uncheck();
 /* a profile picture: chosen, shrunk to a small square, shown, and put on your trips */
 await page.setInputFiles('input[aria-label="Profile photo"]', 'public/apple-touch-icon.png');
 await page.waitForSelector('.photopick img.avatar');
+await page.waitForSelector('.photopick >> text=Saved on this phone');
+check(await page.locator('.photopick [role=alert]').count() === 0, 'before the database is ready: no error, the picture is kept on the phone and says so');
+await page.setInputFiles('input[aria-label="Profile photo"]', 'public/apple-touch-icon.png');
+await page.waitForFunction(() => !document.querySelector('.photopick .fhint'));
 const pic = await page.getAttribute('.photopick img.avatar', 'src');
 check(/^data:image\/jpeg;base64,/.test(pic) && pic.length < 60000, `the photo becomes a small JPEG (${Math.round(pic.length / 1024)} KB as text)`);
 check(asked.some(a => a.avatar === pic), '... and goes on your trips');

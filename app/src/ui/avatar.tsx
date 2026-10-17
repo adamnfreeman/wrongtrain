@@ -14,10 +14,12 @@ let mine: string | null = pref<string | null>(KEY, null);
 
 export const useMyAvatar = () => useSyncExternalStore(f => { listeners.add(f); return () => listeners.delete(f); }, () => mine);
 
-/** Sets (or, with null, removes) your picture on this phone and on your trips. */
-export async function saveMyAvatar(a: string | null) {
+/** Sets (or, with null, removes) your picture on this phone and on your trips. It's always kept on
+    the phone; false means it couldn't reach your trips yet (no signal, or the database isn't
+    ready), and it goes on them the next time the trip's people are loaded (useTripPeople). */
+export async function saveMyAvatar(a: string | null): Promise<boolean> {
   mine = a; setPref(KEY, a); listeners.forEach(f => f());
-  await setMyAvatar(a);
+  try { await setMyAvatar(a); return true; } catch { return false; }
 }
 export const myAvatar = () => mine;
 
@@ -61,6 +63,9 @@ export function useTripPeople(tripId: string): Member[] {
     peopleOnce(tripId).then(m => {
       if (!live) return;
       setPeople(m);
+      /* your picture didn't make it onto the trip before: put it there now */
+      const me = m.find(p => p.user_id === session.user.id);
+      if (me && (me.avatar || null) !== mine) void setMyAvatar(mine).catch(() => {});
       try { localStorage.setItem(cacheKey(tripId), JSON.stringify(m)); } catch { /* full: show without */ }
     }).catch(() => {});
     return () => { live = false; };

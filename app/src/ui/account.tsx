@@ -286,10 +286,13 @@ function PhotoPicker({ name }: { name: string }) {
   const pic = useMyAvatar();
   const input = useRef<HTMLInputElement>(null);
   const [msg, setMsg] = useState('');
+  const [later, setLater] = useState(false);
+  const signedIn = !!useSync().session;
   const pick = async (f: File | undefined) => {
     if (!f) return;
-    setMsg('');
-    try { await saveMyAvatar(await makeAvatar(f)); } catch (e) { setMsg(e instanceof Error ? e.message : errText(e)); }
+    setMsg(''); setLater(false);
+    try { const shared = await saveMyAvatar(await makeAvatar(f)); setLater(signedIn && !shared); }
+    catch (e) { setMsg(e instanceof Error ? e.message : errText(e)); }
     if (input.current) input.current.value = '';
   };
   return (
@@ -297,10 +300,11 @@ function PhotoPicker({ name }: { name: string }) {
       <Avatar name={name || '?'} src={pic} size={64} />
       <div className="chips" style={{ marginTop: 0 }}>
         <button type="button" className="chipbtn" onClick={() => input.current?.click()}>{pic ? 'Change photo' : 'Add a photo'}</button>
-        {pic && <button type="button" className="chipbtn" onClick={() => void saveMyAvatar(null).catch(e => setMsg(errText(e)))}>Remove</button>}
+        {pic && <button type="button" className="chipbtn" onClick={() => { setLater(false); void saveMyAvatar(null); }}>Remove</button>}
       </div>
       <input ref={input} type="file" accept="image/*" hidden aria-label="Profile photo" onChange={e => void pick(e.target.files?.[0])} />
       {msg && <p className="geomsg bad" role="alert">{msg}</p>}
+      {later && <p className="fhint">Saved on this phone. Your group will see it once it can reach your trips.</p>}
     </div>
   );
 }
