@@ -238,3 +238,21 @@ update trip_members set avatar = 'data:image/jpeg;base64,BBBB' where user_id <> 
 select pg_temp.act('ana');
 select pg_temp.ok((select avatar from trip_members where trip_id = 't9' and user_id = auth.uid()) is null, 'nobody can set someone else''s picture');
 select pg_temp.ok((select avatar from trip_members where trip_id = 't9' and user_id = '00000000-0000-0000-0000-00000000000c') = 'data:image/jpeg;base64,AAAA', 'Ana, on a trip with Cat, sees her picture');
+
+-- where everyone is: shared by choice, seen only by people on the trip, only until the chosen time
+select pg_temp.act('cat');
+select public.share_location('t9', 38.71, -9.14, 20, now() + interval '1 hour');
+select pg_temp.ok((select count(*) from trip_locations where trip_id = 't9') = 1, 'Cat shares where she is, for an hour');
+select pg_temp.ok(pg_temp.fails($$insert into trip_locations (trip_id, user_id, lat, lng, until) values ('t9', '00000000-0000-0000-0000-00000000000a', 0, 0, now() + interval '1 hour')$$), '... nobody can post a location for someone else');
+select pg_temp.ok(pg_temp.fails($$select public.share_location('t1', 1, 1, 1, now() + interval '1 hour')$$), '... or on a trip they are not on');
+select pg_temp.ok(pg_temp.fails($$select public.share_location('t9', 1, 1, 1, now() - interval '1 hour')$$), '... or for a time already past');
+select pg_temp.act('ana');
+select pg_temp.ok((select lat from trip_locations where trip_id = 't9' and user_id = '00000000-0000-0000-0000-00000000000c') = 38.71, 'Ana, on the trip, sees it');
+select pg_temp.act('ben');
+select pg_temp.ok((select count(*) from trip_locations) = 0, 'Ben, not on that trip, does not');
+select pg_temp.act('cat');
+select public.share_location('t9', 38.72, -9.13, 15, now() + interval '100 days');
+select pg_temp.ok((select until from trip_locations where trip_id = 't9' and user_id = auth.uid()) < now() + interval '31 days', 'sharing is capped at 30 days');
+select public.stop_sharing_location('t9');
+select pg_temp.act('ana');
+select pg_temp.ok((select count(*) from trip_locations where trip_id = 't9') = 0, 'when Cat stops, it is gone');

@@ -477,3 +477,10 @@ select.input { background-image: linear-gradient(45deg, transparent 50%, var(--m
 .photopick .geomsg { flex-basis: 100% }
 .notewho { display: flex; align-items: center; gap: 6px }
 .sheet .item-h .avatar { margin-right: 8px }
+
+/* friends on the map (ui/map.tsx FriendFinder) */
+.leaflet-marker-icon.friend { border-radius: 999px; overflow: hidden; border: 3px solid var(--card); box-shadow: 0 1px 4px rgba(0,0,0,.4); background: hsl(200 45% 42%); display: grid; place-items: center }
+.leaflet-marker-icon.friend img { width: 100%; height: 100%; object-fit: cover }
+.leaflet-marker-icon.friend span { color: #fff; font: 700 14px var(--f-display) }
+.sharing-on { font-size: 14px; font-weight: 600; color: var(--ok, var(--ink)); align-self: center }
+#friends .item-h .avatar { margin-right: 8px }
