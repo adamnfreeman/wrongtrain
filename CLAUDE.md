@@ -249,6 +249,9 @@ Next:
    and for a shared trip let the owner delete it for everyone, with a clear warning.
 36. **The logo** (for Andrea): the simple line logo feels a bit like a gummy worm. Try it on a
    diagonal, and see whether it says "trip" and "train" enough on its own.
+37. **A new tagline** (Adam: "Every trip is a line" isn't for him). It's the welcome screen's
+   heading (`Welcome` in `src/App.tsx`). Find one that says what WrongTrain does for a group of
+   friends (see VISION.md), with Andrea.
 
 ## Working together
 
