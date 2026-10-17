@@ -289,8 +289,9 @@ Next:
    (make them swipeable, or not look it); tapping a card or its link stops the rotation for good,
    so after opening the insurance link you're stuck on that card: start again after a pause.
    `src/ui/planning.tsx`. (Opening a link doesn't stop the plan being built.)
-47. **All the referral ids** (Adam to send them): Airalo (Impact), Viator, Klook, SafetyWing,
-   Booking.com... into `REF` in `src/model/partners.ts` (see 34).
+47. **All the referral ids** into `REF` in `src/model/partners.ts` (see 34). Viator, Klook and
+   SafetyWing ids are on the project sheet's Accounts tab; still needed: the Airalo tracking link
+   (Impact, pending) and the Booking.com aid.
 48. **What each AI job costs**: a tracker for each trip plan and each note filed or change made
    (tokens and dollars). `ai_plans` already counts tokens per plan; add the same for filings
    and nearby picks, and a view of it (for Adam).
@@ -333,8 +334,9 @@ Two people work on this at once: Adam (adam@thefreemans.io, the technical side) 
   `/start <what>` begins a piece of work on its own branch, `/save` backs it up to GitHub,
   `/catchup` brings in the other person's finished work, `/done` checks it and adds it to `app`.
 - Never commit straight to `app`; `/done` merges into it after the build and tests pass.
-- **The project sheet** ("WrongTrain project: to-dos and changelog",
-  https://docs.google.com/spreadsheets/d/1PpEdGILeWLNULUx0Iaor2YOd6S4gfaMA88Gd5K2aYWY/edit) mirrors
+- **The project sheet** ("WrongTrain project: to-dos, changelog, accounts"; also has the
+  Accounts list of every service and the Working together steps; never passwords or keys,
+  which go in 1Password: https://docs.google.com/spreadsheets/d/1PpEdGILeWLNULUx0Iaor2YOd6S4gfaMA88Gd5K2aYWY/edit) mirrors
   the to-do list above and records every change. Keep it up to date as part of the work, without
   being asked: a new to-do gets a row on To-dos (Status Open); when one is finished, set its Status
   to Done and fill in "Done on" (never delete rows; Done rows strike through by themselves); every
