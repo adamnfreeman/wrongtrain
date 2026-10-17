@@ -1,5 +1,6 @@
-/* Every place with a pin, coloured by kind, with your own location when you switch it on. */
-import { useEffect, useMemo, useRef } from 'react';
+/* Every place with a pin, coloured by kind, with your own location when you switch it on, and
+   friends on the trip who are sharing where they are (sync/locations.ts). */
+import { useEffect, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { Place } from '../model/types';
@@ -7,6 +8,11 @@ import { ALL_PIN_GROUPS, KIND_LABEL, fmtDist, mapsLink, metres, pinGroup } from 
 import { Empty, Ext, Pill, Txt, pinColor } from './bits';
 import { DestChips } from './views';
 import { useApp } from './ctx';
+import { Avatar, useTripPeople } from './avatar';
+import { JAPAN } from '../edition';
+import { useStore } from '../model/store';
+import { errText, useSync, type Member } from '../sync/engine';
+import { ago, startSharing, stopSharing, useFriendSpots, useSharingUntil, type FriendSpot } from '../sync/locations';
 
 /** Further than this from every pin, you are not on the trip yet, so the map stays put. */
 const FAR = 300000;
@@ -22,6 +28,9 @@ export function MapView() {
 
   const shown = (p: Place) => p.lat != null && p.lng != null && !ui.hide[pinGroup(p).key] && (ui.dest === 'all' || p.destinationId === ui.dest);
   const pins = ix.trip.places.filter(shown);
+  const spots = useFriendSpots(ix.trip.id, !JAPAN);
+  const people = useTripPeople(ix.trip.id);
+  const friends = useRef<L.Marker[]>([]);
   const near = useMemo(() => (geo.on && geo.pos
     ? ix.trip.places.filter(p => p.lat != null && !ui.hide[pinGroup(p).key]).map(p => ({ p, d: metres(geo.pos!.lat, geo.pos!.lng, p.lat!, p.lng!) })).sort((a, b) => a.d - b.d)
     : []), [ix, ui.hide, geo.on, geo.pos]);
@@ -62,6 +71,18 @@ export function MapView() {
     if (!centered.current && near.length && near[0].d <= FAR) { centered.current = true; m.setView(ll, 15); }
   }, [geo.on, geo.pos, near]);
 
+  /* friends who are sharing where they are: their picture, or initials, on the map */
+  useEffect(() => {
+    const m = map.current; if (!m) return;
+    friends.current.forEach(f => f.remove());
+    friends.current = spots.map(s => {
+      const p = people.find(x => x.user_id === s.user_id), name = p?.name || 'Someone';
+      const face = p?.avatar ? `<img src="${esc(p.avatar)}" alt="">` : `<span>${esc(name.trim().slice(0, 1).toUpperCase())}</span>`;
+      return L.marker([s.lat, s.lng], { icon: L.divIcon({ className: 'friend', html: face, iconSize: [34, 34] }), zIndexOffset: 900, keyboard: false })
+        .addTo(m).bindPopup(`<b>${esc(name)}</b><br>${esc(ago(s.at))}`);
+    });
+  }, [spots, people, ix, ui.dest, ui.hide]);
+
   return (
     <>
       <h1 className="page-h">Map</h1>
@@ -76,6 +97,7 @@ export function MapView() {
           {geo.msg && <p className={'geomsg' + (geo.bad ? ' bad' : '')} role="status">{geo.msg}</p>}
         </>
       )}
+      {!JAPAN && <FriendFinder spots={spots} people={people} onShow={s => map.current?.setView([s.lat, s.lng], Math.max(map.current.getZoom(), 15))} />}
       <div className="chips">
         {ALL_PIN_GROUPS.map(g => (
           <button key={g.key} className="chipbtn pg" aria-pressed={!ui.hide[g.key]} onClick={() => set({ hide: { ...ui.hide, [g.key]: !ui.hide[g.key] } })}>
@@ -104,5 +126,55 @@ function PinItem({ p, away }: { p: Place; away?: number }) {
       <Txt text={p.notes} className="item-d" />
       <div className="meta">{away != null && <span>{fmtDist(away)} away</span>}<Ext href={mapsLink(ix, p)}>Open in Google Maps</Ext><button className="linkbtn" onClick={() => edit({ kind: 'place', id: p.id })}>Edit</button></div>
     </li>
+  );
+}
+
+/* ---------- where everyone is ---------- */
+
+const CHOICES: { label: string; until: (lastDay?: string) => Date }[] = [
+  { label: '1 hour', until: () => new Date(Date.now() + 3600_000) },
+  { label: '4 hours', until: () => new Date(Date.now() + 4 * 3600_000) },
+  { label: 'Rest of today', until: () => { const d = new Date(); d.setHours(23, 59, 0, 0); return d; } },
+  { label: 'Whole trip', until: last => (last ? new Date(`${last}T23:59:00`) : new Date(Date.now() + 14 * 86400_000)) },
+];
+
+function FriendFinder({ spots, people, onShow }: { spots: FriendSpot[]; people: Member[]; onShow: (s: FriendSpot) => void }) {
+  const { ix, geo } = useApp();
+  const { session } = useSync();
+  const shared = !!useStore().sync[ix.trip.id];
+  const until = useSharingUntil(ix.trip.id);
+  const [msg, setMsg] = useState('');
+  const last = ix.trip.days.at(-1)?.date;
+  return (
+    <section className="blk" id="friends">
+      <h3>Where everyone is</h3>
+      {!shared ? <p className="fhint">Share the trip with your group (Trip settings → Share with the group) to see where everyone is, when they choose to share it.</p>
+        : !session ? <p className="fhint">Sign in to see where everyone is.</p>
+        : <>
+          {until
+            ? <div className="chips"><span className="sharing-on">Sharing where you are until {until.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}{until.toDateString() !== new Date().toDateString() ? `, ${until.toLocaleDateString([], { month: 'short', day: 'numeric' })}` : ''}</span>
+                <button className="chipbtn" onClick={() => { setMsg(''); stopSharing(ix.trip.id).catch(e => setMsg(errText(e))); }}>Stop</button></div>
+            : <>
+              <p className="fhint" style={{ marginTop: 0 }}>Share where you are with the people on this trip, for as long as you choose. Only they can see it.</p>
+              <div className="chips">{CHOICES.map(c => (
+                <button key={c.label} className="chipbtn" disabled={!geo.supported} onClick={() => { setMsg(''); startSharing(ix.trip.id, c.until(last)); }}>{c.label}</button>
+              ))}</div>
+            </>}
+          {msg && <p className="geomsg bad" role="alert">{msg}</p>}
+          {spots.length > 0
+            ? <ul className="sheet" style={{ marginTop: 10 }}>{spots.map(s => {
+                const p = people.find(x => x.user_id === s.user_id), name = p?.name || 'Someone';
+                const d = geo.pos ? metres(geo.pos.lat, geo.pos.lng, s.lat, s.lng) : null;
+                return (
+                  <li key={s.user_id}>
+                    <div className="item-h"><Avatar name={name} src={p?.avatar} size={30} /><span className="item-n">{name}</span><span className="grow" /><span className="kick">{ago(s.at)}</span></div>
+                    <div className="meta">{d != null && <span>{fmtDist(d)} away</span>}<button className="linkbtn" onClick={() => onShow(s)}>Show on map</button>
+                      <Ext href={`https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}`}>Directions</Ext></div>
+                  </li>
+                );
+              })}</ul>
+            : <p className="fhint">Nobody else is sharing where they are right now.</p>}
+        </>}
+    </section>
   );
 }

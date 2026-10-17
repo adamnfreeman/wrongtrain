@@ -3,6 +3,7 @@ import { importTrip, openSample, pref, resetSample, selectTrip, setPref, useStor
 import { readTripFile } from './model/tripFile';
 import { JAPAN } from './edition';
 import { JapanApp, SheetOnly } from './ui/japan';
+import { sendSpot, useSharingUntil } from './sync/locations';
 import { indexTrip, whereNow } from './model/trip';
 import type { Trip } from './model/types';
 import { shortDate } from './model/time';
@@ -164,8 +165,12 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
   const [editing, edit] = useState<Edit | null>(null);
   const close = useCallback(() => edit(null), []);
   /* Today needs it during the trip, and for "Something nearby" at any time */
-  const geoWanted = ui.tab === 'map' || ui.tab === 'today';
+  /* while you share where you are with the group, location stays on as you move between pages */
+  const sharingUntil = useSharingUntil(trip.id);
+  const geoWanted = ui.tab === 'map' || ui.tab === 'today' || !!sharingUntil;
   const geo = useGeo(geoWanted);
+  useEffect(() => { if (sharingUntil && !geo.on && !geo.bad) geo.toggle(); }, [sharingUntil, geo]);
+  useEffect(() => { if (sharingUntil && geo.pos) void sendSpot(trip.id, geo.pos, sharingUntil); }, [sharingUntil, geo.pos, trip.id]);
 
   useEffect(() => {
     /* leave a sign-in link's tokens in place until Supabase has read them */

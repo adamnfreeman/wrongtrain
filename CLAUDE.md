@@ -69,6 +69,12 @@ on a Mac.
   `src/ui/account.tsx`). Sign in/out, change email (a code to the new address), your name, Appearance (`src/ui/theme.tsx`) and the build
   number and time (set in `vite.config.ts`), so you can tell whether a phone has the latest.
 
+- Where everyone is (Map → "Where everyone is", `src/sync/locations.ts`, `FriendFinder` in
+  `src/ui/map.tsx`): on a shared trip, each person may share where they are for a time they pick
+  (1 hour, 4 hours, rest of today, whole trip); while it lasts and the app is open, location stays
+  on and is sent every minute or after 30 m (`trip_locations`, written only through
+  `share_location`, seen only by people on the trip and only until then). Friends show on the map
+  with their picture, in a list with distance and directions. Not in the Japan edition.
 - Profile pictures (`src/ui/avatar.tsx`): chosen on Account & settings, cropped and shrunk on the
   phone to a ~10 KB JPEG, kept on the phone and on each trip you're on (`trip_members.avatar`,
   readable only by people on that trip). Shown on the corner button, the people list and group
@@ -124,7 +130,7 @@ Touch nothing else on `main`. GitHub Pages updates within a couple of minutes.
 ## Waiting to be switched on (Adam, when ready; not now)
 
 Built and tested, but they need the website-account steps before they work on shared trips:
-- Run the updated `schema.sql` in Supabase (levels of say, profile pictures; also item 1 below).
+- Run the updated `schema.sql` in Supabase (levels of say, profile pictures, where everyone is; also item 1 below).
 - Deploy the ideas box (`file-note`; item 2 below).
 - Change email (Account & settings → Change email, `ChangeEmailSheet` in `src/ui/account.tsx`):
   in Supabase, Authentication → Emails → "Change email address", make the message show the code
@@ -164,8 +170,6 @@ Next:
    adds you to a friend's item, and each night's stay can differ per pair; in-the-moment help
    (more moods done; "who's playing tonight" needs event listings); leave-now notifications and
    real transit directions; step-by-step station guidance; "get me home" options; affiliate links.
-8. **Share my location / friend finder** (asked for Oct 16): see where everyone on the trip
-   is, by choice and for a set time.
 9. **Wallet and Phrases extras** (asked for Oct 16): a currency calculator (type an amount in
    either currency; rates already come from Frankfurter for Money); more phrase languages
    (packs in `src/phrases`); starring phrases so favourites sit at the top, and reordering them.

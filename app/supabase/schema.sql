@@ -531,6 +531,49 @@ end $$;
 drop trigger if exists photo_author on public.trip_photos;
 create trigger photo_author before insert on public.trip_photos for each row execute function public.photo_author();
 
+-- ---------- where everyone is (friend finder) ----------
+--
+-- Someone on a trip can share where they are, for as long as they choose (an hour, the day, the
+-- whole trip). Only people on that trip see it, and only until then; stopping removes it. Rows are
+-- written only through share_location, so nobody can post a location for someone else.
+create table if not exists public.trip_locations (
+  trip_id  text not null references public.trips (id) on delete cascade,
+  user_id  uuid not null references auth.users (id) on delete cascade,
+  lat      double precision not null check (lat between -90 and 90),
+  lng      double precision not null check (lng between -180 and 180),
+  acc      real,
+  at       timestamptz not null default now(),
+  until    timestamptz not null,
+  primary key (trip_id, user_id)
+);
+alter table public.trip_locations enable row level security;
+drop policy if exists "people on the trip see who is sharing" on public.trip_locations;
+create policy "people on the trip see who is sharing" on public.trip_locations for select
+  using (public.is_member(trip_id) and until > now());
+revoke insert, update, delete on public.trip_locations from anon, authenticated;
+
+create or replace function public.share_location(trip_id text, lat double precision, lng double precision, acc real, until timestamptz)
+returns void language plpgsql security definer set search_path = public as $$
+declare t text := trip_id;
+begin
+  if not public.is_member(t) then raise exception 'not on this trip'; end if;
+  if until <= now() then raise exception 'pick a time in the future'; end if;
+  insert into trip_locations (trip_id, user_id, lat, lng, acc, at, until)
+    values (t, auth.uid(), lat, lng, acc, now(), least(until, now() + interval '30 days'))
+    on conflict on constraint trip_locations_pkey do update
+      set lat = excluded.lat, lng = excluded.lng, acc = excluded.acc, at = excluded.at, until = excluded.until;
+end $$;
+
+create or replace function public.stop_sharing_location(trip_id text)
+returns void language plpgsql security definer set search_path = public as $$
+declare t text := trip_id;
+begin
+  delete from trip_locations l where l.trip_id = t and l.user_id = auth.uid();
+end $$;
+
+revoke all on function public.share_location(text, double precision, double precision, real, timestamptz), public.stop_sharing_location(text) from public, anon;
+grant execute on function public.share_location(text, double precision, double precision, real, timestamptz), public.stop_sharing_location(text) to authenticated;
+
 -- ---------- live updates ----------
 
 -- phones listen for changes to trips they are on (the read rule above still applies)
@@ -544,5 +587,9 @@ exception when duplicate_object then null;
 end $$;
 do $$ begin
   alter publication supabase_realtime add table public.trip_photos;
+exception when duplicate_object then null;
+end $$;
+do $$ begin
+  alter publication supabase_realtime add table public.trip_locations;
 exception when duplicate_object then null;
 end $$;
