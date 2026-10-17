@@ -9,6 +9,7 @@ import { useWaitingForMe } from './requests';
 import { RouteList } from './day';
 import { SecH } from './bits';
 import { JAPAN } from '../edition';
+import { visibleTodos } from '../model/todos';
 import { SHEET_URL } from '../sheet/live';
 
 /** Sections that open from Trip rather than the bottom bar (none now: every section has a tab). */
@@ -18,7 +19,7 @@ export function TripHub() {
   const { ix, ui, set, go, edit } = useApp();
   const t = ix.trip, shared = !!useStore().sync[t.id];
   const waiting = useWaitingForMe(t.id);
-  const open = t.todos.filter(x => !x.done).length, notes = t.notes.filter(n => !n.done).length;
+  const open = visibleTodos(t.todos, useStore().me).filter(x => !x.done).length, notes = t.notes.filter(n => !n.done).length;
   const toBook = t.legs.filter(l => l.status === 'todo').length;
   const ideas = t.places.filter(p => p.wishlist).length;
   const pack = t.phrasePack ? PACKS[t.phrasePack] : undefined;

@@ -532,3 +532,10 @@ select.input { background-image: linear-gradient(45deg, transparent 50%, var(--m
 .docthumb .docpdf { display: grid; place-items: center; height: 100%; font: 800 12px var(--f-display); color: var(--muted) }
 .openbtn { padding: 8px 18px; font-size: 15px }
 .pview-pdf { width: 100%; height: 100%; border: 0; background: #fff }
+
+/* to-do kinds (model/todos.ts): coloured tags, group checks */
+.ttag { margin-left: 8px; font: 800 11px/1 var(--f-display); letter-spacing: .06em; text-transform: uppercase; padding: 4px 7px; border-radius: 6px; color: #fff; flex: none }
+.t-book { --tc: #2f6fde } .t-buy { --tc: #1f9d55 } .t-call { --tc: #d9822b } .t-email { --tc: #8e44ad } .t-fill { --tc: #c0392b }
+.ttag { background: var(--tc) }
+.ttag-pick[aria-pressed="true"] { background: var(--tc); border-color: var(--tc); color: #fff }
+.checks { font-size: 13px; color: var(--muted); margin-top: 2px }

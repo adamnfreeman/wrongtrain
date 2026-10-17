@@ -14,6 +14,7 @@ import { addDays, daysBetween, longDate, todayIn } from '../model/time';
 import { PACKS } from '../phrases';
 import { Sharing } from './account';
 import { SayPicker } from './requests';
+import { TODO_TAGS } from '../model/todos';
 import { Check, Choice, DeleteButton, Field, Lines, PinPicker, Segs, Sheet, Swatches, Text, ZonePicker, guessZone, phoneZone, zoneLabel } from './form';
 
 export type Edit =
@@ -252,6 +253,13 @@ export function TodoEditor({ trip, id, group, close }: Props & { id?: string; gr
       <Choice label="List" value={t.group} onChange={v => up({ group: v })}
         options={[...trip.todoGroups.map(x => ({ value: x, label: x })), { value: '__new', label: 'New list…' }]} />
       {t.group === '__new' && <Text label="Name of the new list" value={newGroup} onChange={setNewGroup} placeholder="e.g. Packing" />}
+      <Choice label="Who" value={t.everyone ? 'all' : t.mine ? 'me' : 'group'}
+        onChange={v => up({ everyone: v === 'all' || undefined, mine: v === 'me' ? (getState().me || 'Me') : undefined })}
+        options={[{ value: 'group', label: 'For the group: anyone ticks it' }, { value: 'all', label: 'Everyone does it: each person ticks their own' }, { value: 'me', label: 'Just me: only I see it' }]} />
+      <div className="field"><span className="flabel">Kind</span>
+        <div className="chips" style={{ marginTop: 0 }}>{TODO_TAGS.map(x => (
+          <button key={x.value} type="button" className={'chipbtn plain ttag-pick t-' + x.value} aria-pressed={t.tag === x.value} onClick={() => up({ tag: t.tag === x.value ? undefined : x.value })}>{x.label}</button>
+        ))}</div></div>
       <Text label="When" value={t.when || ''} onChange={v => up({ when: v || undefined })} placeholder="e.g. A week before" />
       <Text label="Details" multiline value={t.details || ''} onChange={v => up({ details: v || undefined })} />
       <Text label="Link" type="url" value={t.link || ''} onChange={v => up({ link: v || undefined })} />
