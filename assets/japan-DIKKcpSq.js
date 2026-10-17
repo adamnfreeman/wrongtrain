@@ -1,0 +1,1 @@
+export{r as seedFromOldPage}from"./japan-Bh76yzeY.js";

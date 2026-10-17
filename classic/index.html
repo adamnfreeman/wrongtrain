@@ -1,0 +1,1374 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+   <meta name='impact-site-verification' value='756106fc-fbfa-4aed-9634-3d72ecd55ea6'>
+<meta name="robots" content="noindex,nofollow">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Japan 2026">
+<meta name="theme-color" content="#EEF1F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E1412" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="apple-touch-icon.png">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>html,body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body class="locked">
+<title>Japan 2026</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap">
+<style>
+/* Layout: the trip as a transit line. Each city is a line colour, each day a numbered stop on a rail,
+   each day header a station name board. One column, thumb-reach tab bar. */
+:root{
+  --bg:#EEF1F0; --card:#FFFFFF; --ink:#12201C; --muted:#56655F; --rule:#D3DAD7; --chip:#E1E7E4; --link:#1B5AA6;
+  --c-travel:#2C6DB4; --c-kyoto:#6B45A8; --c-nara:#A9560F; --c-osaka:#CF2E2A; --c-tokyo:#3B8212; --c-other:#56655F; --c-shop:#0B7A85;
+  --on-line:#FFFFFF;
+  --ok:#11694F; --ok-bg:#DCF0E8; --warn:#84540A; --warn-bg:#FAEBC8; --no:#9C2C26; --no-bg:#F7DDDA;
+  --f-display:'Zen Kaku Gothic New','Hiragino Sans','Yu Gothic',system-ui,sans-serif;
+  --f-body:'Instrument Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-data:'IBM Plex Mono',ui-monospace,'SF Mono',Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0E1412; --card:#18211E; --ink:#E9EEEC; --muted:#9BA9A4; --rule:#2B3733; --chip:#24302C; --link:#8DBBF0;
+  --c-travel:#6FA8E8; --c-kyoto:#B193EA; --c-nara:#EFA05A; --c-osaka:#FF7F78; --c-tokyo:#8FD45C; --c-other:#9BA9A4; --c-shop:#5CC8D1;
+  --on-line:#0E1412;
+  --ok:#6FD9B5; --ok-bg:#12382D; --warn:#F1C56B; --warn-bg:#3B2E0E; --no:#FF9A93; --no-bg:#40191A;
+  color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0E1412; --card:#18211E; --ink:#E9EEEC; --muted:#9BA9A4; --rule:#2B3733; --chip:#24302C; --link:#8DBBF0;
+  --c-travel:#6FA8E8; --c-kyoto:#B193EA; --c-nara:#EFA05A; --c-osaka:#FF7F78; --c-tokyo:#8FD45C; --c-other:#9BA9A4; --c-shop:#5CC8D1;
+  --on-line:#0E1412;
+  --ok:#6FD9B5; --ok-bg:#12382D; --warn:#F1C56B; --warn-bg:#3B2E0E; --no:#FF9A93; --no-bg:#40191A;
+  color-scheme:dark }
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 var(--f-body);-webkit-text-size-adjust:100%}
+p{margin:0}
+a{color:var(--link);text-underline-offset:2px}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+.wrap{max-width:640px;margin-inline:auto;padding-inline:16px;padding-block:14px calc(92px + env(safe-area-inset-bottom,0px))}
+.tm{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* tab bar */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--card);border-top:1px solid var(--rule);padding-bottom:env(safe-area-inset-bottom,0px)}
+.tabs-in{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);max-width:640px;margin-inline:auto}
+.tab{appearance:none;border:0;background:none;color:var(--muted);font:600 11px/1 var(--f-body);letter-spacing:.02em;padding:10px 0 9px;display:grid;justify-items:center;gap:5px;cursor:pointer;position:relative}
+.tab svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.tab[aria-current="page"]{color:var(--ink)}
+.tab[aria-current="page"]::before{content:"";position:absolute;top:-1px;left:22%;right:22%;height:3px;background:var(--ink);border-radius:0 0 3px 3px}
+
+/* station board */
+.board{background:var(--card);border:1px solid var(--rule);border-radius:14px;overflow:hidden}
+.board-main{padding:18px 16px 14px;text-align:center}
+.kicker{font:500 12px/1.3 var(--f-data);color:var(--muted);letter-spacing:.05em;text-transform:uppercase}
+.board h1{font:900 clamp(30px,9.5vw,46px)/1.05 var(--f-display);margin:8px 0 6px;text-wrap:balance}
+.board-sub{color:var(--muted);font-size:14.5px;text-wrap:balance}
+.board-sub a{white-space:nowrap}
+.band{display:grid;grid-template-columns:1fr 1fr;background:var(--line);color:var(--on-line)}
+.band-btn{appearance:none;border:0;background:none;color:inherit;padding:9px 14px 10px;text-align:left;cursor:pointer;min-width:0;font:700 14px/1.2 var(--f-display)}
+.band-btn small{display:block;font:500 11px/1.3 var(--f-data);opacity:.9}
+.band-btn.next{text-align:right}
+.band-btn:disabled{opacity:.45;cursor:default}
+.legs3{display:grid;grid-auto-flow:column;grid-auto-columns:1fr}
+.legs3 .band-btn{background:var(--line);color:var(--on-line)}
+
+/* headings */
+.sec{margin-top:28px}
+.sec-h{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:0 0 10px}
+.sec-h h2{font:700 13px/1.2 var(--f-display);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0}
+.linkbtn{appearance:none;border:0;background:none;color:var(--link);font:600 14px var(--f-body);padding:4px 0;cursor:pointer}
+.page-h{font:900 28px/1.1 var(--f-display);margin:6px 0 4px}
+.lede{color:var(--muted);font-size:14.5px;margin-bottom:14px}
+
+/* route rail (trip at a glance) */
+.route{list-style:none;margin:0;padding:0}
+.stop{appearance:none;border:0;background:none;text-align:left;width:100%;display:grid;grid-template-columns:44px minmax(0,1fr);gap:12px;position:relative;padding:0 0 18px;cursor:pointer}
+.stop::before{content:"";position:absolute;left:19px;top:0;bottom:0;width:6px;background:var(--line)}
+.route li:first-child .stop::before{top:20px}
+.route li:last-child .stop{padding-bottom:0}
+.route li:last-child .stop::before{bottom:auto;height:20px}
+.badge{position:relative;width:44px;height:44px;border-radius:9px;background:var(--card);border:3px solid var(--line);display:grid;place-content:center;justify-items:center;line-height:1}
+.badge i{font:500 9.5px var(--f-data);font-style:normal;letter-spacing:.06em;color:var(--muted)}
+.badge b{font:700 17px var(--f-display);margin-top:2px}
+.stop-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px}
+.stop-h b{font:700 16px var(--f-display)}
+.stop-h span{color:var(--line);font:700 13px var(--f-display)}
+.stop-p{display:block;font-size:14.5px;color:var(--muted)}
+.here{display:inline-block;background:var(--ink);color:var(--bg);font:600 11px var(--f-body);padding:1px 7px;border-radius:999px}
+
+/* day strip */
+.daystrip{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;background:var(--bg);margin-inline:-16px;padding:8px 16px 9px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--rule);margin-bottom:14px}
+.daystrip::-webkit-scrollbar{display:none}
+.daychip{flex:none;appearance:none;border:0;border-bottom:4px solid var(--line);background:var(--card);border-radius:8px 8px 3px 3px;padding:6px 0 3px;min-width:48px;display:grid;justify-items:center;font:500 11px/1.2 var(--f-data);color:var(--muted);cursor:pointer}
+.daychip b{font:700 17px/1.15 var(--f-display);color:var(--ink)}
+.daychip[aria-current="true"]{background:var(--line);color:var(--on-line)}
+.daychip[aria-current="true"] b{color:inherit}
+
+/* plan timeline */
+.plan{list-style:none;margin:0 0 0 6px;padding:0;border-left:4px solid var(--line)}
+.plan>li{position:relative;padding:0 0 16px 18px}
+.plan>li:last-child{padding-bottom:2px}
+.plan>li::before{content:"";position:absolute;left:-10px;top:5px;width:10px;height:10px;border-radius:50%;background:var(--bg);border:3px solid var(--line)}
+.sub{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:8px}
+.sub li{border-left:2px solid var(--rule);padding-left:11px;font-size:15px}
+
+/* clamp */
+.clamp{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
+.cl.open .clamp{display:block}
+.more{appearance:none;border:0;background:none;color:var(--link);font:600 13px var(--f-body);padding:3px 0 0;cursor:pointer}
+
+/* lists in one card */
+.sheet{list-style:none;margin:0;padding:0;background:var(--card);border:1px solid var(--rule);border-radius:12px}
+.sheet>li{padding:12px 14px;min-width:0}
+.sheet>li+li{border-top:1px solid var(--rule)}
+.item-h{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin-bottom:3px}
+.item-n{font:700 16px/1.25 var(--f-display)}
+.item-d{font-size:15px}
+.meta{display:flex;flex-wrap:wrap;gap:2px 12px;margin-top:5px;font-size:13.5px;color:var(--muted)}
+.meta a{font-weight:600}
+.dim{opacity:.55}
+.lbl{display:block;font:500 11px var(--f-data);letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-top:8px}
+
+.pill{display:inline-flex;align-items:center;font:600 11.5px/1.25 var(--f-body);padding:3px 8px;border-radius:11px;max-width:100%;background:var(--chip);color:var(--muted)}
+.pill.ok{background:var(--ok-bg);color:var(--ok)}
+.pill.todo{background:var(--warn-bg);color:var(--warn)}
+.pill.no{background:var(--no-bg);color:var(--no)}
+
+/* controls */
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;background:var(--chip);border-radius:10px;padding:3px;gap:3px}
+.seg button{appearance:none;border:0;background:none;border-radius:8px;padding:8px 4px;font:600 14px var(--f-body);color:var(--muted);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--card);color:var(--ink)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chipbtn{appearance:none;border:1px solid var(--rule);background:var(--card);border-radius:999px;padding:6px 12px;font:600 13.5px var(--f-body);color:var(--muted);cursor:pointer}
+.chipbtn[aria-pressed="true"]{background:var(--line,var(--ink));border-color:var(--line,var(--ink));color:var(--on-line)}
+.chipbtn.plain[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.sbar{position:relative;margin-bottom:14px;display:flex;gap:8px}
+.sin{position:relative;flex:1;min-width:0}
+.notebtn{flex:none;appearance:none;border:1px solid var(--rule);background:var(--card);color:var(--ink);border-radius:10px;padding:0 12px;font:600 14px var(--f-body);cursor:pointer}
+.notebox{resize:vertical;min-height:84px;padding-right:12px;line-height:1.4;display:block}
+.search{width:100%;padding:10px 74px 10px 12px;border:1px solid var(--rule);border-radius:10px;background:var(--card);color:var(--ink);font:16px var(--f-body);-webkit-appearance:none;appearance:none}
+.search::-webkit-search-cancel-button{display:none}
+.sclear{position:absolute;right:6px;top:50%;transform:translateY(-50%);appearance:none;border:0;background:var(--chip);color:var(--ink);border-radius:8px;padding:6px 10px;font:600 13px var(--f-body);cursor:pointer}
+mark{background:var(--warn-bg);color:inherit;border-radius:3px;padding:0 1px}
+.kick{font:500 11.5px/1.4 var(--f-data);letter-spacing:.03em;color:var(--muted);margin-bottom:3px}
+.meta .linkbtn{font-size:13.5px;padding:0}
+.blk>.linkbtn{margin-top:8px}
+/* map */
+.map{position:relative;z-index:0;isolation:isolate;height:min(58vh,460px);min-height:300px;margin-top:12px;border:1px solid var(--rule);border-radius:12px;overflow:hidden;background:var(--chip)}
+.map .leaflet-popup-content-wrapper,.map .leaflet-popup-tip{background:var(--card);color:var(--ink)}
+.map .leaflet-popup-content{margin:12px 14px;font:14px/1.4 var(--f-body)}
+.map .leaflet-popup-content b{font:700 15px var(--f-display)}
+.map .leaflet-popup-content p{margin:6px 0}
+.map .leaflet-popup-content i{font-style:normal;color:var(--muted);font-size:12.5px}
+.leaflet-container a{color:var(--link)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--pc);margin-right:6px;vertical-align:-1px}
+.geomsg{font-size:13.5px;color:var(--muted);margin-top:8px}
+.catstrip{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--bg);margin-inline:-16px;padding:8px 16px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--rule)}
+.catstrip::-webkit-scrollbar{display:none}
+.catstrip .chipbtn{flex:none;white-space:nowrap}
+.phrase .ja{font:700 22px/1.35 var(--f-display);margin:2px 0}
+.phrase.big .ja{font-size:clamp(34px,11vw,52px);line-height:1.25;margin:10px 0}
+.phrase .ro{font-size:15.5px}
+.phrase .say{display:block;font:500 13px/1.5 var(--f-data);color:var(--muted)}
+.pbtns{margin:8px 0 8px}
+.chipbtn.go{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.pbtns a.chipbtn,.lookup a.chipbtn{text-decoration:none;display:inline-block}
+.lookup{margin-top:4px}
+.catstrip+#phraselist .blk:first-child{margin-top:12px}
+.nextbox{background:var(--card);border:1px solid var(--rule);border-radius:12px;padding:14px 16px}
+.bigtime{font:900 clamp(30px,9vw,42px)/1.05 var(--f-display);margin-bottom:6px}
+.sub-h{font:700 17px/1.25 var(--f-display);margin:20px 0 8px}
+.lede2{font-size:15.5px;margin-bottom:10px}
+.simrow{display:grid;grid-template-columns:auto 1fr auto 1fr;gap:6px 8px;align-items:center;margin-bottom:4px}
+.simrow label{font:500 12px var(--f-data);letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.sel{width:100%;min-width:0;padding:8px 8px;border:1px solid var(--rule);border-radius:9px;background:var(--card);color:var(--ink);font:15px var(--f-body)}
+.simrow+.geomsg{margin:6px 0 12px}
+.geomsg.bad{color:var(--warn)}
+.me{background:var(--c-travel);border:3px solid var(--card);border-radius:50%;box-shadow:0 0 0 2px var(--c-travel)}
+.me::after{content:"";position:absolute;inset:-3px;border-radius:50%;border:2px solid var(--c-travel);opacity:0}
+@media (prefers-reduced-motion:no-preference){ .me::after{animation:me-pulse 2.2s ease-out infinite} }
+@keyframes me-pulse{ from{transform:scale(1);opacity:.7} to{transform:scale(2.6);opacity:0} }
+.chipbtn.pg[aria-pressed="false"]{opacity:.5}
+.chipbtn.pg[aria-pressed="true"]{background:var(--card);border-color:var(--muted);color:var(--ink)}
+.group-h{font:900 20px/1.2 var(--f-display);margin:24px 0 2px}
+.blk{margin-top:18px}
+.blk>h3{font:700 16px/1.25 var(--f-display);margin:0 0 2px}
+.blk>.note{font-size:14px;color:var(--muted);margin-bottom:8px}
+.blk>h3+.sheet{margin-top:8px}
+.empty{color:var(--muted);padding:24px 0;text-align:center}
+
+details.fold{background:var(--card);border:1px solid var(--rule);border-radius:12px;margin-top:8px}
+details.fold>summary{list-style:none;cursor:pointer;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px;font:700 15.5px/1.25 var(--f-display)}
+details.fold>summary::-webkit-details-marker{display:none}
+details.fold>summary .count{font:500 12px var(--f-data);color:var(--muted);flex:none}
+details.fold>.note{padding:0 14px 10px;font-size:14px;color:var(--muted)}
+details.fold>.sheet{border:0;border-top:1px solid var(--rule);border-radius:0 0 12px 12px;background:none}
+
+/* to do */
+li.todo{display:grid;grid-template-columns:22px minmax(0,1fr);gap:11px}
+.box{width:22px;height:22px;border:2px solid var(--muted);border-radius:6px;display:grid;place-items:center;font:700 13px var(--f-body);margin-top:1px}
+.todo.done .box{background:var(--ok);border-color:var(--ok);color:var(--card)}
+button.box{appearance:none;background:none;padding:0;cursor:pointer;position:relative;color:inherit}
+button.box::after{content:"";position:absolute;inset:-11px}
+.todo.done .item-n{text-decoration:line-through;color:var(--muted)}
+.when{font:500 12.5px var(--f-data);color:var(--warn)}
+
+.foot{margin-top:30px;font-size:13.5px;color:var(--muted)}
+.foot .linkbtn,.status .linkbtn{font-size:13.5px;padding:0}
+.status{margin:-6px 0 12px;font-size:13.5px;color:var(--muted)}
+.status.bad{color:var(--warn)}
+/* checking the sheet: a card with a spinner and a train of the four line colours running along the bottom */
+.status.busy{position:relative;overflow:hidden;display:flex;align-items:center;gap:10px;margin:0 0 12px;padding:10px 12px 13px;background:var(--card);border:1px solid var(--rule);border-radius:10px;color:var(--ink);font-weight:600;font-size:14.5px}
+.status.busy::before{content:"";position:absolute;left:0;right:0;bottom:0;height:4px;background:var(--chip)}
+.status.busy::after{content:"";position:absolute;left:0;bottom:0;height:4px;width:45%;border-radius:2px;background:linear-gradient(90deg,var(--c-kyoto) 0 25%,var(--c-nara) 25% 50%,var(--c-osaka) 50% 75%,var(--c-tokyo) 75% 100%)}
+.spin{flex:none;width:16px;height:16px;border-radius:50%;border:2.5px solid var(--chip);border-top-color:var(--ink)}
+@media (prefers-reduced-motion:no-preference){
+  .status.busy{animation:status-in .25s ease-out}
+  .status.busy::after{animation:status-run 1.25s cubic-bezier(.45,.05,.55,.95) infinite}
+  .spin{animation:status-spin .8s linear infinite}
+}
+@media (prefers-reduced-motion:reduce){ .status.busy::after{width:100%} }
+@keyframes status-run{ from{transform:translateX(-100%)} to{transform:translateX(223%)} }
+@keyframes status-spin{ to{transform:rotate(360deg)} }
+@keyframes status-in{ from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:none} }
+/* sign-in */
+body.locked .tabs, body.locked .sbar{display:none}
+.gate{max-width:420px;margin:6vh auto 0}
+.gate form{display:grid;gap:8px;margin-top:22px}
+.gate label{font:700 13px/1.2 var(--f-display);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-top:8px}
+.gate input{width:100%;padding:12px;border:1px solid var(--rule);border-radius:10px;background:var(--card);color:var(--ink);font:17px var(--f-body);-webkit-appearance:none;appearance:none}
+.gobtn{appearance:none;border:0;border-radius:10px;background:var(--ink);color:var(--bg);font:700 16px var(--f-display);padding:13px;margin-top:14px;cursor:pointer}
+.gobtn:disabled{opacity:.6;cursor:default}
+.gate .msg{min-height:1.5em;font-size:14.5px;color:var(--no);margin-top:6px}
+.gate .hint{font-size:13.5px;color:var(--muted);margin-top:14px}
+.stripe{display:grid;grid-template-columns:repeat(4,1fr);height:12px}
+.stripe i{background:var(--line)}
+@media (prefers-reduced-motion:no-preference){ html{scroll-behavior:smooth} }
+</style>
+
+<div class="wrap">
+  <div class="sbar" id="gbar"><div class="sin"><input class="search" id="gq" type="search" placeholder="Search the whole trip" aria-label="Search the whole trip" autocomplete="off" enterkeyhint="search"><button class="sclear" id="gx" hidden>Clear</button></div><button class="notebtn" id="gn" data-note hidden>+ Note</button></div>
+  <div class="status" id="status" role="status" hidden></div>
+  <div id="view"></div>
+</div>
+<nav class="tabs" aria-label="Sections"><div class="tabs-in">
+  <button class="tab" data-go="today"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/></svg>Today</button>
+  <button class="tab" data-go="days"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Days</button>
+  <button class="tab" data-go="transit"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="14" rx="3.5"/><path d="M5 10.5h14M9 20.5l1.5-3.5M15 20.5L13.5 17M9 13.8h.01M15 13.8h.01"/></svg>Transit</button>
+  <button class="tab" data-go="places"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.6l2.6 5.2 5.8.9-4.2 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.2-4.1 5.8-.9z"/></svg>Places</button>
+  <button class="tab" data-go="map"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-11.5a7 7 0 0 0-14 0C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>Map</button>
+  <button class="tab" data-go="phrases"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H10l-4.5 3.5V16H4z"/><path d="M8.5 9.5h7M8.5 12.5h4.5"/></svg>Phrases</button>
+  <button class="tab" data-go="prep"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5l2 2 3-3.5M4 15.5l2 2 3-3.5M12.5 8H20M12.5 16H20"/></svg>To do</button>
+</div></nav>
+
+<script>
+const RAW = null;
+const LIVE_URL = "https://script.google.com/macros/s/AKfycbwomx2AxfD05jvfIOhGDbaSaeL_-oBOonTAgQfSOFDpyI-G7Ptrugr_mciUOW81vUbe/exec";
+const AUTH = "1" === "1";   /* 1 = nothing loads until someone signs in */
+</script>
+<script>
+/* Built-in phrasebook. Rows in an optional "Phrases" sheet tab are added to these. */
+const PHRASES = [{"cat":"Basics","items":[{"en":"Hello","ja":"こんにちは","ro":"Konnichiwa","say":"kon-nee-chee-wah","when":"Daytime greeting, from late morning until evening. Shop staff will call out “irasshaimase” (welcome) as you walk in. You don't need to answer; a nod is fine."},{"en":"Good morning","ja":"おはようございます","ro":"Ohayō gozaimasu","say":"oh-hah-yoh go-zai-mahss","when":"Until about 10 or 11 AM. Good for hotel staff and the first café of the day."},{"en":"Good evening","ja":"こんばんは","ro":"Konbanwa","say":"kon-bahn-wah","when":"After dark, in place of konnichiwa."},{"en":"Thank you","ja":"ありがとうございます","ro":"Arigatō gozaimasu","say":"ah-ree-gah-toh go-zai-mahss","when":"The polite form, right for staff and strangers. Use it constantly: when handed change, when someone holds a door, when leaving a shop."},{"en":"Excuse me / Sorry","ja":"すみません","ro":"Sumimasen","say":"soo-mee-mah-sen","when":"The most useful word to learn. Call a waiter, squeeze past someone, get a stranger's attention, or apologise for something small."},{"en":"I'm sorry","ja":"ごめんなさい","ro":"Gomen nasai","say":"go-men nah-sai","when":"A real apology, for when you bump into someone or make a mistake."},{"en":"Yes / No","ja":"はい / いいえ","ro":"Hai / Iie","say":"hai / ee-eh","when":"“Iie” on its own can sound blunt. To turn something down, “daijōbu desu” (next) is softer.","tts":"はい。いいえ。"},{"en":"No thanks, I'm fine","ja":"大丈夫です","ro":"Daijōbu desu","say":"dai-joh-boo dess","when":"Politely turn down a bag, a receipt, a refill or a flyer. It also means “it's OK” when someone apologises to you."},{"en":"Please","ja":"お願いします","ro":"Onegaishimasu","say":"oh-neh-gai-shee-mahss","when":"Add it after whatever you are asking for. Pointing at something and saying this is a complete request."},{"en":"I don't understand","ja":"わかりません","ro":"Wakarimasen","say":"wah-kah-ree-mah-sen","when":"When someone speaks to you in Japanese and you are lost. Say it with sumimasen."},{"en":"Do you speak English?","ja":"英語は話せますか？","ro":"Eigo wa hanasemasu ka?","say":"eh-go wah hah-nah-seh-mahss kah","when":"Ask before launching into English. Many people understand more than they are comfortable speaking, so short, simple English helps."},{"en":"Once more, slowly, please","ja":"もう一度、ゆっくりお願いします","ro":"Mō ichido, yukkuri onegaishimasu","say":"moh ee-chee-doh, yook-koo-ree oh-neh-gai-shee-mahss","when":"When you nearly caught it."},{"en":"Where is the toilet?","ja":"トイレはどこですか？","ro":"Toire wa doko desu ka?","say":"toy-reh wah doh-koh dess kah","when":"Stations, department stores and convenience stores all have public toilets."},{"en":"Cheers!","ja":"乾杯","ro":"Kanpai","say":"kahn-pai","when":"Before the first drink. Wait until everyone has a glass."}]},{"cat":"Eating out","items":[{"en":"Four people","ja":"4人です","ro":"Yonin desu","say":"yoh-neen dess","when":"The first thing staff ask is how many (“nan-mei sama desu ka?”). Holding up four fingers works too.","tts":"よにんです"},{"en":"Do you have an English menu?","ja":"英語のメニューはありますか？","ro":"Eigo no menyū wa arimasu ka?","say":"eh-go no men-yoo wah ah-ree-mahss kah","when":"Worth asking everywhere. Many places also have picture menus or a tablet with an English button."},{"en":"This one, please","ja":"これをお願いします","ro":"Kore o onegaishimasu","say":"koh-reh oh oh-neh-gai-shee-mahss","when":"Point at the menu, a display dish or a ticket-machine button."},{"en":"Two of these, please","ja":"これを二つお願いします","ro":"Kore o futatsu onegaishimasu","say":"koh-reh oh foo-tah-tsoo oh-neh-gai-shee-mahss","when":"Counting things: hitotsu (1), futatsu (2), mittsu (3), yottsu (4)."},{"en":"I'm vegetarian","ja":"私はベジタリアンです","ro":"Watashi wa bejitarian desu","say":"wah-tah-shee wah beh-jee-tah-ree-ahn dess","when":"A start, but “vegetarian” is often taken loosely and fish stock may not count. Follow it with the next phrase."},{"en":"I don't eat meat or fish","ja":"肉と魚は食べません","ro":"Niku to sakana wa tabemasen","say":"nee-koo toh sah-kah-nah wah tah-beh-mah-sen","when":"Clearer than “vegetarian”. Say it when ordering, before the food is made."},{"en":"Does this have meat or fish in it?","ja":"これは肉か魚が入っていますか？","ro":"Kore wa niku ka sakana ga haitte imasu ka?","say":"koh-reh wah nee-koo kah sah-kah-nah gah hite-teh ee-mahss kah","when":"Point at a dish and ask. “Haitte imasu” means it does; “haitte imasen” means it doesn't."},{"en":"Is there fish in the broth, or fish sauce?","ja":"出汁に魚は入っていますか？魚醤は使っていますか？","ro":"Dashi ni sakana wa haitte imasu ka? Gyoshō wa tsukatte imasu ka?","say":"dah-shee nee sah-kah-nah wah hite-teh ee-mahss kah? gyoh-shoh wah tsoo-kaht-teh ee-mahss kah?","when":"Two questions in one: is there fish in the stock, and do you use fish sauce? Dashi (stock) is usually made from bonito flakes and hides in miso soup, noodle broth, sauces and even some vegetable dishes. Gyoshō is fish sauce; in Thai or Vietnamese places ask about “nanpurā” (nam pla) instead.","tts":"だしに魚は入っていますか。ぎょしょうは使っていますか。"},{"en":"Without meat, please","ja":"肉抜きでお願いします","ro":"Niku nuki de onegaishimasu","say":"nee-koo noo-kee deh oh-neh-gai-shee-mahss","when":"Asks them to leave it out. Swap “niku” for “sakana” (fish). Small kitchens may say they can't change a dish."},{"en":"Water, please","ja":"お水をお願いします","ro":"Omizu o onegaishimasu","say":"oh-mee-zoo oh oh-neh-gai-shee-mahss","when":"Water and tea are free in most restaurants."},{"en":"It's delicious","ja":"おいしいです","ro":"Oishii desu","say":"oy-shee dess","when":"Say it to the chef or server. It goes down very well at small counters."},{"en":"Thank you for the meal","ja":"ごちそうさまでした","ro":"Gochisōsama deshita","say":"go-chee-soh-sah-mah desh-tah","when":"Say it to the staff as you leave. It is the standard way to thank them for the food."},{"en":"The bill, please","ja":"お会計お願いします","ro":"Okaikei onegaishimasu","say":"oh-kai-keh oh-neh-gai-shee-mahss","when":"Often you take the slip from your table and pay at the register by the door. There is no tipping."},{"en":"Can I pay by card?","ja":"カードは使えますか？","ro":"Kādo wa tsukaemasu ka?","say":"kah-doh wah tsoo-kah-eh-mahss kah","when":"Small shops, temples and older restaurants can be cash only."},{"en":"To take away, please","ja":"持ち帰りでお願いします","ro":"Mochikaeri de onegaishimasu","say":"moh-chee-kah-eh-ree deh oh-neh-gai-shee-mahss","when":"At cafés and counters they ask whether you are eating in (“tennai de”) or taking away."}]},{"cat":"Getting around","items":[{"en":"Where is Kyoto Station?","ja":"京都駅はどこですか？","ro":"Kyōto-eki wa doko desu ka?","say":"kyoh-toh eh-kee wah doh-koh dess kah","when":"Swap in any place: put its name in front of “wa doko desu ka”. “Eki” means station."},{"en":"Does this train go to Shinjuku?","ja":"この電車は新宿に行きますか？","ro":"Kono densha wa Shinjuku ni ikimasu ka?","say":"koh-no den-shah wah sheen-joo-koo nee ee-kee-mahss kah","when":"Ask station staff or anyone on the platform before you board. Swap in your stop."},{"en":"Which platform?","ja":"何番線ですか？","ro":"Nanban-sen desu ka?","say":"nahn-bahn-sen dess kah","when":"Show your ticket or the station name on your phone as you ask."},{"en":"To here, please","ja":"ここまでお願いします","ro":"Koko made onegaishimasu","say":"koh-koh mah-deh oh-neh-gai-shee-mahss","when":"For taxis. Show the address or map pin on your phone. Taxi doors open and close by themselves."},{"en":"I'm getting off","ja":"降ります","ro":"Orimasu","say":"oh-ree-mahss","when":"On a packed train or bus, say it with sumimasen and people will make room."},{"en":"Is this seat free?","ja":"この席は空いていますか？","ro":"Kono seki wa aite imasu ka?","say":"koh-no seh-kee wah ai-teh ee-mahss kah","when":"For unreserved cars and shared café tables."},{"en":"I'm lost","ja":"道に迷いました","ro":"Michi ni mayoimashita","say":"mee-chee nee mah-yoy-mahsh-tah","when":"Then show where you are trying to go. Police boxes (kōban) near stations help with directions."}]},{"cat":"Shopping","items":[{"en":"How much is this?","ja":"これはいくらですか？","ro":"Kore wa ikura desu ka?","say":"koh-reh wah ee-koo-rah dess kah","when":"Most things have a price tag. Useful at markets and at card shops with unpriced singles."},{"en":"Do you have this?","ja":"これはありますか？","ro":"Kore wa arimasu ka?","say":"koh-reh wah ah-ree-mahss kah","when":"Show a photo on your phone. Works well in card shops, toy shops and camera shops."},{"en":"Tax-free, please","ja":"免税でお願いします","ro":"Menzei de onegaishimasu","say":"men-zeh deh oh-neh-gai-shee-mahss","when":"For ¥5,000 or more at a tax-free shop, with your passport. Through Oct 31, 2026 the tax comes off at the till. From Nov 1, 2026 you pay the full price and claim the tax back at the airport before checking your bags."},{"en":"Can I try this on?","ja":"試着してもいいですか？","ro":"Shichaku shite mo ii desu ka?","say":"shee-chah-koo shteh moh ee dess kah","when":"Take your shoes off in the fitting room."},{"en":"Do you have a bigger size?","ja":"もっと大きいサイズはありますか？","ro":"Motto ōkii saizu wa arimasu ka?","say":"mot-toh oh-kee sai-zoo wah ah-ree-mahss kah","when":"Japanese sizes run small. For smaller, say “chiisai” in place of “ōkii”."},{"en":"I don't need a bag","ja":"袋はいりません","ro":"Fukuro wa irimasen","say":"foo-koo-roh wah ee-ree-mah-sen","when":"Cashiers ask whether you want a bag (“fukuro wa?”), which costs a few yen."},{"en":"I'm just looking","ja":"見ているだけです","ro":"Mite iru dake desu","say":"mee-teh ee-roo dah-keh dess","when":"If staff come over to help and you want to browse."}]},{"cat":"Hotels","items":[{"en":"Checking in, please","ja":"チェックインをお願いします","ro":"Chekku-in o onegaishimasu","say":"chek-koo een oh oh-neh-gai-shee-mahss","when":"Have passports ready; hotels are required to copy them."},{"en":"Can you hold our bags?","ja":"荷物を預かってもらえますか？","ro":"Nimotsu o azukatte moraemasu ka?","say":"nee-moh-tsoo oh ah-zoo-kaht-teh moh-rah-eh-mahss kah","when":"Before check-in time or after checkout. Nearly every hotel will."},{"en":"What's the Wi-Fi password?","ja":"Wi-Fiのパスワードは何ですか？","ro":"Waifai no pasuwādo wa nan desu ka?","say":"wai-fai no pah-soo-wah-doh wah nahn dess kah","when":"Usually on a card in the room.","tts":"ワイファイのパスワードは何ですか"}]},{"cat":"Photos & baths","items":[{"en":"May I take a photo?","ja":"写真を撮ってもいいですか？","ro":"Shashin o totte mo ii desu ka?","say":"shah-sheen oh tot-teh moh ee dess kah","when":"Ask in shops, at shrines and before photographing people. Some shops and temple interiors don't allow it."},{"en":"Could you take our photo?","ja":"写真を撮ってもらえますか？","ro":"Shashin o totte moraemasu ka?","say":"shah-sheen oh tot-teh moh-rah-eh-mahss kah","when":"Hand over the phone with the camera already open."},{"en":"Are tattoos OK?","ja":"タトゥーは大丈夫ですか？","ro":"Tatū wa daijōbu desu ka?","say":"tah-too wah dai-joh-boo dess kah","when":"Ask at baths (onsen and sentō), pools and gyms before paying. Many still turn tattooed guests away."},{"en":"Is this OK?","ja":"これは大丈夫ですか？","ro":"Kore wa daijōbu desu ka?","say":"koh-reh wah dai-joh-boo dess kah","when":"An all-purpose check: is it OK to sit here, to bring this in, to do this?"},{"en":"Happy Halloween!","ja":"ハッピーハロウィン","ro":"Happī Harowin","say":"hap-pee hah-roh-ween","when":"For Oct 31 in Amerikamura and Dotonbori."}]},{"cat":"Emergencies","items":[{"en":"Please help me","ja":"助けてください","ro":"Tasukete kudasai","say":"tah-skeh-teh koo-dah-sai","when":"For real trouble. For a small favour, use sumimasen."},{"en":"I don't feel well","ja":"具合が悪いです","ro":"Guai ga warui desu","say":"goo-eye gah wah-roo-ee dess","when":"Tell hotel or station staff; they can point you to a clinic or pharmacy."},{"en":"Where is a hospital?","ja":"病院はどこですか？","ro":"Byōin wa doko desu ka?","say":"byoh-een wah doh-koh dess kah","when":"For a pharmacy, say “yakkyoku” in place of “byōin”."},{"en":"I lost my passport","ja":"パスポートをなくしました","ro":"Pasupōto o nakushimashita","say":"pah-soo-poh-toh oh nah-koo-shee-mahsh-tah","when":"Swap in “saifu” (wallet) or “keitai” (phone). Go to a police box (kōban); lost things are handed in remarkably often."},{"en":"Please call an ambulance","ja":"救急車を呼んでください","ro":"Kyūkyūsha o yonde kudasai","say":"kyoo-kyoo-shah oh yon-deh koo-dah-sai","when":"Emergency numbers: 119 for ambulance or fire, 110 for police."}]}];
+</script>
+<script>
+/*PARSER-START  turns the sheet's raw tabs into the trip data the page draws */
+function parseTrip(raw){
+  const SHEET_URL='https://docs.google.com/spreadsheets/d/1wwep3wajMXaMjp2RDtYWxsXL856zxeuIrBVNWeJo724/edit';
+  const HEAD=new Set(['Item','Task','Leg','Location','Date / Topic','Who','Name','Done']);
+  const MONTHS={January:1,February:2,March:3,April:4,May:5,June:6,July:7,August:8,September:9,October:10,November:11,December:12};
+  const tabs={}, order=[];
+  (raw.tabs||[]).forEach(t=>{
+    tabs[t.title]=(t.rows||[]).map((r,ri)=>{
+      const row=(r||[]).map((v,ci)=>({t:String(v==null?'':v).trim(), l:(t.links&&t.links[ri+','+ci])||null}));
+      while(row.length && !row[row.length-1].t) row.pop();
+      return row; });
+    order.push(t.title); });
+  const tab=n=>tabs[n]||[];
+  const nf=row=>row.reduce((n,c)=>n+(c.t?1:0),0);
+  const cell=(row,i)=>row && i<row.length ? row[i].t : '';
+  const link=(row,i)=>row && i<row.length ? row[i].l : null;
+  const num=v=>{ v=String(v==null?'':v).trim(); return v!=='' && isFinite(+v) ? +v : null; };
+  function sections(rows){
+    const heads=[]; rows.forEach((r,i)=>{ if(r.length && HEAD.has(r[0].t) && nf(r)>=2) heads.push(i); });
+    const headSet=new Set(heads), lead={}, leadRows=new Set();
+    heads.forEach(h=>{ const pre=[]; let k=h-1;
+      while(k>=0 && rows[k].length && nf(rows[k])===1 && rows[k][0].t){ pre.unshift(k); k--; }
+      lead[h]=pre; pre.forEach(x=>leadRows.add(x)); });
+    return heads.map(h=>{
+      const pre=lead[h].map(k=>rows[k][0].t); let group='', title='', note='';
+      if(pre.length>=3){ group=pre[0]; title=pre[1]; note=pre.slice(2).join(' '); }
+      else if(pre.length===2){ title=pre[0]; note=pre[1]; }
+      else if(pre.length===1) title=pre[0];
+      const body=[], idx=[]; let k=h+1;
+      while(k<rows.length && rows[k].length && nf(rows[k]) && !leadRows.has(k) && !headSet.has(k)){ body.push(rows[k]); idx.push(k); k++; }
+      return {group, title, note, cols:rows[h].map(c=>c.t), rows:body, idx}; });
+  }
+  const vegKey=v=>{ v=(v||'').toLowerCase(); return v.startsWith('yes')?'yes':v.startsWith('some')?'some':v.startsWith('no')?'no':v?'ask':''; };
+  const closedFlag=(desc,hours)=>{ hours=hours||'';
+    if((desc+' '+hours).includes('PERMANENTLY CLOSED') || desc.startsWith('CLOSED') || hours.startsWith('CLOSED (')) return 'perm';
+    return hours.toUpperCase().startsWith('CLOSED') ? 'today' : ''; };
+  const cityFrom=text=>{ const t=text.toLowerCase();
+    const sets=[['Nara',['nara']],['Kyoto',['kyoto','arashiyama','gion']],['Osaka',['osaka','dotonbori','shinsaibashi']],
+      ['Tokyo',['tokyo','kamakura','enoshima','shinjuku','shibuya','akihabara','near your hotel','hamacho']]];
+    for(const [key,words] of sets) if(words.some(w=>t.includes(w))) return key;
+    return ''; };
+
+  /* overview */
+  const itin={};
+  tab('Itinerary').slice(2).forEach(row=>{ if(!cell(row,0)) return;
+    itin[cell(row,0).split(/\s+/).slice(1).join(' ')]={date:cell(row,0), city:cell(row,1), stay:cell(row,2), glance:cell(row,3)}; });
+
+  /* transport */
+  const trows=tab('Transportation'), legs=[];
+  const th=trows.findIndex(r=>cell(r,0)==='Date');
+  if(th>-1) trows.slice(th+1).forEach(row=>{ if(!nf(row)) return;
+    const st=cell(row,3);
+    legs.push({date:cell(row,0), route:cell(row,1), how:cell(row,2), status:st, sk:st==='Booked'?'ok':st==='Nothing to book'?'none':'todo', buy:cell(row,4), details:cell(row,5)}); });
+  const transportNote=trows.length>1 ? cell(trows[1],0) : '';
+
+  /* map pins */
+  const mrows=tab('Maps'); let mapUrl=null;
+  mrows.forEach(r=>r.forEach(c=>{ if(!mapUrl && c.l && c.l.includes('maps/d/')) mapUrl=c.l; }));
+  const MAPS='https://www.google.com/maps/search/?api=1&query=';
+  const pins=sections(mrows).map(s=>{
+    const ci={}; s.cols.forEach((c,i)=>{ ci[c]=i; });
+    const col=(n,d)=>n in ci ? ci[n] : d;
+    const city=s.title.toUpperCase().includes('OTHER') ? 'Other' : cityFrom(s.title);
+    return {title:s.title, city:city||'Other', items:s.rows.map(row=>{
+      const name=cell(row,col('Name',0)), la=cell(row,col('Latitude',3)), lo=cell(row,col('Longitude',4));
+      let lk=null; row.forEach(c=>{ if(!lk && c.l) lk=c.l; });
+      let lat=num(la), lng=num(lo);
+      if(lat==null || lng==null){ const m=/query=(-?[\d.]+),(-?[\d.]+)/.exec(lk||''); lat=m?+m[1]:null; lng=m?+m[2]:null; }
+      /* the sheet builds this link with a formula; rebuild it the same way when the link itself is not available */
+      if(!lk) lk=MAPS+(num(la)!=null && num(lo)!=null ? la+','+lo : encodeURIComponent(name+', Japan'));
+      return {name, type:cell(row,col('Type',1)), notes:cell(row,col('Day / Notes',2)), link:lk, lat, lng}; })}; });
+  const hotels=[]; pins.forEach(s=>s.items.forEach(p=>{ if(p.type==='Hotel') hotels.push(p); }));
+
+  /* days */
+  function parseDay(title, rows){
+    const m=/Day (\d+) of (\d+)\s+—\s+(\w+), (\w+) (\d+), (\d{4})/.exec(cell(rows[0],0));
+    if(!m || !MONTHS[m[4]]) return null;
+    const iso=m[6]+'-'+String(MONTHS[m[4]]).padStart(2,'0')+'-'+String(+m[5]).padStart(2,'0');
+    const sub=cell(rows[1],0), dot=sub.indexOf('·');
+    const city=(dot<0?sub:sub.slice(0,dot)).trim(), stay=dot<0?'':sub.slice(dot+1).trim();
+    const secs=[], eats=[]; let cur=null;
+    rows.slice(2).forEach(row=>{
+      if(!row.length || !nf(row)) return;
+      const a=cell(row,0);
+      if(nf(row)===1 && /^[A-Z][A-Z'’ &\/]+$/.test(a)){ cur={title:a, items:[]}; if(a!=='RESTAURANT IDEAS') secs.push(cur); return; }
+      if(!cur){ cur={title:"TODAY'S PLAN", items:[]}; secs.push(cur); }
+      if(cur.title==='RESTAURANT IDEAS'){
+        if(a==='Item') return;
+        const desc=cell(row,1), hours=cell(row,4);
+        eats.push({name:a, desc, loc:cell(row,2), veg:cell(row,3), vk:vegKey(cell(row,3)), hours, closed:closedFlag(desc,hours)});
+        return; }
+      if(/^[–-]\s+/.test(a) && cur.items.length) cur.items[cur.items.length-1].sub.push(a.replace(/^[–-]\s+/,''));
+      else cur.items.push({t:a.replace(/^•\s*/,''), sub:[]});
+    });
+    const it=itin[title]||{};
+    const glance=(it.glance||'').replace(/^\S{1,3}\s{2,}/u,'');
+    const cities=(it.city||city).match(/Kyoto|Nara|Osaka|Tokyo|Travel/g);
+    const key=(cities?cities[cities.length-1]:'Travel').toLowerCase();
+    let hotel=null;
+    for(const h of hotels){ const words=h.name.split(/\s+/);
+      for(let k=words.length;k>1;k--) if(stay.includes(words.slice(0,k).join(' '))){ hotel={name:h.name, link:h.link}; break; }
+      if(hotel) break; }
+    const label=it.date||title;
+    return {id:title.toLowerCase().replace(' ','-'), iso, dow:m[3].slice(0,3), label, short:title, n:+m[1], of:+m[2], city, key, stay, glance,
+      sections:secs, eats, hotel, legs:legs.filter(l=>l.date===label)};
+  }
+  const days=[]; order.forEach(t=>{ if(/^[A-Z][a-z]{2} \d{1,2}$/.test(t) && tab(t).length>1){ const d=parseDay(t,tab(t)); if(d) days.push(d); } });
+
+  /* to do */
+  const drows=tab('To Do');
+  const todo={note:drows.length>1?cell(drows[1],0):'', groups:sections(drows).map(s=>({title:s.title, items:s.rows.map((r,i)=>(
+    {row:s.idx[i]+1, done:cell(r,0).toUpperCase()==='TRUE', when:cell(r,1), what:cell(r,2), details:cell(r,3), where:cell(r,4), link:link(r,4)}))}))};
+
+  /* food */
+  const food=sections(tab('Food')).map(s=>{ const secCity=cityFrom(s.title);
+    return {title:s.title, note:s.note, items:s.rows.map(r=>{ const desc=cell(r,1);
+      return {name:cell(r,0), desc, loc:cell(r,2), veg:cell(r,3), vk:vegKey(cell(r,3)), closed:closedFlag(desc), city:secCity||cityFrom(cell(r,2))}; })}; });
+
+  /* ideas */
+  const ideas=[];
+  [['Kyoto Ideas','Kyoto'],['Osaka Ideas','Osaka'],['Tokyo Ideas','Tokyo']].forEach(([name,base])=>{
+    sections(tab(name)).forEach(s=>{ const city=s.title.trim().toLowerCase()==='nara'?'Nara':base;
+      ideas.push({group:s.group, title:s.title, note:s.note, col3:s.cols.length>2?s.cols[2]:'',
+        items:s.rows.map(r=>({name:cell(r,0), desc:cell(r,1), extra:cell(r,2), city}))}); }); });
+
+  /* reference tabs */
+  const notes=[];
+  ['Before You Go','Notes & Logistics'].forEach(name=>sections(tab(name)).forEach(s=>
+    notes.push({src:name, title:s.title, note:s.note, cols:s.cols, rows:s.rows.map(r=>s.cols.map((_,i)=>cell(r,i)))})));
+
+  /* optional "Phrases" tab: a header row with English and Japanese (plus Category, Romaji, Say it, When to use) */
+  const phrases=[], prow=tab('Phrases');
+  const ph=prow.findIndex(r=>r.some(c=>/^english$/i.test(c.t)) && r.some(c=>/^japanese$/i.test(c.t)));
+  if(ph>-1){
+    const col={}; prow[ph].forEach((c,i)=>{ if(c.t) col[c.t.toLowerCase()]=i; });
+    const g=(r,names)=>{ for(const n of names) if(n in col) return cell(r,col[n]); return ''; };
+    prow.slice(ph+1).forEach(r=>{ const en=g(r,['english']), ja=g(r,['japanese']);
+      if(en && ja) phrases.push({cat:g(r,['category'])||'From the sheet', en, ja, ro:g(r,['romaji','reading']), say:g(r,['say it','pronunciation']), when:g(r,['when to use','when','notes'])}); });
+  }
+  /* "Group Notes" tab: what people have asked for from the page (When, Who, Note, Done) */
+  const gnotes=[], nrow=tab('Group Notes');
+  const nh=nrow.findIndex(r=>r.some(c=>/^who$/i.test(c.t)) && r.some(c=>/^note$/i.test(c.t)));
+  if(nh>-1){ const col={}; nrow[nh].forEach((c,i)=>{ if(c.t) col[c.t.toLowerCase()]=i; });
+    nrow.slice(nh+1).forEach(r=>{ const text=cell(r,col.note); if(text) gnotes.push({when:'when' in col?cell(r,col.when):'', who:cell(r,col.who), text, done:'done' in col && cell(r,col.done).toUpperCase()==='TRUE'}); }); }
+  return {updated:raw.updated, sheetUrl:SHEET_URL, mapUrl, transportNote, days, legs, todo, food, ideas, pins, notes, phrases, gnotes};
+}
+/*PARSER-END*/
+</script>
+<script>
+(function(){
+const view = document.getElementById('view');
+const TABS = ['today','days','transit','places','map','phrases','prep'];
+const gq = document.getElementById('gq'), gx = document.getElementById('gx');
+const CODE = {travel:'AIR', kyoto:'KY', nara:'NR', osaka:'OS', tokyo:'TK'};
+const CITY = {kyoto:'Kyoto', osaka:'Osaka', tokyo:'Tokyo', travel:'Travel'};
+let D=null, byId={}, byLabel={}, N={cur:null, phase:'before', togo:0};
+const LIVE={on:!!LIVE_URL, ok:false, at:null, busy:false, last:0};
+let CREDS=null;
+const statusEl=document.getElementById('status');
+const S = {tab:'today', day:'', seg:'food', city:'All', gq:'', exp:{}, hide:{}, veg:false, sim:{day:'', min:840}, pq:'', pcat:'All', draft:'', noteMsg:'', noteBad:false};
+try{ S.veg = localStorage.getItem('veg')==='1'; }catch(e){}
+
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const TM = /\b\d{1,2}(?::\d{2})?(?:\s?[–-]\s?\d{1,2}(?::\d{2})?)?\s?(?:AM|PM)\b/g;
+const rich = s => esc(s).replace(TM, m=>'<span class="tm">'+m+'</span>');
+const line = k => 'style="--line:var(--c-'+(k||'other')+')"';
+const pad = n => String(n).padStart(2,'0');
+const mapsQ = q => 'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(q);
+const ext = (href,label) => '<a href="'+esc(href)+'" target="_blank" rel="noopener">'+esc(label)+'</a>';
+function txt(t, cls){
+  if(!t) return '';
+  const c = cls?' '+cls:'';
+  return t.length>170
+    ? '<div class="cl"><p class="clamp'+c+'">'+rich(t)+'</p><button class="more" data-more aria-expanded="false">More</button></div>'
+    : '<p class="'+c.trim()+'">'+rich(t)+'</p>';
+}
+function stamp(iso){ const d=new Date(iso); if(isNaN(d)) return String(iso||'');
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+', '+d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}); }
+
+/* where are we in the trip? Japan time decides the day once travel starts */
+function now(){
+  let jst='';
+  try{ jst = new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()); }catch(e){}
+  const first=D.days[0].iso, last=D.days[D.days.length-1].iso;
+  const cur = D.days.find(d=>d.iso===jst) || null;
+  const t=new Date(), local=new Date(t.getFullYear(),t.getMonth(),t.getDate());
+  const [y,m,d]=first.split('-').map(Number);
+  const togo = Math.round((new Date(y,m-1,d)-local)/864e5);
+  return {cur, phase: cur?'during':(jst && jst>last?'after':'before'), togo};
+}
+
+/* ---------- pieces ---------- */
+function vegPill(it){
+  if(it.closed==='perm') return '<span class="pill no">Closed for good</span>';
+  const p = {yes:['ok','Veg-friendly'], some:['todo','Some veg'], no:['','Not veg'], ask:['','Ask about veg']}[it.vk];
+  return (p?'<span class="pill '+p[0]+'">'+p[1]+'</span>':'') + (it.closed==='today'?'<span class="pill no">Closed this day</span>':'');
+}
+function eatItem(it){
+  const more = it.veg && !/^(yes|no)$/i.test(it.veg) ? '<span>'+esc(it.veg)+'</span>' : '';
+  const hours = it.hours && it.closed!=='perm' ? '<span>'+rich(it.hours)+'</span>' : '';
+  const find = it.closed==='perm' ? '' : ext(mapsQ(it.name.replace(/^TOP PICK —\s*/,'')+', '+(it.loc||it.city||'')+', Japan'),'Find in Maps');
+  return '<li class="'+(it.closed?'dim':'')+'"><div class="item-h"><span class="item-n">'+esc(it.name)+'</span>'+vegPill(it)+'</div>'
+    + txt(it.desc,'item-d') + '<div class="meta">'+(it.loc?'<span>'+esc(it.loc)+'</span>':'')+hours+more+find+'</div></li>';
+}
+const vegOk = it => !S.veg || ((it.vk==='yes'||it.vk==='some') && it.closed!=='perm');
+function vegToggle(){ return '<button class="chipbtn plain" data-veg aria-pressed="'+S.veg+'">Veg-friendly only</button>'; }
+function legItem(l){
+  const mark = l.sk==='ok'?'✓ ':'';
+  return '<li><div class="item-h"><span class="item-n">'+esc(l.route)+'</span><span class="pill '+(l.sk==='none'?'':l.sk)+'">'+mark+esc(l.status)+'</span></div>'
+    + txt(l.how,'item-d')
+    + (l.buy&&l.buy!=='Done'?'<span class="lbl">Tickets</span>'+txt(l.buy,'item-d'):'')
+    + (l.details?'<span class="lbl">Details</span>'+txt(l.details,'item-d'):'')+'</li>';
+}
+function bullets(items){
+  return '<ul class="sheet">'+items.map(i=>'<li>'+txt(i.t)+(i.sub.length?'<ul class="sub">'+i.sub.map(s=>'<li>'+txt(s)+'</li>').join('')+'</ul>':'')+'</li>').join('')+'</ul>';
+}
+function board(d){
+  const i=byId[d.id], p=D.days[i-1], n=D.days[i+1];
+  const stay = d.hotel ? esc(d.stay)+' · '+ext(d.hotel.link,'Map') : esc(d.stay);
+  return '<header class="board" '+line(d.key)+'><div class="board-main"><div class="kicker">Day '+d.n+' of '+d.of+' · '+esc(d.label)+'</div>'
+    + '<h1>'+esc(d.city)+'</h1><p class="board-sub">'+stay+'</p></div><div class="band">'
+    + '<button class="band-btn" '+(p?'data-day="'+p.id+'"':'disabled')+'><small>◀ '+(p?esc(p.short):'Start')+'</small>'+(p?esc(p.city):'')+'</button>'
+    + '<button class="band-btn next" '+(n?'data-day="'+n.id+'"':'disabled')+'><small>'+(n?esc(n.short):'End')+' ▶</small>'+(n?esc(n.city):'')+'</button>'
+    + '</div></header>';
+}
+function dayBody(d){
+  const find = re => d.sections.find(s=>re.test(s.title));
+  const plan=find(/PLAN/), know=find(/KNOW/), around=find(/AROUND/);
+  const rest=d.sections.filter(s=>s!==plan&&s!==know&&s!==around);
+  let h='';
+  if(plan) h+='<section class="sec" '+line(d.key)+'><div class="sec-h"><h2>Plan</h2></div><ol class="plan">'
+    + plan.items.map(i=>'<li>'+txt(i.t)+(i.sub.length?'<ul class="sub">'+i.sub.map(s=>'<li>'+txt(s)+'</li>').join('')+'</ul>':'')+'</li>').join('')+'</ol></section>';
+  h+=fixedTimes(d);
+  if(d.legs.length || around){
+    h+='<section class="sec"><div class="sec-h"><h2>Getting around</h2><button class="linkbtn" data-go="transit">All legs</button></div>';
+    if(d.legs.length) h+='<ul class="sheet">'+d.legs.map(legItem).join('')+'</ul>';
+    if(around) h+='<div class="blk">'+bullets(around.items)+'</div>';
+    h+='</section>';
+  }
+  if(know) h+='<section class="sec"><div class="sec-h"><h2>Good to know</h2></div>'+bullets(know.items)+'</section>';
+  rest.forEach(s=>{ h+='<section class="sec"><div class="sec-h"><h2>'+esc(s.title.toLowerCase())+'</h2></div>'+bullets(s.items)+'</section>'; });
+  if(d.eats.length){
+    const list=d.eats.filter(vegOk);
+    h+='<section class="sec"><div class="sec-h"><h2>Where to eat</h2>'+vegToggle()+'</div>'
+      + (list.length?'<ul class="sheet">'+list.map(eatItem).join('')+'</ul>':'<p class="empty">Nothing veg-friendly listed for this day.</p>')+'</section>';
+  }
+  return h;
+}
+function routeList(){
+  return '<ol class="route">'+D.days.map(d=>'<li><button class="stop" data-day="'+d.id+'" '+line(d.key)+'>'
+    + '<span class="badge"><i>'+CODE[d.key]+'</i><b>'+pad(d.n)+'</b></span>'
+    + '<span><span class="stop-h"><b>'+esc(d.label)+'</b><span>'+esc(d.city)+'</span>'+(N.cur&&N.cur.id===d.id?'<em class="here">Today</em>':'')+'</span>'
+    + '<span class="stop-p">'+rich(d.glance)+'</span></span></button></li>').join('')+'</ol>';
+}
+function footer(){
+  const links=ext(D.sheetUrl,'Open the sheet')+(D.mapUrl?' · '+ext(D.mapUrl,'Open the group map'):'');
+  let msg;
+  if(!LIVE.on) msg='Built from the Japan 2026 sheet as it stood on '+stamp(D.updated)+'. Changes made in the sheet after that are not here yet. ';
+  else if(LIVE.ok) msg='Live from the Japan 2026 sheet, last checked '+LIVE.at.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})+'. <button class="linkbtn" data-refresh>Check again</button> · ';
+  else msg='This is the Japan 2026 sheet as it stood on '+stamp(D.updated)+'. <button class="linkbtn" data-refresh>Check for changes</button> · ';
+  const who=AUTH&&CREDS ? ' · Signed in as '+esc(CREDS.shown||CREDS.name)+'. <button class="linkbtn" data-signout>Sign out</button>' : '';
+  return '<p class="foot" id="foot">'+msg+links+who+'</p>';
+}
+function todoItem(t, brief){
+  const where = t.link ? ext(t.link,t.where) : esc(t.where);
+  const box = LIVE.on
+    ? '<button class="box" data-tick="'+t.row+'" role="checkbox" aria-checked="'+t.done+'" aria-label="'+esc((t.done?'Untick: ':'Tick off: ')+t.what)+'">'+(t.done?'✓':'')+'</button>'
+    : '<span class="box" aria-hidden="true">'+(t.done?'✓':'')+'</span>';
+  return '<li class="todo'+(t.done?' done':'')+'">'+box+'<div>'
+    + '<div class="item-h"><span class="item-n">'+esc(t.what)+'</span></div>'
+    + (t.when?'<div class="when">'+esc(t.when)+'</div>':'')+(brief?'':txt(t.details,'item-d'))
+    + (t.where&&!brief?'<div class="meta"><span>'+where+'</span></div>':'')+'</div></li>';
+}
+
+/* ---------- where to next: fixed times, opening hours, suggestions ----------
+   Fixed times come from two places in the sheet:
+   - Transportation rows marked Booked that have a clock time (the departure, at the "from" station)
+   - Maps rows of type Booked event, Meeting point or Luggage whose notes give that day's date and a time
+   Everything else on the map is a suggestion, ranked by distance and whether its notes name today. */
+const MON3=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const T_RANGE=/(\d{1,2})(?::(\d{2}))?\s?(AM|PM)?\s?[–-]\s?(\d{1,2})(?::(\d{2}))?\s?(AM|PM)\b/i;
+const T_ONE=/(\d{1,2})(?::(\d{2}))?\s?(AM|PM)\b/i;
+const toMin=(h,m,ap)=>((+h%12)+(/pm/i.test(ap)?12:0))*60+(+m||0);
+function firstTime(text){
+  const noon=/\bnoon\b/i.exec(text), r=T_RANGE.exec(text), o=T_ONE.exec(text);
+  const first=[noon,r,o].filter(Boolean).sort((a,b)=>a.index-b.index)[0];
+  if(!first) return null;
+  if(first===noon) return {start:720, end:null};
+  if(r && r.index<=o.index){ const end=toMin(r[4],r[5],r[6]); let start=toMin(r[1],r[2],r[3]||r[6]);
+    if(!r[3] && start>end) start=toMin(r[1],r[2],/pm/i.test(r[6])?'AM':'PM');
+    return {start, end}; }
+  return {start:toMin(o[1],o[2],o[3]), end:null};
+}
+const fmtT=m=>{ m=((Math.round(m)%1440)+1440)%1440; const h=Math.floor(m/60), x=m%60; return ((h+11)%12+1)+':'+String(x).padStart(2,'0')+' '+(h<12?'AM':'PM'); };
+const fmtDur=m=>{ m=Math.max(0,Math.round(m)); const h=Math.floor(m/60), x=m%60; return h ? h+' h'+(x?' '+x+' min':'') : x+' min'; };
+const D_RE=/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{1,2})(?:\s?[–-]\s?(?:(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) )?(\d{1,2})(?!\s?(?:AM|PM)|:\d|\d))?/g;
+function mentions(text){
+  const out=[]; let m; D_RE.lastIndex=0;
+  while((m=D_RE.exec(text))){ const a=(MON3.indexOf(m[1])+1)*100+ +m[2], b=m[4]?(MON3.indexOf(m[3]||m[1])+1)*100+ +m[4]:a;
+    out.push({a, b, i:m.index, e:m.index+m[0].length}); }
+  return out;
+}
+const ord=d=>+d.iso.slice(5,7)*100+ +d.iso.slice(8,10);
+/* the parts of a note that are about this day: from each matching date up to the next date */
+function clausesOn(text, d){
+  const ms=mentions(text||''), o=ord(d), out=[];
+  ms.forEach((m,k)=>{ if(m.a<=o && o<=m.b) out.push(text.slice(m.e, ms[k+1]?ms[k+1].i:text.length)); });
+  return out;
+}
+const tidy=t=>t.replace(/^[\s,:;—–-]+/,'').replace(/[\s,;:(]+$/,'').replace(/\s+(or|and)$/i,'');
+const FIXED=new Set(['Booked event','Meeting point','Luggage']);
+const NOT_A_STOP=new Set(['Hotel','Transit hub','Booked event','Meeting point','Luggage']);
+const allPins=()=>{ const out=[]; D.pins.forEach(s=>{ if(s.city!=='Other') s.items.forEach(p=>out.push(p)); }); return out; };
+function hub(origin){
+  const want=fold(origin).split(/[^a-z0-9]+/).filter(Boolean); if(!want.length) return null;
+  const hits=allPins().filter(p=>p.lat!=null && want.every(w=>fold(p.name).includes(w)));
+  hits.sort((a,b)=>((a.type==='Transit hub'?0:1)-(b.type==='Transit hub'?0:1)) || a.name.length-b.name.length);
+  return hits[0]||null;
+}
+function anchorsFor(d){
+  const out=[];
+  d.legs.forEach(l=>{
+    if(l.sk!=='ok') return;
+    const t=firstTime(l.how); if(!t) return;
+    const place=hub(l.route.replace(/\(.*?\)/g,'').split('→')[0]); if(!place) return;
+    const flight=/\bflights?\b/i.test(l.how);
+    out.push({at:t.start, lead:flight?150:10, name:l.route.replace(/\s*\(.*?\)\s*/g,' ').trim(), what:l.how, place, kind:flight?'flight':'ride'});
+  });
+  allPins().forEach(p=>{
+    if(!FIXED.has(p.type)) return;
+    clausesOn(p.notes, d).forEach(c=>{
+      const by=/\bby\s+(\d{1,2}(?::\d{2})?\s?(?:AM|PM)|noon)/i.exec(c), t=by?firstTime(by[1]):firstTime(c);
+      out.push({at:t?t.start:null, lead:t&&!by?10:0, name:p.name, what:tidy(c), place:p, kind:by?'deadline':'event'});
+    });
+  });
+  return out.sort((a,b)=>(a.at==null?-1:a.at)-(b.at==null?-1:b.at));
+}
+function hoursOf(notes){
+  if(/24 hours/i.test(notes)) return {open:0, close:1440};
+  const r=T_RANGE.exec(notes);
+  if(r){ const t=firstTime(r[0]); return {open:t.start, close:t.end>t.start?t.end:t.end+1440}; }
+  const o=/\b(?:opens|from)\s+(?:at\s+)?(\d{1,2}(?::\d{2})?\s?(?:AM|PM))/i.exec(notes), c=/\b(?:to|until)\s+(\d{1,2}(?::\d{2})?\s?(?:AM|PM))/i.exec(notes);
+  if(o||c) return {open:o?firstTime(o[1]).start:null, close:c?firstTime(c[1]).start:null};
+  return null;
+}
+function closedOn(notes, d){
+  const day=MON3[+d.iso.slice(5,7)-1]+' '+ +d.iso.slice(8,10);
+  return new RegExp('closed[^.;)]{0,14}\\b'+day+'\\b','i').test(notes);
+}
+const OFF_PLAN=/not (currently )?scheduled|parked|not currently on|not near your route|not currently booked/i;
+/* rough travel time from straight-line distance: walking pace up to 1.2 km, otherwise a transit guess */
+function travel(m){
+  if(m<=1200) return {min:Math.max(2,Math.round(m*1.3/75)), how:'on foot', mode:'walking'};
+  const km=m*1.3/1000, slow=Math.min(km,13), fast=Math.max(0,km-13);       /* local lines first, then faster trains on long runs */
+  return {min:Math.round(12+slow/28*60+fast/55*60), how:'by train or bus', mode:'transit'};
+}
+const about=tr=>'about '+fmtDur(tr.min)+' '+tr.how;
+const dirLink=(p,mode)=>'https://www.google.com/maps/dir/?api=1&destination='+p.lat+','+p.lng+'&travelmode='+mode;
+function jstMinutes(){
+  try{ const t=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Tokyo',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date()).split(':'); return (+t[0]%24)*60+ +t[1]; }
+  catch(e){ const n=new Date(); return n.getHours()*60+n.getMinutes(); }
+}
+const canGeo = () => !!(LIVE.on && navigator.geolocation && window.isSecureContext);
+function hotelPin(d){ return d && d.hotel ? allPins().find(p=>p.name===d.hotel.name && p.lat!=null)||null : null; }
+/* what "now" means: the real moment during the trip, or a chosen moment (from that day's hotel) before it */
+function nextCtx(){
+  if(N.phase==='during') return {d:N.cur, min:jstMinutes(), pos:(GEO.on&&GEO.pos)||null, live:true};
+  if(N.phase!=='before') return null;
+  const d=D.days[byId[S.sim.day]] || D.days[Math.min(2,D.days.length-1)];
+  /* before mid-afternoon you are still at the place you woke up in; after that, at tonight's hotel */
+  const woke=hotelPin(D.days[byId[d.id]-1]), hp=(S.sim.min<900 && woke) ? woke : (hotelPin(d)||woke);
+  return {d, min:S.sim.min, pos:hp?{lat:hp.lat,lng:hp.lng}:null, live:false, from:hp};
+}
+function stopItem(c, x){
+  const p=x.p, bits=[];
+  if(x.dist!=null) bits.push(fmtDist(x.dist)+' · '+about(x.tr));
+  if(x.status) bits.push(x.status);
+  return '<li><div class="item-h"><span class="item-n"><span class="dot" style="--pc:var('+pinGroup(p.type)[3]+')"></span>'+esc(p.name)+'</span><span class="pill">'+esc(p.type)+'</span>'
+    + (x.today?'<span class="pill ok">On today\'s list</span>':'')+'</div>'
+    + (bits.length?'<div class="when">'+esc(bits.join(' · '))+'</div>':'')+txt(p.notes,'item-d')
+    + '<div class="meta">'+ext(x.dist!=null?dirLink(p,x.tr.mode):p.link,x.dist!=null?'Directions':'Open in Google Maps')+'</div></li>';
+}
+function stopsFor(c, next, need){
+  const out=[];
+  allPins().forEach(p=>{
+    if(NOT_A_STOP.has(p.type) || p.lat==null) return;
+    const today=clausesOn(p.notes,c.d).length>0;
+    if(!today && OFF_PLAN.test(p.notes)) return;
+    if(closedOn(p.notes,c.d)) return;
+    const h=hoursOf(p.notes); let status='';
+    if(h){
+      if(h.open!=null && c.min<h.open){ if(h.open-c.min>45) return; status='opens at '+fmtT(h.open); }
+      else if(h.close!=null){ if(c.min>h.close-20) return; status=h.close-h.open>=1440?'open 24 hours':'open until '+fmtT(h.close); }
+      else if(h.open!=null) status='open from '+fmtT(h.open);
+    }
+    const x={p, today, status, dist:null, tr:null, leaveBy:null};
+    if(c.pos){
+      x.dist=metres(c.pos.lat,c.pos.lng,p.lat,p.lng); x.tr=travel(x.dist);
+      if(x.dist<75 || x.dist>(today?20000:2500)) return;    /* skip where you already are, and anything far unless today names it */
+      if(next && next.place.lat!=null){
+        const back=travel(metres(p.lat,p.lng,next.place.lat,next.place.lng)).min;
+        x.leaveBy=need-back;
+        if(c.min+x.tr.min+25>x.leaveBy) return;            /* no room for even a short stop before the next fixed time */
+      }
+      x.score=x.dist+(today?0:2500)-(today&&p.type==='Planned stop'?800:0);
+    } else { if(!today) return; x.score=h&&h.open!=null?h.open:0; }
+    out.push(x);
+  });
+  return out.sort((a,b)=>a.score-b.score);
+}
+function nextCard(){
+  const c=nextCtx(); if(!c) return '';
+  const list=anchorsFor(c.d), timed=list.filter(a=>a.at!=null), allDay=list.filter(a=>a.at==null);
+  const next=timed.find(a=>a.at>=c.min-15)||null;
+  let need=null, tr=null, leaveBy=null, big, say;
+  if(next){
+    need=next.at-next.lead;
+    const beThere=next.lead ? 'Be there by '+fmtT(need)+' for '+fmtT(next.at) : 'Be there by '+fmtT(next.at);
+    const why=next.kind==='flight' ? ' (that leaves two and a half hours before the flight)' : '';
+    if(c.pos && next.place.lat!=null){
+      tr=travel(metres(c.pos.lat,c.pos.lng,next.place.lat,next.place.lng)); leaveBy=need-tr.min;
+      const free=leaveBy-c.min, where='<b>'+esc(next.place.name)+'</b>';
+      const hop='It is about '+fmtDur(tr.min)+' away '+tr.how;
+      if(need<c.min){ big='Running late'; say=where+' is at '+fmtT(next.at)+'. '+hop+'.'; }
+      else if(free<=5){ big='Leave now'; say='Head to '+where+'. '+beThere+why+'. '+hop+'.'; }
+      else { big=fmtDur(free); say='until you need to leave for '+where+'. '+beThere+why+'. '+hop+', so leave by <b>'+fmtT(leaveBy)+'</b>.'; }
+    } else {
+      big=fmtDur(need-c.min); say='until you need to be at <b>'+esc(next.place.name)+'</b>. '+beThere+why+'.';
+    }
+  } else {
+    big='No deadline'; say=allDay.length ? 'Today is '+allDay.map(a=>'<b>'+esc(a.name)+'</b>').join(' and ')+', with no fixed time in the sheet.' : 'Nothing with a fixed time is left today.';
+  }
+  let h='<section class="sec" id="next"><div class="sec-h"><h2>How much time do I have?</h2>'+(c.live?'':'<span class="kicker">Preview</span>')+'</div>';
+  if(!c.live){
+    const times=[]; for(let m=360;m<=1380;m+=30) times.push(m);
+    h+='<div class="simrow"><label for="simday">Day</label><select id="simday" class="sel">'+D.days.map(x=>'<option value="'+x.id+'"'+(x.id===c.d.id?' selected':'')+'>'+esc(x.label)+'</option>').join('')+'</select>'
+      + '<label for="simtime">Time</label><select id="simtime" class="sel">'+times.map(m=>'<option value="'+m+'"'+(m===c.min?' selected':'')+'>'+fmtT(m)+'</option>').join('')+'</select></div>'
+      + '<p class="geomsg">'+(c.from?'As if you were at '+esc(c.from.name)+' at '+fmtT(c.min)+' on '+esc(c.d.label)+'.':'No hotel pin for '+esc(c.d.label)+', so distances are left out.')+' During the trip this uses the real time and your location.</p>';
+  }
+  h+='<div class="nextbox"><p class="bigtime">'+big+'</p><p>'+say+'</p>'
+    + (next&&next.place.lat!=null?'<div class="meta">'+ext(dirLink(next.place,tr?tr.mode:'transit'),'Directions to '+next.place.name)+'</div>':'')+'</div>';
+  if(c.live && !c.pos && canGeo()) h+='<div class="chips"><button class="chipbtn plain" data-locate aria-pressed="'+GEO.on+'">'+(GEO.on?'Finding you…':'Use my location')+'</button></div>'
+    + '<p class="geomsg'+(GEO.bad?' bad':'')+'">'+esc(GEO.bad?GEO.msg:'Turn on location to see when to leave and what is nearby.')+'</p>';
+  /* best matches first, but no more than two of a kind, so food, shops and sights all get a look in */
+  const kinds={}, stops=stopsFor(c, next, need).filter(x=>{ const k=pinGroup(x.p.type)[0]; kinds[k]=(kinds[k]||0)+1; return kinds[k]<=2; }).slice(0,5);
+  h+='<h3 class="sub-h">'+(c.pos?'Where to next?':'On today\'s list')+'</h3>';
+  if(stops.length){
+    if(c.pos){ const s=stops[0];
+      h+='<p class="lede2">Go to <b>'+esc(s.p.name)+'</b>, '+fmtDist(s.dist)+' away ('+about(s.tr)+').'
+        + (s.leaveBy!=null?' Leave there by <b>'+fmtT(s.leaveBy)+'</b> to be at '+esc(next.place.name)+' by '+fmtT(need)+'.':' Nothing after it has a fixed time today.')+'</p>'; }
+    h+='<ul class="sheet">'+stops.map(x=>stopItem(c,x)).join('')+'</ul>';
+  } else h+='<p class="lede2">'+(next&&c.pos?'No time for a detour. Head for <b>'+esc(next.place.name)+'</b>.':c.pos?'Nothing on the map is close by and open right now.':'Nothing on the map names today.')+'</p>';
+  const up=timed.filter(a=>a.at>=c.min-15), tomorrow=D.days[byId[c.d.id]+1], tfirst=tomorrow?anchorsFor(tomorrow).find(a=>a.at!=null):null;
+  if(up.length||allDay.length||tfirst){
+    h+='<h3 class="sub-h">Coming up</h3><ul class="sheet">'
+      + allDay.map(a=>'<li><div class="kick">All day</div><div class="item-h"><span class="item-n">'+esc(a.name)+'</span></div></li>').join('')
+      + up.map(a=>'<li><div class="kick">'+fmtT(a.at)+(a.at-c.min>0?' · in '+fmtDur(a.at-c.min):' · now')+'</div><div class="item-h"><span class="item-n">'+esc(a.name)+'</span></div>'+txt(a.what,'item-d')+'</li>').join('')
+      + (tfirst?'<li><div class="kick">Tomorrow · '+fmtT(tfirst.at)+'</div><div class="item-h"><span class="item-n">'+esc(tfirst.name)+'</span></div>'+txt(tfirst.what,'item-d')+'</li>':'')+'</ul>';
+  }
+  return h+'<p class="geomsg">Travel times are rough guesses from straight-line distance. Check Directions before relying on one.</p></section>';
+}
+function fixedTimes(d){
+  const list=anchorsFor(d); if(!list.length) return '';
+  return '<section class="sec"><div class="sec-h"><h2>Be on time for</h2></div><ul class="sheet">'
+    + list.map(a=>'<li><div class="kick">'+(a.at==null?'All day':fmtT(a.at)+(a.kind==='deadline'?' at the latest':''))+'</div><div class="item-h"><span class="item-n">'+esc(a.name)+'</span></div>'+txt(a.what,'item-d')+'</li>').join('')+'</ul></section>';
+}
+function redrawNext(){ const el=document.getElementById('next'); if(el && D) el.outerHTML=nextCard(); }
+
+/* ---------- views ---------- */
+function vToday(){
+  let h='';
+  if(N.phase==='during'){
+    h+=board(N.cur)+nextCard()+dayBody(N.cur);
+    h+='<section class="sec"><div class="sec-h"><h2>The whole route</h2></div>'+routeList()+'</section>';
+    return h;
+  }
+  const runs=[]; D.days.forEach(d=>{ if(d.key==='travel') return; const r=runs[runs.length-1]; if(r&&r.key===d.key) r.end=d; else runs.push({key:d.key,start:d,end:d}); });
+  const big = N.phase==='after' ? 'Trip complete' : N.togo>1 ? N.togo+' days to go' : N.togo===1 ? 'Tomorrow' : 'Time to go';
+  h+='<header class="board"><div class="board-main"><div class="kicker">Japan 2026 · '+esc(D.days[0].short)+' – '+esc(D.days[D.days.length-1].short)+'</div>'
+    + '<h1>'+big+'</h1><p class="board-sub">'+D.days.length+' days, '+runs.length+' cities, one line.</p></div><div class="legs3">'
+    + runs.map(r=>'<button class="band-btn" data-day="'+r.start.id+'" '+line(r.key)+'><small>'+esc(r.start.short)+'</small>'+CITY[r.key]+'</button>').join('')
+    + '</div></header>';
+  if(N.phase==='before'){
+    const open=[]; D.todo.groups.slice(0,1).forEach(g=>g.items.forEach(t=>{ if(!t.done) open.push(t); }));
+    if(open.length) h+='<section class="sec"><div class="sec-h"><h2>Next to do</h2><button class="linkbtn" data-go="prep">All '+open.length+'</button></div><ul class="sheet">'
+      + open.slice(0,3).map(t=>todoItem(t,true)).join('')+'</ul></section>';
+  }
+  if(N.phase==='before') h+=nextCard();
+  h+='<section class="sec"><div class="sec-h"><h2>The route</h2></div>'+routeList()+'</section>';
+  return h;
+}
+function vDays(){
+  const d=D.days[byId[S.day]];
+  return '<div class="daystrip" id="strip">'+D.days.map(x=>'<button class="daychip" data-day="'+x.id+'" '+line(x.key)+' aria-current="'+(x.id===d.id)+'" aria-label="'+esc(x.label)+'">'+esc(x.dow)+'<b>'+Number(x.iso.slice(8))+'</b></button>').join('')+'</div>'
+    + board(d)+dayBody(d);
+}
+function vTransit(){
+  const groups=[]; D.legs.forEach(l=>{ const g=groups[groups.length-1]; if(g&&g.date===l.date) g.legs.push(l); else groups.push({date:l.date,legs:[l]}); });
+  const booked=D.legs.filter(l=>l.sk==='ok').length, open=D.legs.filter(l=>l.sk==='todo').length;
+  return '<h1 class="page-h">Getting around</h1><p class="lede">'+D.legs.length+' legs. '+booked+' booked, '+open+' still need something from us.</p>'
+    + groups.map(g=>{ const d=byLabel[g.date];
+        return '<section class="blk" '+line(d?d.key:'other')+'><div class="sec-h"><h2>'+esc(g.date)+(d?' · '+esc(d.city):'')+'</h2>'
+          + (d?'<button class="linkbtn" data-day="'+d.id+'">Day plan</button>':'')+'</div><ul class="sheet">'+g.legs.map(legItem).join('')+'</ul></section>'; }).join('');
+}
+const cityOk = it => S.city==='All' || it.city===S.city;
+function results(){
+  let h='';
+  if(S.seg==='food'){
+    D.food.forEach(sec=>{ const list=sec.items.filter(it=>cityOk(it)&&vegOk(it)); if(!list.length) return;
+      h+='<section class="blk"><h3>'+esc(sec.title)+'</h3>'+(sec.note?'<p class="note">'+esc(sec.note)+'</p>':'')+'<ul class="sheet">'+list.map(eatItem).join('')+'</ul></section>'; });
+  } else {
+    let lastGroup='';
+    D.ideas.forEach(sec=>{ const list=sec.items.filter(cityOk); if(!list.length) return;
+      if(sec.group && sec.group!==lastGroup){ h+='<h3 class="group-h">'+esc(sec.group)+'</h3>'; lastGroup=sec.group; }
+      const statusCol=/itinerary/i.test(sec.col3);
+      h+='<details class="fold"><summary>'+esc(sec.title)+'<span class="count">'+list.length+'</span></summary>'
+        + (sec.note?'<p class="note">'+esc(sec.note)+'</p>':'')+'<ul class="sheet">'
+        + list.map(it=>{ const on=statusCol&&/^(on |already on|booked|nov \d|shibuya is on)/i.test(it.extra);
+            return '<li><div class="item-h"><span class="item-n">'+esc(it.name)+'</span>'+(statusCol&&it.extra?'<span class="pill '+(on?'ok':'')+'">'+esc(it.extra)+'</span>':'')+'</div>'
+              + txt(it.desc,'item-d')+(!statusCol&&it.extra?'<div class="meta"><span>'+esc(it.extra)+'</span></div>':'')+'</li>'; }).join('')
+        + '</ul></details>'; });
+  }
+  return h || '<p class="empty">Nothing here for that filter.</p>';
+}
+function vPlaces(){
+  const seg=[['food','Food'],['ideas','Ideas']];
+  const cities=['All','Kyoto','Nara','Osaka','Tokyo'];
+  return '<h1 class="page-h">Places</h1>'
+    + '<div class="seg" role="group" aria-label="List">'+seg.map(s=>'<button data-seg="'+s[0]+'" aria-pressed="'+(S.seg===s[0])+'">'+s[1]+'</button>').join('')+'</div>'
+    + '<div class="chips">'+cities.map(c=>'<button class="chipbtn" data-city="'+c+'" aria-pressed="'+(S.city===c)+'" '+(c==='All'?'':line(c.toLowerCase()))+'>'+c+'</button>').join('')
+    + (S.seg==='food'?vegToggle():'')+'</div>'
+    + '<div id="results">'+results()+'</div>';
+}
+/* ---------- map ---------- */
+const PIN_GROUPS=[['stay','Stays',['Hotel'],'--ink'],['plan','Planned',['Booked event','Planned stop','Meeting point','Day trip','Luggage'],'--c-osaka'],
+  ['sight','Sights & areas',['Sight','Neighborhood'],'--c-travel'],['coffee','Food & coffee',['Coffee shop','Food'],'--c-nara'],
+  ['shop','Shops',['Shopping'],'--c-shop'],['wish','Wishlist',['Wishlist'],'--c-kyoto'],['transit','Transit',['Transit hub'],'--c-tokyo']];
+const pinGroup = type => PIN_GROUPS.find(g=>g[2].includes(type)) || PIN_GROUPS[2];
+const pinShown = (sec,it) => (S.city==='All'||sec.city===S.city) && !S.hide[pinGroup(it.type)[0]];
+let MAP=null;
+/* your own location: kept on this device, never sent anywhere */
+const GEO={on:false, watch:null, pos:null, dot:null, ring:null, map:null, msg:'', bad:false, centered:false, drawn:0};
+const canLocate = () => !!(window.L && canGeo());
+function metres(a,b,c,d){ const R=6371000, t=Math.PI/180, x=(c-a)*t, y=(d-b)*t;
+  const h=Math.sin(x/2)**2+Math.cos(a*t)*Math.cos(c*t)*Math.sin(y/2)**2; return 2*R*Math.asin(Math.sqrt(h)); }
+function fmtDist(m){ return m<950 ? Math.max(10,Math.round(m/10)*10)+' m' : m<100000 ? (m/1000).toFixed(1)+' km' : Math.round(m/1000).toLocaleString('en-US')+' km'; }
+function pinItem(it){
+  const p=GEO.on&&GEO.pos, away=p&&it.lat!=null ? '<span>'+fmtDist(metres(p.lat,p.lng,it.lat,it.lng))+' away</span>' : '';
+  return '<li><div class="item-h"><span class="item-n"><span class="dot" style="--pc:var('+pinGroup(it.type)[3]+')"></span>'+esc(it.name)+'</span><span class="pill">'+esc(it.type)+'</span></div>'
+    + txt(it.notes,'item-d')+(it.link||away?'<div class="meta">'+away+(it.link?ext(it.link,'Open in Google Maps'):'')+'</div>':'')+'</li>';
+}
+function nearest(){
+  const p=GEO.on&&GEO.pos, out=[]; if(!p) return out;
+  D.pins.forEach(sec=>sec.items.forEach(it=>{ if(it.lat!=null && !S.hide[pinGroup(it.type)[0]]) out.push([metres(p.lat,p.lng,it.lat,it.lng),it]); }));
+  return out.sort((a,b)=>a[0]-b[0]);
+}
+const FAR=300000;   /* further than this from every pin: you are not on the trip yet, so the map stays put */
+function pinList(){
+  let h='', any=false; const near=nearest();
+  if(near.length){
+    h+= near[0][0]>FAR
+      ? '<p class="geomsg">You are about '+fmtDist(near[0][0])+' from the nearest pin, so the map has stayed on the trip.</p>'
+      : '<section class="blk"><h3>Nearest to you</h3><ul class="sheet">'+near.slice(0,6).map(n=>pinItem(n[1])).join('')+'</ul></section>';
+  }
+  D.pins.forEach(sec=>{ const list=sec.items.filter(it=>pinShown(sec,it)); if(!list.length) return; any=true;
+    h+='<section class="blk"><h3>'+esc(sec.title)+'</h3><ul class="sheet">'+list.map(pinItem).join('')+'</ul></section>'; });
+  return h+(any?'':'<p class="empty">No pins for that filter.</p>');
+}
+function vMap(){
+  const cities=['All','Kyoto','Nara','Osaka','Tokyo'];
+  return '<h1 class="page-h">Map</h1>'
+    + '<div class="chips">'+cities.map(c=>'<button class="chipbtn" data-city="'+c+'" aria-pressed="'+(S.city===c)+'" '+(c==='All'?'':line(c.toLowerCase()))+'>'+c+'</button>').join('')+'</div>'
+    + (window.L?'<div class="map" id="map" role="application" aria-label="Map of trip pins"></div>':'')
+    + (canLocate()?'<div class="chips"><button class="chipbtn plain" data-locate aria-pressed="'+GEO.on+'">'+(GEO.on?'My location: on':'Show my location')+'</button>'
+        + (GEO.on&&GEO.pos?'<button class="chipbtn" data-center>Center on me</button>':'')+'</div>'
+        + '<p class="geomsg'+(GEO.bad?' bad':'')+'" id="geomsg" role="status"'+(GEO.msg?'':' hidden')+'>'+esc(GEO.msg)+'</p>':'')
+    + '<div class="chips">'+PIN_GROUPS.map(g=>'<button class="chipbtn pg" data-pg="'+g[0]+'" aria-pressed="'+!S.hide[g[0]]+'"><span class="dot" style="--pc:var('+g[3]+')"></span>'+g[1]+'</button>').join('')+'</div>'
+    + (D.mapUrl?'<p class="foot" style="margin-top:12px">For directions'+(canLocate()?'':' and your own location')+', '+ext(D.mapUrl,'open the group map in Google Maps')+'.</p>':'')
+    + '<div id="pinlist">'+pinList()+'</div>';
+}
+function geoStart(){
+  if(GEO.watch!=null || !canGeo()) return;
+  GEO.watch=navigator.geolocation.watchPosition(geoFix, geoFail, {enableHighAccuracy:true, maximumAge:15000, timeout:20000});
+}
+function geoStop(){ if(GEO.watch!=null){ try{ navigator.geolocation.clearWatch(GEO.watch); }catch(e){} GEO.watch=null; } }
+function geoFix(pos){
+  const firstFix=!GEO.pos;
+  GEO.pos={lat:pos.coords.latitude, lng:pos.coords.longitude, acc:pos.coords.accuracy||0}; GEO.msg=''; GEO.bad=false;
+  if(!GEO.on || S.gq.trim().length>1) return;
+  if(S.tab==='today'){ if(firstFix || Date.now()-GEO.drawn>8000){ GEO.drawn=Date.now(); redrawNext(); } return; }
+  if(S.tab!=='map') return;
+  if(firstFix) return render(true);                  /* draws the dot, the Center button and the nearest list */
+  geoDraw();
+  if(Date.now()-GEO.drawn>8000){ GEO.drawn=Date.now(); const el=document.getElementById('pinlist'); if(el) el.innerHTML=pinList(); }
+}
+function geoFail(err){
+  /* a passing hiccup (no fix for a moment) should not switch the feature off once it has found you */
+  if(GEO.pos && !(err && err.code===1)) return;
+  geoStop(); GEO.on=false; GEO.pos=null; GEO.bad=true;
+  GEO.msg = err && err.code===1
+    ? 'Location is switched off for this site. Allow it in your browser settings for this site, then try again.'
+    : 'Could not find your location. Try again outdoors, or with Wi-Fi on.';
+  if(S.tab==='map' && D) render(true); else if(S.tab==='today') redrawNext();
+}
+function geoDraw(){
+  if(!MAP || !GEO.on || !GEO.pos) return;
+  const ll=[GEO.pos.lat, GEO.pos.lng];
+  if(GEO.map===MAP && GEO.dot){ GEO.ring.setLatLng(ll).setRadius(GEO.pos.acc); GEO.dot.setLatLng(ll); return; }
+  const c=getComputedStyle(document.documentElement).getPropertyValue('--c-travel').trim();
+  GEO.ring=L.circle(ll,{radius:GEO.pos.acc,color:c,weight:1,fillColor:c,fillOpacity:.14,interactive:false}).addTo(MAP);
+  GEO.dot=L.marker(ll,{icon:L.divIcon({className:'me',iconSize:[22,22]}),zIndexOffset:1000,keyboard:false}).addTo(MAP).bindPopup('<b>You are here</b>');
+  GEO.map=MAP;
+}
+function geoToggle(){
+  if(GEO.on){ GEO.on=false; geoStop(); GEO.pos=null; GEO.msg=''; GEO.bad=false; GEO.centered=false; return render(true); }
+  GEO.on=true; GEO.bad=false; GEO.msg='Finding you…'; GEO.centered=false; render(true);   /* render starts the watch */
+}
+function initMap(){
+  const el=document.getElementById('map'); if(!el||!window.L) return;
+  const css=getComputedStyle(document.documentElement), col=v=>css.getPropertyValue(v).trim();
+  try{
+    MAP=L.map(el,{scrollWheelZoom:false});
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap contributors'}).addTo(MAP);
+    const pts=[];
+    D.pins.forEach(sec=>sec.items.forEach(it=>{
+      if(it.lat==null || S.hide[pinGroup(it.type)[0]]) return;
+      const g=pinGroup(it.type);
+      L.circleMarker([it.lat,it.lng],{radius:g[0]==='stay'?9:7,color:col('--card'),weight:2,fillColor:col(g[3]),fillOpacity:1}).addTo(MAP)
+        .bindPopup('<b>'+esc(it.name)+'</b><br><i>'+esc(it.type)+'</i>'+(it.notes?'<p>'+esc(it.notes)+'</p>':'<br>')+(it.link?ext(it.link,'Open in Google Maps'):''),{maxWidth:230});
+      if(S.city==='All' ? sec.city!=='Other' : sec.city===S.city) pts.push([it.lat,it.lng]);
+    }));
+    if(pts.length) MAP.fitBounds(pts,{padding:[26,26],maxZoom:15}); else MAP.setView([35.3,137.6],6);
+    geoDraw();
+    if(GEO.on && GEO.pos && !GEO.centered){ GEO.centered=true; const n=nearest(); if(n.length && n[0][0]<=FAR) MAP.setView([GEO.pos.lat,GEO.pos.lng],15); }
+  }catch(err){ el.hidden=true; MAP=null; }
+}
+/* ---------- search across everything ---------- */
+let IDX=[];
+/* lower-case and strip accents one character at a time, so positions still line up for highlighting */
+const fold = s => s.replace(/[\u00C0-\u024F]/g, c=>c.normalize('NFD')[0]).toLowerCase();
+function buildIndex(){
+  IDX=[];
+  const add=e=>{ e.h=fold([e.k,e.t,e.x].join(' ')); IDX.push(e); };
+  const foodNames=new Set(); D.food.forEach(sec=>sec.items.forEach(it=>foodNames.add(it.name)));
+  D.days.forEach(d=>{
+    add({g:'Days',k:d.label,t:d.city+' · '+d.stay,x:d.glance,day:d.id});
+    d.sections.forEach(s=>{ const nm=/PLAN/.test(s.title)?'Plan':/KNOW/.test(s.title)?'Good to know':/AROUND/.test(s.title)?'Getting around':s.title;
+      s.items.forEach(i=>{ add({g:'Days',k:d.label+' · '+nm,t:'',x:i.t,day:d.id}); i.sub.forEach(x=>add({g:'Days',k:d.label+' · '+nm,t:'',x:x,day:d.id})); }); });
+    d.eats.forEach(it=>{ if(!foodNames.has(it.name)) add({g:'Days',k:d.label+' · Where to eat',t:it.name,x:[it.desc,it.loc,it.veg,it.hours].filter(Boolean).join(' · '),day:d.id}); });
+  });
+  D.legs.forEach(l=>add({g:'Transit',k:l.date,t:l.route,x:[l.how,l.buy!=='Done'?l.buy:'',l.details].filter(Boolean).join(' · '),
+    pill:'<span class="pill '+(l.sk==='none'?'':l.sk)+'">'+esc(l.status)+'</span>',go:'transit'}));
+  D.food.forEach(sec=>sec.items.forEach(it=>add({g:'Food',k:sec.title,t:it.name,x:[it.desc,it.loc,/^(yes|no)$/i.test(it.veg)?'':it.veg].filter(Boolean).join(' · '),pill:vegPill(it),
+    href:it.closed==='perm'?'':mapsQ(it.name+', '+(it.loc||it.city||'')+', Japan'),hl:'Find in Maps'})));
+  D.ideas.forEach(sec=>sec.items.forEach(it=>add({g:'Ideas',k:(sec.group?sec.group+' · ':'')+sec.title,t:it.name,x:[it.desc,it.extra].filter(Boolean).join(' · '),go:'places',seg:'ideas'})));
+  D.pins.forEach(sec=>sec.items.forEach(it=>add({g:'Map',k:sec.title+' · '+it.type,t:it.name,x:it.notes,href:it.link,hl:'Open in Google Maps'})));
+  D.todo.groups.forEach(g=>g.items.forEach(t=>add({g:'To do',k:g.title+(t.when?' · '+t.when:''),t:t.what,x:[t.details,t.where].filter(Boolean).join(' · '),
+    pill:t.done?'<span class="pill ok">✓ Done</span>':'',go:'prep'})));
+  D.notes.forEach(t=>t.rows.forEach(r=>add({g:'Notes',k:t.src+' · '+t.title,t:r[0],x:r.slice(1).filter(Boolean).join(' · ')})));
+  (D.gnotes||[]).forEach(n=>add({g:'Notes',k:'Group notes · '+n.who+(n.when?' · '+n.when:''),t:'',x:n.text,go:'prep'}));
+  phraseGroups().forEach(grp=>grp.items.forEach(it=>add({g:'Phrases',k:grp.cat,t:it.en,x:[it.ja,it.ro,it.when].filter(Boolean).join(' · '),go:'phrases',pq:it.en})));
+}
+function hl(s, terms){
+  const low=fold(s), ranges=[];
+  terms.forEach(t=>{ let p=0; while((p=low.indexOf(t,p))>-1){ ranges.push([p,p+t.length]); p+=t.length; } });
+  ranges.sort((a,b)=>a[0]-b[0]);
+  let out='', i=0;
+  ranges.forEach(r=>{ if(r[0]<i) return; out+=esc(s.slice(i,r[0]))+'<mark>'+esc(s.slice(r[0],r[1]))+'</mark>'; i=r[1]; });
+  return out+esc(s.slice(i));
+}
+function snip(x, terms){
+  if(x.length<=240) return '';
+  const low=fold(x); let p=-1;
+  terms.forEach(t=>{ const i=low.indexOf(t); if(i>-1 && (p<0||i<p)) p=i; });
+  const a=Math.max(0,(p<0?0:p)-70), b=Math.min(x.length,a+220);
+  return (a>0?'…':'')+x.slice(a,b).trim()+(b<x.length?'…':'');
+}
+function hit(e, terms){
+  const sn=e.x?snip(e.x,terms):'';
+  const body=!e.x?'':sn
+    ? '<div class="cl"><p class="item-d snip">'+hl(sn,terms)+'</p><p class="item-d full" hidden>'+hl(e.x,terms)+'</p><button class="more" data-more aria-expanded="false">More</button></div>'
+    : '<p class="item-d">'+hl(e.x,terms)+'</p>';
+  const act=e.day?'<button class="linkbtn" data-day="'+e.day+'">Open this day</button>'
+    : e.go?'<button class="linkbtn" data-go="'+e.go+'"'+(e.seg?' data-segto="'+e.seg+'"':'')+(e.pq?' data-pq="'+esc(e.pq)+'"':'')+'>Open '+({transit:'Transit',prep:'To do',places:'Ideas',phrases:'Phrases to hear it'}[e.go])+'</button>'
+    : e.href?ext(e.href,e.hl):'';
+  return '<li><div class="kick">'+hl(e.k,terms)+'</div>'+(e.t?'<div class="item-h"><span class="item-n">'+hl(e.t,terms)+'</span>'+(e.pill||'')+'</div>':'')
+    + body+(act?'<div class="meta">'+act+'</div>':'')+'</li>';
+}
+function vSearch(q){
+  const terms=fold(q).split(/\s+/).filter(Boolean);
+  const hits=IDX.filter(e=>terms.every(t=>e.h.includes(t)));
+  if(!hits.length) return '<p class="empty">Nothing in the trip matches “'+esc(q)+'”.</p>';
+  const order=['Days','Transit','Food','Ideas','Map','Phrases','To do','Notes'];
+  const first={today:['Days'],days:['Days'],transit:['Transit'],places:['Food','Ideas'],map:['Map'],phrases:['Phrases'],prep:['To do','Notes']}[S.tab];
+  let h='<p class="lede">'+hits.length+(hits.length===1?' result':' results')+' across the whole trip.</p>';
+  first.concat(order.filter(g=>!first.includes(g))).forEach(g=>{ const list=hits.filter(e=>e.g===g); if(!list.length) return;
+    const show=S.exp[g]?list:list.slice(0,5);
+    h+='<section class="blk"><div class="sec-h"><h2>'+g+'</h2><span class="kicker">'+list.length+'</span></div><ul class="sheet">'+show.map(e=>hit(e,terms)).join('')+'</ul>'
+      + (list.length>show.length?'<button class="linkbtn" data-exp="'+g+'">Show all '+list.length+'</button>':'')+'</section>'; });
+  return h;
+}
+function noteItem(n){
+  return '<li><div class="kick">'+esc(n.who||'Someone')+(n.when?' · '+esc(n.when):'')+(n.pending?' · saving…':'')+'</div><p class="item-d">'+esc(n.text)+'</p></li>';
+}
+const NOTE_HOW='<details class="fold" style="margin-top:12px"><summary>What happens to your note<span class="count">How it works</span></summary><ul class="sheet">'
+  + [['Every hour','New notes are picked up automatically, once an hour. Nobody has to do anything.'],
+     ['Filed in the right section','A clear addition is looked up, given a short description and put where it belongs: Ideas or Food on the Places tab, under the right city and area, or Phrases, or the packing and tips lists further down this page.'],
+     ['Pinned on the map','When its location can be confirmed, it gets a pin on the Map tab as well.'],
+     ['Shows up for everyone','The guide reloads from the sheet whenever you open it, so the addition appears on everyone\'s phone and your note moves to Dealt with.'],
+     ['Left for Adam','Changes to plans already made, anything about bookings, times or money, and questions stay open here until Adam decides.']]
+    .map(s=>'<li><div class="kick">'+s[0]+'</div><p class="item-d">'+s[1]+'</p></li>').join('')+'</ul></details>';
+function notesBlock(){
+  const all=(D.gnotes||[]).slice().reverse(), open=all.filter(n=>!n.done), done=all.filter(n=>n.done);
+  const canAdd=LIVE.on && AUTH && CREDS;
+  if(!canAdd && !all.length) return '';
+  return '<section class="blk" id="gnotes"><div class="sec-h"><h2>Group notes</h2><span class="kicker">'+open.length+' open</span></div>'
+    + (canAdd ? '<p class="note">More than a to-do list: this is how things get added to the guide. Leave a note with what you want added (a shop, somewhere to eat, a sight, a phrase, something to pack). Within about an hour it is filed in the right section, pinned on the map and showing on everyone\'s phone.</p>'
+        + '<textarea class="search notebox" id="gnote" rows="3" maxlength="600" placeholder="For example: add the ramen place near the hotel to Nov 3" aria-label="Your note">'+esc(S.draft)+'</textarea>'
+        + '<div class="chips"><button class="chipbtn go" data-addnote>Add note</button></div><p class="geomsg'+(S.noteBad?' bad':'')+'" id="gnmsg" role="status"'+(S.noteMsg?'':' hidden')+'>'+esc(S.noteMsg)+'</p>'+NOTE_HOW : '')
+    + (open.length?'<ul class="sheet" style="margin-top:12px">'+open.map(noteItem).join('')+'</ul>':'')
+    + (done.length?'<details class="fold"><summary>Dealt with<span class="count">'+done.length+'</span></summary><ul class="sheet">'+done.map(noteItem).join('')+'</ul></details>':'')+'</section>';
+}
+function addNote(btn){
+  const box=document.getElementById('gnote'), text=(box?box.value:'').trim();
+  const say=(m,bad)=>{ S.noteMsg=m; S.noteBad=!!bad; const el=document.getElementById('gnmsg'); if(el){ el.textContent=m; el.hidden=!m; el.className='geomsg'+(bad?' bad':''); } };
+  if(!text) return say('Write the note first.', true);
+  btn.disabled=true; btn.textContent='Saving…'; say('');
+  call({action:'note', text:text}).then(r=>{
+    if(AUTH && r && r.ok===false && r.error==='signin') return signOut('Please sign in again.');
+    if(r && r.ok && r.noted){
+      S.draft=''; D.gnotes=(D.gnotes||[]).concat([{when:r.when||'', who:r.who||(CREDS&&CREDS.shown)||'', text:r.text||text, done:false}]);
+      S.noteMsg='Saved to the Group Notes tab in the sheet.'; S.noteBad=false; buildIndex(); render(true); return;
+    }
+    if(r && Array.isArray(r.tabs)) return say('Notes are not switched on yet. The sheet\'s script needs updating first.', true);
+    say(r && r.error ? 'That note was not saved: '+r.error+'.' : 'That note was not saved. Try again.', true);
+  }).catch(()=>say('That note was not saved. Check your connection and try again.', true))
+    .then(()=>{ const b=document.querySelector('[data-addnote]'); if(b){ b.disabled=false; b.textContent='Add note'; } });
+}
+function vPrep(){
+  let h='<h1 class="page-h">To do</h1>'+notesBlock()+'<p class="lede" style="margin-top:22px">'+esc(D.todo.note.replace(/\s*Tick the box.*$/,''))+(LIVE.on?' Tap a box to tick it off for everyone; it ticks the box in the sheet too.':' Tick things off in the sheet.')+'</p>';
+  D.todo.groups.forEach(g=>{ const open=g.items.filter(t=>!t.done), done=g.items.filter(t=>t.done);
+    h+='<section class="blk"><div class="sec-h"><h2>'+esc(g.title)+'</h2><span class="kicker">'+open.length+' open</span></div>'
+      + (open.length?'<ul class="sheet">'+open.map(t=>todoItem(t)).join('')+'</ul>':'<p class="empty">All done.</p>')
+      + (done.length?'<details class="fold"><summary>Done<span class="count">'+done.length+'</span></summary><ul class="sheet">'+done.map(t=>todoItem(t)).join('')+'</ul></details>':'')+'</section>'; });
+  let src='';
+  D.notes.forEach(t=>{ if(t.src!==src){ src=t.src; h+='<h3 class="group-h">'+esc(src)+'</h3>'; }
+    h+='<details class="fold"><summary>'+esc(t.title)+'<span class="count">'+t.rows.length+'</span></summary><ul class="sheet">'
+      + t.rows.map(r=>'<li><div class="item-h"><span class="item-n">'+esc(r[0])+'</span></div>'
+          + r.slice(1).map((c,i)=>c?(t.cols.length>2?'<span class="lbl">'+esc(t.cols[i+1])+'</span>':'')+txt(c,'item-d'):'').join('')+'</li>').join('')
+      + '</ul></details>'; });
+  return h;
+}
+
+/* ---------- phrases ---------- */
+const CAN_SPEAK = 'speechSynthesis' in window && typeof SpeechSynthesisUtterance!=='undefined';
+let JA_VOICE=null, VOICES=0;
+function pickVoice(){ try{ const v=speechSynthesis.getVoices(); VOICES=v.length; JA_VOICE=v.find(x=>/^ja([-_]|$)/i.test(x.lang))||null; }catch(e){} }
+if(CAN_SPEAK){ pickVoice(); try{ speechSynthesis.addEventListener('voiceschanged', pickVoice); }catch(e){} }
+let UTTER=null, SPEAK_T=null;
+function sayBtn(btn, on){ if(btn && btn.isConnected) btn.textContent = on ? 'Playing…' : (btn.dataset.slow ? 'Slow' : 'Play'); }
+function speechHelp(btn, text){
+  sayBtn(btn,false);
+  const card=btn && btn.isConnected ? btn.closest('.phrase') : null; if(!card || card.querySelector('.sphelp')) return;
+  card.querySelector('.pbtns').insertAdjacentHTML('afterend','<p class="geomsg bad sphelp">No sound came out. Check the volume and that the phone is not on silent, or '+ext(trLink(text,'ja','en'),'hear it in Google Translate')+'.</p>');
+}
+/* Recorded clips for the built-in phrases live in phrases-audio.json beside this page. They play through an ordinary
+   audio element, which works on every phone. Phrases added in the sheet have no clip and use the device's own voice. */
+const CLIPS={el:null, map:null, state:'idle', p:null, urls:{}};
+const SILENT_WAV="data:audio/wav;base64,UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YSADAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==";
+function loadClips(){
+  if(CLIPS.state!=='idle') return CLIPS.p;
+  CLIPS.state='loading';
+  CLIPS.p=fetch('phrases-audio.json').then(r=>{ if(!r.ok) throw new Error('http'); return r.json(); })
+    .then(j=>{ CLIPS.map=j.clips||{}; CLIPS.state='ready'; }).catch(()=>{ CLIPS.state='failed'; });
+  return CLIPS.p;
+}
+function clipUrl(key){
+  if(CLIPS.urls[key]) return CLIPS.urls[key];
+  const b=CLIPS.map && CLIPS.map[key]; if(!b) return null;
+  const bin=atob(b), bytes=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+  return CLIPS.urls[key]=URL.createObjectURL(new Blob([bytes],{type:'audio/mpeg'}));
+}
+function playPhrase(it, slow, btn){
+  const key=it.tts||it.ja;
+  if(!CLIPS.el){ CLIPS.el=new Audio(); CLIPS.el.preload='auto'; }
+  const a=CLIPS.el, rate=slow?0.65:1;
+  const fail=()=>{ sayBtn(btn,false); speechHelp(btn,key); };
+  const startClip=()=>{
+    const url=clipUrl(key); if(!url) return false;
+    try{ if(CAN_SPEAK) speechSynthesis.cancel(); }catch(e){}
+    document.querySelectorAll('[data-say]').forEach(b=>sayBtn(b,false));
+    a.onplaying=()=>{ a.playbackRate=rate; sayBtn(btn,true); const h=btn.isConnected&&btn.closest('.phrase').querySelector('.sphelp'); if(h) h.remove(); };
+    a.onended=()=>sayBtn(btn,false); a.onerror=fail;
+    a.pause(); a.src=url; a.defaultPlaybackRate=rate; a.playbackRate=rate;      /* some browsers reset the speed when the source changes */
+    try{ a.preservesPitch=true; a.webkitPreservesPitch=true; }catch(e){}
+    const pr=a.play(); if(pr && pr.catch) pr.catch(fail);
+    return true;
+  };
+  if(CLIPS.state==='ready'){ if(!startClip()) speak(key, slow, btn); return; }
+  if(CLIPS.state==='failed'){ speak(key, slow, btn); return; }
+  /* clips still downloading: start a silent sound now so the phone lets this tap play audio a moment later */
+  if(btn) btn.textContent='Loading…';
+  try{ a.src=SILENT_WAV; const pr=a.play(); if(pr && pr.catch) pr.catch(()=>{}); }catch(e){}
+  loadClips().then(()=>{ if(CLIPS.state==='ready' && startClip()) return; sayBtn(btn,false); speak(key, slow, btn); });
+}
+/* the device's own voices: prefer the natural ones, never the novelty "Eloquence" set that sounds like an old robot */
+function jaVoice(){
+  let v=[]; try{ v=speechSynthesis.getVoices().filter(x=>/^ja([-_]|$)/i.test(x.lang||'')); }catch(e){}
+  const bad=/Eddy|Flo|Grandma|Grandpa|Reed|Rocko|Sandy|Shelley|Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Jester|Organ|Superstar|Trinoids|Whisper|Wobble|Zarvox|eSpeak/i;
+  const good=[/Kyoko/i,/O-?ren/i,/Otoya/i,/Hattori/i,/Siri/i,/Google/i];
+  for(const g of good){ const hit=v.find(x=>g.test(x.name||'') && !bad.test(x.name||'')); if(hit) return hit; }
+  return v.find(x=>!bad.test(x.name||'')) || null;
+}
+function speak(text, slow, btn){
+  if(!CAN_SPEAK) return speechHelp(btn, text);
+  const synth=window.speechSynthesis;
+  const fire=()=>{
+    let started=false;
+    const u=new SpeechSynthesisUtterance(text); UTTER=u;              /* keep a reference, or some browsers drop it mid-word */
+    u.lang='ja-JP'; u.rate=slow?0.5:0.9;
+    const v=jaVoice(); if(v) u.voice=v;
+    u.onstart=()=>{ started=true; sayBtn(btn,true); const h=btn&&btn.isConnected&&btn.closest('.phrase').querySelector('.sphelp'); if(h) h.remove(); };
+    u.onend=()=>sayBtn(btn,false);
+    u.onerror=e=>{ sayBtn(btn,false); if(!started && !(e && /interrupted|cancel/i.test(e.error||''))) speechHelp(btn,text); };
+    try{ synth.resume(); }catch(e){}
+    try{ synth.speak(u); }catch(e){ return speechHelp(btn,text); }
+    clearTimeout(SPEAK_T); SPEAK_T=setTimeout(()=>{ if(!started && !synth.speaking) speechHelp(btn,text); }, 2500);
+  };
+  /* Safari throws away speech queued in the same breath as cancel(), so only cancel when something is playing, then wait a beat */
+  if(synth.speaking || synth.pending){ try{ synth.cancel(); }catch(e){} document.querySelectorAll('[data-say]').forEach(b=>sayBtn(b,false)); setTimeout(fire,150); }
+  else fire();
+}
+function phraseGroups(){
+  const groups=PHRASES.map(g=>({cat:g.cat, items:g.items.slice()}));
+  ((D&&D.phrases)||[]).forEach(p=>{ let g=groups.find(x=>fold(x.cat)===fold(p.cat)); if(!g){ g={cat:p.cat, items:[]}; groups.push(g); } g.items.push(p); });
+  return groups;
+}
+const trLink=(text,from,to)=>'https://translate.google.com/?sl='+from+'&tl='+to+'&text='+encodeURIComponent(text)+'&op=translate';
+function phraseList(){
+  const terms=fold(S.pq.trim()).split(/\s+/).filter(Boolean); let h='', n=0, k=0;
+  phraseGroups().forEach(g=>{
+    const skip=!terms.length && S.pcat!=='All' && g.cat!==S.pcat;      /* typing searches every category */
+    const rows=g.items.map(it=>({it, id:k++})).filter(x=>!skip && terms.every(t=>fold([x.it.en,x.it.ja,x.it.ro,x.it.say,x.it.when,g.cat].join(' ')).includes(t)));
+    if(!rows.length) return; n+=rows.length;
+    h+='<section class="blk"><h3>'+esc(g.cat)+'</h3><ul class="sheet">'+rows.map(x=>{ const it=x.it;
+      return '<li class="phrase"><div class="item-h"><span class="item-n">'+esc(it.en)+'</span></div>'
+        + '<p class="ja" lang="ja">'+esc(it.ja)+'</p>'
+        + '<p class="ro">'+esc(it.ro)+(it.say?' <span class="say">'+esc(it.say)+'</span>':'')+'</p>'
+        + '<div class="chips pbtns"><button class="chipbtn go" data-say="'+x.id+'">Play</button><button class="chipbtn" data-say="'+x.id+'" data-slow="1">Slow</button>'
+        + '<button class="chipbtn" data-big aria-pressed="false">Show big</button></div>'
+        + (it.when?'<p class="item-d">'+esc(it.when)+'</p>':'')+'</li>'; }).join('')+'</ul></section>'; });
+  const q=S.pq.trim();
+  const look=q ? '<div class="lookup"><p class="lede2">'+(n?'Not what you need?':'Nothing in the list matches.')+' Look up “'+esc(q)+'” elsewhere:</p><div class="chips">'
+      + '<a class="chipbtn" target="_blank" rel="noopener" href="'+esc(trLink(q,'auto','ja'))+'">Google Translate</a>'
+      + '<a class="chipbtn" target="_blank" rel="noopener" href="https://jisho.org/search/'+encodeURIComponent(q)+'">Jisho dictionary</a>'
+      + '<a class="chipbtn" target="_blank" rel="noopener" href="https://www.google.com/search?q='+encodeURIComponent('how to say "'+q+'" in Japanese')+'">Google</a></div></div>' : '';
+  return look+h;
+}
+function vPhrases(){
+  return '<h1 class="page-h">Phrases</h1>'
+    + '<p class="lede">Vowels are always a “ah”, i “ee”, u “oo”, e “eh”, o “oh”. A line over a vowel (ō, ū) means hold it twice as long. The “u” in desu and masu is nearly silent.</p>'
+    + '<div class="sbar"><input class="search" id="pq" type="search" placeholder="Find a phrase or type a word" aria-label="Find a phrase" autocomplete="off" value="'+esc(S.pq)+'"><button class="sclear" id="px"'+(S.pq?'':' hidden')+'>Clear</button></div>'
+    + catStrip()+'<div id="phraselist">'+phraseList()+'</div>';
+}
+function catStrip(){
+  const cats=['All'].concat(phraseGroups().map(g=>g.cat)); if(!cats.includes(S.pcat)) S.pcat='All';
+  return '<div class="catstrip" id="cats" role="group" aria-label="Category">'+cats.map(c=>'<button class="chipbtn plain" data-pcat="'+esc(c)+'" aria-pressed="'+(S.pcat===c && !S.pq.trim())+'">'+esc(c)+'</button>').join('')+'</div>';
+}
+function phraseById(id){ let k=0, hit=null; phraseGroups().forEach(g=>g.items.forEach(it=>{ if(k++===id) hit=it; })); return hit; }
+
+/* ---------- shell ---------- */
+const VIEWS={today:vToday, days:vDays, transit:vTransit, places:vPlaces, map:vMap, phrases:vPhrases, prep:vPrep};
+function render(keepScroll){
+  if(MAP){ try{ MAP.remove(); }catch(e){} MAP=null; }
+  const q=S.gq.trim(), searching=q.length>1;
+  view.innerHTML = (searching ? vSearch(q) : VIEWS[S.tab]()) + footer();
+  gx.hidden = !S.gq;
+  document.getElementById('gbar').hidden = S.tab==='phrases' && !searching;
+  document.getElementById('gn').hidden = !(LIVE.on && AUTH && CREDS) || S.tab==='prep';
+  if(S.tab==='phrases') loadClips();
+  document.querySelectorAll('.tab').forEach(b=>{ if(b.dataset.go===S.tab) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
+  if(!keepScroll) window.scrollTo(0,0);
+  const cur=view.querySelector('.daychip[aria-current="true"]');
+  if(cur){ const st=document.getElementById('strip'); st.scrollLeft = cur.offsetLeft - st.clientWidth/2 + cur.clientWidth/2; }
+  if(S.tab==='map' && !searching) initMap();
+  if(GEO.on && !searching && (S.tab==='map' || (S.tab==='today' && N.phase==='during'))) geoStart(); else geoStop();
+  try{ history.replaceState(null,'','#'+(S.tab==='days'?S.day:S.tab)); }catch(e){}
+}
+function clearSearch(){ S.gq=''; S.exp={}; gq.value=''; }
+function go(tab, day, keep){ if(day) S.day=day; S.tab=tab; clearSearch(); render(keep); }
+document.addEventListener('click', e=>{
+  if(e.target===gx){ clearSearch(); return render(); }
+  if(e.target.id==='px'){ S.pq=''; return render(true); }
+  const t=e.target.closest('[data-go],[data-day],[data-seg],[data-city],[data-veg],[data-more],[data-exp],[data-pg],[data-refresh],[data-tick],[data-signout],[data-locate],[data-center],[data-say],[data-big],[data-pcat],[data-note],[data-addnote]'); if(!t) return;
+  if(t.hasAttribute('data-addnote')) return addNote(t);
+  if(t.hasAttribute('data-note')){ go('prep'); const box=document.getElementById('gnote'); if(box){ box.focus(); } return; }
+  if(t.dataset.pcat!=null){ S.pcat=t.dataset.pcat; S.pq=''; const box=document.getElementById('pq'); if(box){ box.value=''; document.getElementById('px').hidden=true; }
+    const strip=document.getElementById('cats'), list=document.getElementById('phraselist'); strip.outerHTML=catStrip(); list.innerHTML=phraseList();
+    const fresh=document.getElementById('cats'), on=fresh.querySelector('[aria-pressed="true"]'); if(on) fresh.scrollLeft=on.offsetLeft-fresh.clientWidth/2+on.clientWidth/2;
+    const top=list.getBoundingClientRect().top+window.scrollY-fresh.offsetHeight-parseFloat(getComputedStyle(fresh).top||0)-6; if(window.scrollY>top) window.scrollTo({top:Math.max(0,top), behavior:'instant'});      /* jump, not glide: you tapped to see this list now */
+    return; }
+  if(t.hasAttribute('data-locate')) return geoToggle();
+  if(t.hasAttribute('data-center')){ if(MAP && GEO.pos) MAP.setView([GEO.pos.lat,GEO.pos.lng], Math.max(MAP.getZoom(),15)); return; }
+  if(t.hasAttribute('data-signout')) return signOut('');
+  if(t.hasAttribute('data-refresh')) return refresh(true);
+  if(t.dataset.say!=null){ const it=phraseById(+t.dataset.say); if(it) playPhrase(it, !!t.dataset.slow, t); return; }
+  if(t.hasAttribute('data-big')){ const on=t.closest('.phrase').classList.toggle('big'); t.setAttribute('aria-pressed',on); t.textContent=on?'Show small':'Show big'; return; }
+  if(t.dataset.tick) return tick(+t.dataset.tick);
+  if(t.hasAttribute('data-more')){ const box=t.closest('.cl'), sn=box.querySelector('.snip'); let open;
+    if(sn){ const full=box.querySelector('.full'); open=full.hidden; full.hidden=!open; sn.hidden=open; } else open=box.classList.toggle('open');
+    t.textContent=open?'Less':'More'; t.setAttribute('aria-expanded',open); return; }
+  if(t.dataset.exp){ S.exp[t.dataset.exp]=true; return render(true); }
+  if(t.dataset.pg){ S.hide[t.dataset.pg]=!S.hide[t.dataset.pg]; return render(true); }
+  if(t.dataset.segto) S.seg=t.dataset.segto;
+  if(t.dataset.pq!=null) S.pq=t.dataset.pq;
+  if(t.dataset.go) return go(t.dataset.go);
+  if(t.dataset.day) return go('days', t.dataset.day);
+  if(t.dataset.seg){ S.seg=t.dataset.seg; return render(true); }
+  if(t.dataset.city){ S.city=t.dataset.city; return render(true); }
+  if(t.hasAttribute('data-veg')){ S.veg=!S.veg; try{ localStorage.setItem('veg',S.veg?'1':'0'); }catch(err){} return render(true); }
+});
+gq.addEventListener('input', ()=>{ S.gq=gq.value; S.exp={}; render(true); });
+gq.addEventListener('keydown', e=>{ if(e.key==='Enter') gq.blur(); });
+document.addEventListener('input', e=>{ if(e.target.id==='gnote'){ S.draft=e.target.value; return; } if(e.target.id!=='pq') return; S.pq=e.target.value;
+  document.getElementById('phraselist').innerHTML=phraseList(); document.getElementById('px').hidden=!S.pq; document.getElementById('cats').outerHTML=catStrip(); });
+document.addEventListener('keydown', e=>{ if(e.target.id==='pq' && e.key==='Enter') e.target.blur(); });
+/* swipe left/right between days */
+let sx=0, sy=0;
+view.addEventListener('touchstart', e=>{ const t=e.touches[0]; sx=t.clientX; sy=t.clientY; }, {passive:true});
+view.addEventListener('touchend', e=>{
+  if(S.tab!=='days' || e.target.closest('#strip')) return;
+  const t=e.changedTouches[0], dx=t.clientX-sx, dy=t.clientY-sy;
+  if(Math.abs(dx)<70 || Math.abs(dy)>45) return;
+  const n=D.days[byId[S.day]+(dx<0?1:-1)]; if(n) go('days', n.id);
+}, {passive:true});
+function fromHash(){
+  const h=(location.hash||'').slice(1);
+  if(TABS.includes(h)){ S.tab=h; return true; }
+  if(h in byId){ S.tab='days'; S.day=h; return true; }
+  return false;
+}
+window.addEventListener('hashchange', ()=>{ const was=S.tab+S.day; if(fromHash() && was!==S.tab+S.day) render(); });
+/* ---------- data: adopt a parsed trip, and keep it current from the sheet ---------- */
+let first=true, RAWSTR='';
+function adopt(d){
+  D=d;
+  byId=Object.fromEntries(D.days.map((x,i)=>[x.id,i]));
+  byLabel=Object.fromEntries(D.days.map(x=>[x.label,x]));
+  N=now(); buildIndex();
+  if(first){ first=false; S.day=D.days[0].id; if(N.cur){ S.day=N.cur.id; if(CITY[N.cur.key] && N.cur.key!=='travel') S.city=CITY[N.cur.key]; } }
+  if(!(S.day in byId)) S.day=(N.cur||D.days[0]).id;
+}
+let busyAt=0, busyTimer=0;   /* the checking card stays up at least a moment, so a fast check is still seen */
+function setStatus(kind){
+  clearTimeout(busyTimer);
+  if(kind==='busy'){ busyAt=Date.now(); statusEl.className='status busy'; statusEl.innerHTML='<span class="spin" aria-hidden="true"></span><span>Checking the sheet for changes…</span>'; statusEl.hidden=false; }
+  else if(kind==='bad'){ statusEl.className='status bad'; statusEl.innerHTML='Could not reach the sheet. Showing the copy from '+esc(stamp(D.updated))+'. <button class="linkbtn" data-refresh>Try again</button>'; statusEl.hidden=false; }
+  else { const left=900-(Date.now()-busyAt), isBusy=()=>statusEl.classList.contains('busy');
+    if(left>0 && isBusy() && !statusEl.hidden) busyTimer=setTimeout(()=>{ if(isBusy()) statusEl.hidden=true; }, left); else statusEl.hidden=true; }
+}
+const qs = o => Object.keys(o).map(k=>encodeURIComponent(k)+'='+encodeURIComponent(o[k])).join('&');
+function jsonp(url){
+  return new Promise((res,rej)=>{
+    const cb='__trip'+Date.now(), s=document.createElement('script');
+    const done=()=>{ clearTimeout(timer); try{ delete window[cb]; }catch(e){} s.remove(); };
+    const timer=setTimeout(()=>{ done(); rej(new Error('timeout')); }, 25000);
+    window[cb]=d=>{ done(); res(d); };
+    s.onerror=()=>{ done(); rej(new Error('load')); };
+    s.src=url+'&callback='+cb;
+    document.head.appendChild(s); });
+}
+function call(params){
+  const who=AUTH&&CREDS ? {name:CREDS.name, code:CREDS.code} : {};
+  const u=LIVE_URL+(LIVE_URL.includes('?')?'&':'?')+qs(Object.assign({t:Date.now()},who,params||{}));
+  return fetch(u,{redirect:'follow'}).then(r=>{ if(!r.ok) throw new Error('http '+r.status); return r.json(); }).catch(()=>jsonp(u));
+}
+/* ticks: show them at once, save them to the sheet, and keep them through a refresh that started earlier */
+const TICKS={};
+function applyTicks(){
+  D.todo.groups.forEach(g=>g.items.forEach(t=>{ const o=TICKS[t.what]; if(o && Date.now()-o.at<30000) t.done=o.done; }));
+}
+function tick(row){
+  let item=null; D.todo.groups.forEach(g=>g.items.forEach(t=>{ if(t.row===row) item=t; }));
+  if(!item || !LIVE.on) return;
+  const want=!item.done, what=item.what;
+  item.done=want; TICKS[what]={done:want, at:Date.now()}; buildIndex(); render(true);
+  call({action:'check', row:row, text:what, done:want?'1':'0'}).then(r=>{
+    if(AUTH && r && r.ok===false && r.error==='signin'){ delete TICKS[what]; return signOut('Please sign in again.'); }
+    if(!r || !r.ok) throw new Error((r&&r.error)||'not saved');
+    TICKS[what]={done:want, at:Date.now()}; setStatus('');
+  }).catch(()=>{
+    delete TICKS[what];
+    D.todo.groups.forEach(g=>g.items.forEach(t=>{ if(t.what===what) t.done=!want; }));
+    buildIndex(); render(true);
+    statusEl.className='status bad'; statusEl.textContent='That tick was not saved to the sheet. Check your connection and try again.'; statusEl.hidden=false;
+  });
+}
+function refresh(manual){
+  if(!LIVE.on || LIVE.busy) return;
+  LIVE.busy=true; LIVE.last=Date.now();
+  if(manual || !LIVE.ok) setStatus('busy');
+  call().then(raw=>{
+    if(AUTH && raw && raw.ok===false && raw.error==='signin') return signOut('Please sign in again.');
+    if(!raw || !Array.isArray(raw.tabs) || (AUTH && !(raw.v>=2))) throw new Error('shape');
+    const str=JSON.stringify(raw.tabs);
+    let changed=false;
+    if(str!==RAWSTR){ const d=parseTrip(raw); if(!d.days.length) throw new Error('no days'); adopt(d); applyTicks(); buildIndex(); RAWSTR=str; changed=true;
+      try{ localStorage.setItem('trip-raw', JSON.stringify(raw)); }catch(e){} }
+    else D.updated=raw.updated;
+    LIVE.ok=true; LIVE.at=new Date(); setStatus('');
+    if(changed) render(true); else { const f=document.getElementById('foot'); if(f) f.outerHTML=footer(); }
+  }).catch(()=>{ LIVE.ok=false; setStatus('bad'); const f=document.getElementById('foot'); if(f) f.outerHTML=footer(); })
+    .then(()=>{ LIVE.busy=false; });
+}
+/* ---------- sign-in (only when AUTH is on) ---------- */
+const store={ get(k){ try{ return JSON.parse(localStorage.getItem(k)||'null'); }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }, del(k){ try{ localStorage.removeItem(k); }catch(e){} } };
+function start(raw){
+  adopt(parseTrip(raw)); RAWSTR=JSON.stringify(raw.tabs);
+  document.body.classList.remove('locked');
+  fromHash(); render();
+}
+const SIGN_HINT="The first sign-in can take a little while, because it loads the whole trip. After that, this phone remembers you and opens straight away.", SIGN_WAIT="Loading the whole trip. The first time takes a little longer, so hang tight.";
+function gate(mode, msg){
+  document.body.classList.add('locked'); statusEl.hidden=true; clearSearch();
+  if(MAP){ try{ MAP.remove(); }catch(e){} MAP=null; }
+  if(mode==='loading'){ view.innerHTML='<div class="gate"><p class="empty">Loading the trip…<br>This can take a little while.</p></div>'; return; }
+  view.innerHTML='<div class="gate"><header class="board"><div class="board-main"><div class="kicker">Japan 2026</div><h1>Sign in</h1>'
+    + '<p class="board-sub">Use the name and passcode you were given.</p></div>'
+    + '<div class="stripe">'+['kyoto','nara','osaka','tokyo'].map(k=>'<i '+line(k)+'></i>').join('')+'</div></header>'
+    + '<form id="login" novalidate><label for="ln">Name</label><input id="ln" name="username" autocomplete="username" autocapitalize="words" autocorrect="off" spellcheck="false">'
+    + '<label for="lc">Passcode</label><input id="lc" name="password" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false">'
+    + '<button class="gobtn" id="lgo" type="submit">Sign in</button><p class="msg" id="lmsg" role="alert">'+esc(msg||'')+'</p></form>'
+    + '<p class="hint" id="lhint">'+SIGN_HINT+'</p></div>';
+}
+function signIn(name, code, quiet){
+  const btn=document.getElementById('lgo'), say=m=>{ const el=document.getElementById('lmsg'); if(el) el.textContent=m; else gate('form', m); };
+  const hint=t=>{ const el=document.getElementById('lhint'); if(el) el.textContent=t; };
+  if(btn){ btn.disabled=true; btn.textContent='Signing in…'; hint(SIGN_WAIT); }
+  CREDS={name:name, code:code};
+  call().then(raw=>{
+    if(raw && raw.ok===false){ CREDS=null; store.del('trip-auth');
+      say(raw.error==='locked' ? 'Too many tries for that name. Wait ten minutes and try again.' : 'That name and passcode do not match.'); return; }
+    if(!raw || !Array.isArray(raw.tabs) || !(raw.v>=2)){ CREDS=null; say('The sheet is not set up for sign-in yet. Ask whoever runs the sheet to update its script.'); return; }
+    if(!parseTrip(raw).days.length){ CREDS=null; say('Signed in, but the sheet has no day tabs to show.'); return; }
+    CREDS.shown=raw.name||name; store.set('trip-auth', CREDS); store.set('trip-raw', raw);
+    LIVE.ok=true; LIVE.at=new Date(); LIVE.last=Date.now();
+    first=true; start(raw);
+  }).catch(()=>{ CREDS=null; say('Could not reach the sheet. Check your connection and try again.'); })
+    .then(()=>{ const b=document.getElementById('lgo'); if(b){ b.disabled=false; b.textContent='Sign in'; } hint(SIGN_HINT); });
+}
+function signOut(msg){ geoStop(); GEO.on=false; GEO.pos=null; CREDS=null; D=null; RAWSTR=''; LIVE.ok=false; store.del('trip-auth'); store.del('trip-raw'); gate('form', msg); }
+document.addEventListener('submit', e=>{ if(e.target.id!=='login') return; e.preventDefault();
+  const n=document.getElementById('ln').value.trim(), c=document.getElementById('lc').value.trim();
+  if(!n || !c){ document.getElementById('lmsg').textContent='Enter your name and passcode.'; return; }
+  signIn(n, c, false); });
+
+if(!AUTH){
+  let boot=RAW;
+  if(LIVE.on){ const c=store.get('trip-raw'); try{ if(c && Array.isArray(c.tabs) && String(c.updated)>String(RAW.updated) && parseTrip(c).days.length) boot=c; }catch(e){} }
+  start(boot);
+  if(LIVE.on) refresh(false);
+} else {
+  const saved=store.get('trip-auth'), cached=store.get('trip-raw');
+  let ok=false; try{ ok=!!(saved && saved.name && saved.code && cached && Array.isArray(cached.tabs) && parseTrip(cached).days.length); }catch(e){}
+  if(ok){ CREDS=saved; start(cached); refresh(false); }
+  else if(saved && saved.name && saved.code){ gate('loading'); signIn(saved.name, saved.code, true); }
+  else gate('form','');
+}
+setTimeout(()=>{ if(D) loadClips(); }, 6000);
+setInterval(()=>{ if(D && S.tab==='today' && N.phase==='during' && !document.hidden && S.gq.trim().length<2) redrawNext(); }, 60000);
+document.addEventListener('change', e=>{
+  if(e.target.id==='simday'){ S.sim.day=e.target.value; redrawNext(); }
+  if(e.target.id==='simtime'){ S.sim.min=+e.target.value; redrawNext(); }
+});
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden) return geoStop();
+  if(GEO.on && D && S.gq.trim().length<2 && (S.tab==='map' || (S.tab==='today' && N.phase==='during'))) geoStart();
+  if(D && S.tab==='today') redrawNext();
+  if(LIVE.on && D && Date.now()-LIVE.last>60000) refresh(false);
+});
+})();
+</script>
+
+<style>
+.tabs{top:0;bottom:auto;border-top:0;border-bottom:1px solid var(--rule);padding-bottom:0}
+.tabs-in{height:46px}
+.tab{height:46px;padding:0;align-content:center;font-size:12.5px;letter-spacing:-.01em}
+.tab svg{display:none}
+.tab[aria-current="page"]::before{top:auto;bottom:0;left:18%;right:18%;border-radius:3px 3px 0 0}
+.wrap{padding-block:60px 90px}
+body.locked .wrap{padding-block:16px 40px}
+.daystrip,.catstrip{top:47px}
+</style>
+<script>if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
+</body>
+</html>
