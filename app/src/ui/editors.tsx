@@ -7,8 +7,10 @@ import {
   nextColor, saveDestination, saveLeg, savePlace, saveTodo, setStart, sortPlan, updateDay, type Stop,
 } from '../model/edit';
 import { addTrip, deleteTrip, getState, patchTrip } from '../model/store';
+import { useStore } from '../model/store';
+import { deleteSharedTrip, errText } from '../sync/engine';
 import { KIND_LABEL, cityOf, indexTrip } from '../model/trip';
-import { addDays, longDate, todayIn } from '../model/time';
+import { addDays, daysBetween, longDate, todayIn } from '../model/time';
 import { PACKS } from '../phrases';
 import { Sharing } from './account';
 import { SayPicker } from './requests';
@@ -259,12 +261,40 @@ export function TodoEditor({ trip, id, group, close }: Props & { id?: string; gr
 
 /* ---------- trip settings ---------- */
 
+/** What changing the first or last day will do, in words. */
+function endHint(trip: Trip, start: string, end: string): string {
+  const n = start && end ? daysBetween(start, end) + 1 : trip.days.length;
+  if (n < 1) return 'The last day has to be on or after the first day.';
+  const more = n - trip.days.length;
+  const lost = more < 0 ? trip.days.slice(n).filter(d => d.plan.length).length : 0;
+  return `${n} days, ${longDate(start)} to ${longDate(end)}. Moving the first day moves the whole trip.`
+    + (more > 0 ? ` ${more} empty day${more === 1 ? '' : 's'} will be added at the end.` : '')
+    + (more < 0 ? ` The last ${-more} day${more === -1 ? '' : 's'} will be taken off${lost ? `, with their plans (${lost} ${lost === 1 ? 'day has' : 'days have'} plans)` : ''}.` : '');
+}
+
+/** Deleting a trip: from this phone when it isn't shared; for everyone when you own a shared one;
+    someone else's shared trip is left from Sharing above. */
+function TripDelete({ trip, close }: { trip: Trip; close: () => void }) {
+  const info = useStore().sync[trip.id];
+  const [msg, setMsg] = useState('');
+  if (!info) return <DeleteButton label="Delete this trip" confirmText={`Delete “${trip.name}” from this phone? This cannot be undone.`} onDelete={() => { close(); deleteTrip(trip.id); }} />;
+  if (info.role !== 'owner') return null;
+  return (
+    <>
+      <DeleteButton label="Delete this trip for everyone" confirmText={`Delete “${trip.name}” for everyone on it? It goes from every phone, with its photos and files. This cannot be undone.`}
+        onDelete={async () => { setMsg(''); try { await deleteSharedTrip(trip.id); close(); } catch (e) { setMsg(errText(e)); } }} />
+      {msg && <p className="geomsg bad" role="alert">{msg}</p>}
+    </>
+  );
+}
+
 const packOptions = [{ value: '', label: 'None' }, ...Object.values(PACKS).map(p => ({ value: p.lang, label: p.name }))];
 
 export function TripSettings({ trip, close }: Props) {
   const [name, setName] = useState(trip.name);
   const [people, setPeople] = useState(trip.travelers.join(', '));
   const [start, setStartDate] = useState(trip.days[0]?.date || todayIn(phoneZone()));
+  const [end, setEnd] = useState(trip.days[trip.days.length - 1]?.date || start);
   const [pack, setPack] = useState(trip.phrasePack || '');
   const [dests, setDests] = useState<Destination[]>(trip.destinations);
   const [open, setOpen] = useState<string | null>(null);
@@ -275,15 +305,25 @@ export function TripSettings({ trip, close }: Props) {
       dests.forEach(d => { u = saveDestination(u, { ...d, name: d.name.trim() || 'Unnamed' }); });
       t.destinations.filter(d => !dests.some(x => x.id === d.id)).forEach(d => { u = deleteDestination(u, d.id); });
       if (start && start !== t.days[0]?.date) u = setStart(u, start);
+      /* the last day: days are added at the end, or taken off it (setStart has moved them already) */
+      const want = end ? daysBetween(start, end) + 1 : u.days.length;
+      if (want >= 1 && want !== u.days.length) {
+        while (u.days.length < want) u = insertDay(u);
+        while (u.days.length > want && u.days.length > 1) u = deleteDay(u, u.days[u.days.length - 1].id);
+      }
       return u;
     });
     close();
   };
   return (
     <Sheet title="Trip settings" onCancel={close} onSave={commit}
-      footer={!getState().sync[trip.id] && <DeleteButton label="Delete this trip" confirmText={`Delete “${trip.name}” from this phone? This cannot be undone.`} onDelete={() => { close(); deleteTrip(trip.id); }} />}>
+      footer={<TripDelete trip={trip} close={close} />}>
       <Text label="Trip name" value={name} onChange={setName} />
-      <Text label="First day" type="date" value={start} onChange={setStartDate} hint={trip.days.length ? `${trip.days.length} days, ending ${longDate(addDays(start, trip.days.length - 1))}. Moving the first day moves the whole trip.` : undefined} />
+      <div className="frow">
+        <Text label="First day" type="date" value={start} onChange={v => { if (v && start) setEnd(addDays(end, daysBetween(start, v))); setStartDate(v); }} />
+        <Text label="Last day" type="date" value={end} onChange={setEnd} />
+      </div>
+      <p className="fhint">{endHint(trip, start, end)}</p>
       <Text label="Who's going" value={people} onChange={setPeople} placeholder="Names, separated by commas" />
       <Choice label="Phrases" value={pack} onChange={setPack} options={packOptions} hint="The language on the Phrases tab." />
       <h3 className="fsec">Sharing</h3>

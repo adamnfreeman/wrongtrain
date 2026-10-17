@@ -245,6 +245,17 @@ begin
   update trips t set rule = set_trip_rule.rule where t.id = trip_id;
 end $$;
 
+-- The owner deletes the trip for everyone: members, requests, photos and locations go with it.
+create or replace function public.delete_trip(trip_id text)
+returns void language plpgsql security definer set search_path = public as $$
+declare t text := trip_id;
+begin
+  if my_role(t) is distinct from 'owner' then raise exception 'only the owner can do that'; end if;
+  delete from trips where id = t;
+end $$;
+revoke all on function public.delete_trip(text) from public, anon;
+grant execute on function public.delete_trip(text) to authenticated;
+
 create or replace function public.set_member_role(trip_id text, member uuid, role text)
 returns void language plpgsql security definer set search_path = public as $$
 declare t text := trip_id;

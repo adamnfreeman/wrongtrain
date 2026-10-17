@@ -444,6 +444,14 @@ export async function leaveTrip(id: string) {
   setSynced(s.trips.filter(t => t.id !== id), sync, s.activeId === id ? null : s.activeId);
 }
 
+/** The owner deletes a shared trip for everyone: online, and from this phone. */
+export async function deleteSharedTrip(id: string) {
+  const { error } = await supabase.rpc('delete_trip', { trip_id: id });
+  if (error) throw error;
+  const s = getState(); const sync = { ...s.sync }; delete sync[id];
+  setSynced(s.trips.filter(t => t.id !== id), sync, s.activeId === id ? null : s.activeId);
+}
+
 export async function removeMember(id: string, member: string) {
   const { error } = await supabase.rpc('remove_member', { trip_id: id, member });
   if (error) throw error;

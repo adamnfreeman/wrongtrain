@@ -5,16 +5,17 @@
    The links are plain until each programme approves us. Then put the ids in REF and the links
    carry them; nothing else changes. */
 
-/** Affiliate ids, by partner. Empty: a plain link, no commission. */
+/** Affiliate ids, by partner. Empty: a plain link, no commission. The ids are also on the project
+    sheet's Accounts tab. Not secret: they're in every link we show. */
 export const REF = {
-  /** Airalo partner programme (Impact): the tracking link prefix */
+  /** Airalo partner programme (Impact): the tracking link prefix. Application pending. */
   airalo: '',
-  /** Viator partner id (pid) and campaign (mcid) */
-  viatorPid: '', viatorMcid: '',
+  /** Viator Partner Program: partner id (pid) and campaign (mcid) */
+  viatorPid: 'P00326374', viatorMcid: '42383',
   /** Klook affiliate id (aid) */
-  klook: '',
-  /** SafetyWing referenceID */
-  safetywing: '',
+  klook: '139503',
+  /** SafetyWing Ambassador referenceID */
+  safetywing: '26619287',
 };
 
 interface Country { name: string; code: string; esim: string; rail?: 'jr' | 'eurail' }
@@ -75,7 +76,7 @@ export function partnerCards(where: string, city?: string): PartnerCard[] {
   cards.push({
     id: 'insurance', title: 'Travel insurance', cta: 'Get a quote',
     body: 'For medical bills abroad, cancelled flights and lost bags. Quick to set up, and you can buy it after you have left home.',
-    url: withParams('https://safetywing.com/nomad-insurance', { referenceID: REF.safetywing }),
+    url: withParams('https://safetywing.com/nomad-insurance', { referenceID: REF.safetywing, utm_source: REF.safetywing, utm_medium: REF.safetywing ? 'Ambassador' : '' }),
   });
   return cards;
 }

@@ -256,3 +256,10 @@ select pg_temp.ok((select until from trip_locations where trip_id = 't9' and use
 select public.stop_sharing_location('t9');
 select pg_temp.act('ana');
 select pg_temp.ok((select count(*) from trip_locations where trip_id = 't9') = 0, 'when Cat stops, it is gone');
+
+-- deleting a trip for everyone: only its owner can
+select pg_temp.act('cat');
+select pg_temp.ok(pg_temp.fails($$select public.delete_trip('t9')$$), 'someone on the trip who is not the owner cannot delete it');
+select pg_temp.act('ana');
+select public.delete_trip('t9');
+select pg_temp.ok((select count(*) from trips where id = 't9') = 0 and (select count(*) from trip_members where trip_id = 't9') = 0, 'the owner deletes it for everyone, people and all');
