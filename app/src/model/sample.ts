@@ -314,30 +314,97 @@ const guides: Omit<Guide, 'id'>[] = [
   ] },
 ];
 
+/* ---------- the made-up group, so the sample shows what a shared trip looks like ---------- */
+
+/** A drawn face for a made-up friend: a coloured circle with their initial and a little shine. */
+const face = (initial: string, a: string, b: string) => 'data:image/svg+xml,' + encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs><rect width="96" height="96" fill="url(#g)"/><circle cx="48" cy="38" r="17" fill="#fff" opacity=".92"/><path d="M18 92c4-20 16-30 30-30s26 10 30 30z" fill="#fff" opacity=".92"/><text x="48" y="45" font-family="Helvetica,Arial,sans-serif" font-size="18" font-weight="800" text-anchor="middle" fill="${b}">${initial}</text></svg>`);
+
+/** The sample's travellers as people on the trip, with pictures (for notes, lists and the map). */
+export const SAMPLE_PEOPLE = [
+  { user_id: 'sample-alex', name: 'Alex', role: 'owner' as const, avatar: face('A', '#f2994a', '#c2410c') },
+  { user_id: 'sample-sam', name: 'Sam', role: 'editor' as const, avatar: face('S', '#56ccf2', '#1d4ed8') },
+  { user_id: 'sample-jordan', name: 'Jordan', role: 'contributor' as const, avatar: face('J', '#6fcf97', '#15803d') },
+  { user_id: 'sample-riley', name: 'Riley', role: 'viewer' as const, avatar: face('R', '#bb6bd9', '#7e22ce') },
+];
+
+/** Where two of the made-up friends are "right now", in Kyoto: shared with the group for the day. */
+export function sampleSpots(now = new Date()) {
+  const ago = (min: number) => new Date(now.getTime() - min * 60000).toISOString();
+  const until = new Date(now.getTime() + 6 * 3600_000).toISOString();
+  return [
+    { user_id: 'sample-sam', lat: 35.0050258, lng: 135.764723, acc: 15, at: ago(3), until },
+    { user_id: 'sample-jordan', lat: 35.0037816, lng: 135.777245, acc: 25, at: ago(12), until },
+  ];
+}
+
+/** The sample's photos: drawings standing in for the group's own, by day. */
+export const SAMPLE_PHOTOS = [
+  { day: 'd1', src: 'sample/photo-river.svg', by: 'Sam', caption: 'First night by the Kamo River' },
+  { day: 'd2', src: 'sample/photo-torii.svg', by: 'Jordan', caption: 'Fushimi Inari at 7:40 AM, nearly empty' },
+  { day: 'd2', src: 'sample/photo-bamboo.svg', by: 'Alex', caption: 'Detour through the bamboo' },
+  { day: 'd4', src: 'sample/photo-deer.svg', by: 'Riley', caption: 'He bowed first' },
+];
+
+/** The "Right now" train in the sample: leaves about 35 minutes after you look, today (day 2),
+    so the Right now page always has something to show. Set when the sample opens and each load. */
+export function freshenSample(t: Trip, now = new Date()): Trip {
+  const min = Number(new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hour12: false }).format(now).replace(':', '').replace(/^(\d\d)(\d\d)$/, (_, h, m) => String(+h * 60 + +m)));
+  const at = Math.min(23 * 60 + 55, Math.ceil((min + 35) / 5) * 5);
+  const hm = (x: number) => `${String(Math.floor(x / 60) % 24).padStart(2, '0')}:${String(x % 60).padStart(2, '0')}`;
+  return { ...t, legs: t.legs.map(l => (l.id === 'l-now' ? { ...l, depart: hm(at), arrive: hm(Math.min(at + 29, 23 * 60 + 59)) } : l)) };
+}
+
 export function makeSample(now: Date): Trip {
   n = 0;
   const today = todayIn(TZ, now);
   const start = addDays(today, -1);
   const ds = days().map((d, i) => ({ ...d, date: addDays(start, i) }));
   const stamp = now.toISOString();
-  return {
+  const teamlab = ds[1].plan.find(p => /teamLab/.test(p.text));
+  const trip: Trip = {
     id: 'sample',
     name: 'Japan in ten days',
     travelers: ['Alex', 'Sam', 'Jordan', 'Riley'],
     destinations,
     days: ds,
-    legs: legs.map((l, i) => ({ id: `l${i}`, ...l })),
+    legs: [...legs.map((l, i) => ({ id: `l${i}`, ...l })),
+      /* booked for a time just ahead of now (freshenSample), so Right now always shows */
+      { id: 'l-now', dayId: 'd2', from: 'Kyoto', to: 'Uji', mode: 'train', how: 'JR Nara line rapid', depart: '12:00', arrive: '12:29', fromPlaceId: 'kyoto-st', status: 'booked', statusText: 'Booked',
+        tickets: 'IC card; the group fare is on the sample ticket', details: 'Platform 8, cars 1–4. Get off at Uji (3 stops) for Byodo-in, 10 minutes\' walk.' }],
     places: places.map(p => ({ ...p })),
     todoGroups: ['Before the trip', 'During the trip'],
     todos: todos.map((t, i) => ({ id: `t${i}`, ...t, ...(t.done ? { doneBy: 'Sam' } : {}) })),
     notes: [
-      { id: 'n1', author: 'Sam', text: 'Found a vegan ramen place near Nishiki Market, added to day 2.', at: addDays(today, -6) + 'T09:35:00.000Z', done: true },
-      { id: 'n2', author: 'Alex', text: 'Can we fit in a sentō (public bath) one evening in Tokyo?', at: addDays(today, -2) + 'T18:57:00.000Z', done: false },
+      { id: 'n1', author: 'Sam', text: 'vegan ramen near nishiki market pls', at: addDays(today, -6) + 'T09:35:00.000Z', done: true,
+        filed: 'Added Kyoto Engine Ramen and MOON and BACK Ramen Bar to the Kyoto food ideas, both near Nishiki Market with vegan bowls.' },
+      { id: 'n3', author: 'Jordan', text: 'our flight home moved to 5:30pm, same flight number', at: addDays(today, -3) + 'T14:12:00.000Z', done: true,
+        filed: 'Moved the flight home on the last day to 5:30 PM and left the Narita Express as it was; you still have time.' },
+      { id: 'n4', author: 'Riley', text: 'muji and uniqlo at some point', at: addDays(today, -2) + 'T10:05:00.000Z', done: true,
+        filed: 'Added MUJI and UNIQLO to the Tokyo shopping ideas: both have big stores in Shinjuku and Ginza.' },
+      { id: 'n2', author: 'Alex', text: 'Can we fit in a sentō (public bath) one evening in Tokyo?', at: addDays(today, -1) + 'T18:57:00.000Z', done: false },
     ],
     guides: guides.map((g, i) => ({ id: `g${i}`, ...g })),
     phrasePack: 'ja',
+    docs: [
+      { id: 'doc-uji', title: 'Train to Uji', kind: 'ticket', picture: 'sample/ticket-uji.svg', for: { kind: 'leg', id: 'l-now' }, addedBy: 'Sam', at: stamp, notes: 'Platform 8, cars 1–4.' },
+      { id: 'doc-nozomi', title: 'Shinkansen to Tokyo', kind: 'ticket', picture: 'sample/ticket-nozomi.svg', for: { kind: 'leg', id: 'l5' }, addedBy: 'Alex', at: stamp, notes: 'Seats 8E, 9D, 9E, 10E. Each person scans their own QR at the gate.' },
+      ...(teamlab ? [{ id: 'doc-teamlab', title: 'teamLab tickets', kind: 'ticket' as const, picture: 'sample/ticket-teamlab.svg', for: { kind: 'plan' as const, id: teamlab.id }, addedBy: 'Jordan', at: stamp }] : []),
+      { id: 'doc-hotel', title: 'Kyoto hotel booking', kind: 'booking', picture: 'sample/booking-hotel.svg', addedBy: 'Alex', at: stamp, notes: 'Two twin rooms. Check-in from 3 PM.' },
+      { id: 'doc-insurance', title: 'Travel insurance', kind: 'insurance', picture: 'sample/insurance.svg', addedBy: 'Riley', at: stamp },
+    ],
+    currency: 'USD',
+    expenses: [
+      { id: 'e1', what: 'Haruka tickets from the airport', amount: 14400, currency: 'JPY', rate: 0.0067, paidBy: 'Alex', split: [{ who: 'Alex' }, { who: 'Sam' }, { who: 'Jordan' }, { who: 'Riley' }], at: ds[0].date + 'T08:30:00.000Z', dayId: 'd1', addedBy: 'Alex' },
+      { id: 'e2', what: 'First dinner: izakaya in Pontocho', amount: 21800, currency: 'JPY', rate: 0.0067, paidBy: 'Sam', split: [{ who: 'Alex' }, { who: 'Sam' }, { who: 'Jordan' }, { who: 'Riley' }], at: ds[0].date + 'T11:40:00.000Z', dayId: 'd1', addedBy: 'Sam' },
+      { id: 'e3', what: 'teamLab tickets', amount: 132, currency: 'USD', rate: 1, paidBy: 'Jordan', split: [{ who: 'Alex' }, { who: 'Sam' }, { who: 'Jordan' }, { who: 'Riley' }], at: ds[0].date + 'T02:00:00.000Z', addedBy: 'Jordan' },
+      { id: 'e4', what: 'Matcha and wagashi in Gion', amount: 4200, currency: 'JPY', rate: 0.0067, paidBy: 'Riley', split: [{ who: 'Sam', amount: 2100 }, { who: 'Riley', amount: 2100 }], at: ds[1].date + 'T05:10:00.000Z', dayId: 'd2', addedBy: 'Riley' },
+    ],
+    settlements: [{ id: 's1', from: 'Riley', to: 'Alex', amount: 24, at: ds[1].date + 'T01:00:00.000Z', via: 'venmo' }],
+    venmo: { Alex: 'alex-sample', Sam: 'sam-sample', Jordan: 'jordan-sample' },
     sample: true,
     createdAt: stamp,
     updatedAt: stamp,
   };
+  return freshenSample(trip, now);
 }

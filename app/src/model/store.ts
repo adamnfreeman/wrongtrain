@@ -8,7 +8,7 @@ import type { Note, Trip } from './types';
 import type { Role, Rule } from './rules';
 import { addDays, daysBetween, todayIn } from './time';
 import { newId } from './trip';
-import { makeSample } from './sample';
+import { freshenSample, makeSample } from './sample';
 import { backupSoon } from '../native';
 import { updateFromFile } from './tripFile';
 
@@ -40,7 +40,7 @@ const listeners = new Set<() => void>();
 function load(): State {
   try {
     const s = JSON.parse(localStorage.getItem(KEY) || 'null') as State | null;
-    if (s && Array.isArray(s.trips)) return { ...s, sync: s.sync || {}, trips: s.trips.map(t => (t.sample ? keepSampleCurrent(t) : t)) };
+    if (s && Array.isArray(s.trips)) return { ...s, sync: s.sync || {}, trips: s.trips.map(t => (!t.sample ? t : t.legs.some(l => l.id === 'l-now') ? freshenSample(keepSampleCurrent(t)) : makeSample(new Date()))) };
   } catch { /* storage blocked or corrupt: start empty */ }
   return { trips: [], activeId: null, me: '', sync: {} };
 }

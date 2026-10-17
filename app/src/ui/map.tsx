@@ -148,7 +148,11 @@ function FriendFinder({ spots, people, onShow }: { spots: FriendSpot[]; people: 
   return (
     <section className="blk" id="friends">
       <h3>Where everyone is</h3>
-      {!shared ? <p className="fhint">Share the trip with your group (Trip settings → Share with the group) to see where everyone is, when they choose to share it.</p>
+      {ix.trip.sample ? <>
+          <p className="fhint" style={{ marginTop: 0 }}>In the sample, Sam and Jordan are made up, sharing where they are for the day. On your own trips, share where you are for as long as you choose; only people on the trip see it.</p>
+          {spots.length > 0 && <FriendList spots={spots} people={people} onShow={onShow} />}
+        </>
+        : !shared ? <p className="fhint">Share the trip with your group (Trip settings → Share with the group) to see where everyone is, when they choose to share it.</p>
         : !session ? <p className="fhint">Sign in to see where everyone is.</p>
         : <>
           {until
@@ -162,7 +166,16 @@ function FriendFinder({ spots, people, onShow }: { spots: FriendSpot[]; people: 
             </>}
           {msg && <p className="geomsg bad" role="alert">{msg}</p>}
           {spots.length > 0
-            ? <ul className="sheet" style={{ marginTop: 10 }}>{spots.map(s => {
+            ? <FriendList spots={spots} people={people} onShow={onShow} />
+            : <p className="fhint">Nobody else is sharing where they are right now.</p>}
+        </>}
+    </section>
+  );
+}
+
+function FriendList({ spots, people, onShow }: { spots: FriendSpot[]; people: Member[]; onShow: (s: FriendSpot) => void }) {
+  const { geo } = useApp();
+  return <ul className="sheet" style={{ marginTop: 10 }}>{spots.map(s => {
                 const p = people.find(x => x.user_id === s.user_id), name = p?.name || 'Someone';
                 const d = geo.pos ? metres(geo.pos.lat, geo.pos.lng, s.lat, s.lng) : null;
                 return (
@@ -172,9 +185,5 @@ function FriendFinder({ spots, people, onShow }: { spots: FriendSpot[]; people: 
                       <Ext href={`https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}`}>Directions</Ext></div>
                   </li>
                 );
-              })}</ul>
-            : <p className="fhint">Nobody else is sharing where they are right now.</p>}
-        </>}
-    </section>
-  );
+              })}</ul>;
 }

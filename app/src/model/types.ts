@@ -194,6 +194,8 @@ export interface Doc {
   kind: DocKind;
   file?: FileRef;
   link?: string;
+  /** A picture inside the app, shown in the app's own viewer (the sample's tickets). */
+  picture?: string;
   notes?: string;
   addedBy?: string;
   at: string;

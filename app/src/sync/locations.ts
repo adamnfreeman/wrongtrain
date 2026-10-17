@@ -2,9 +2,10 @@
    hour, the rest of the day, the whole trip); while it lasts and the app is open, your position is
    sent every minute or so, or when you've moved, to trip_locations (schema.sql), where only the
    people on that trip can see it, and only until the time you picked. Stopping removes it. */
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { supabase, useSync } from './engine';
 import { getState } from '../model/store';
+import { sampleSpots } from '../model/sample';
 
 export interface FriendSpot { user_id: string; lat: number; lng: number; acc: number | null; at: string; until: string }
 
@@ -52,9 +53,11 @@ export async function sendSpot(tripId: string, pos: { lat: number; lng: number; 
 
 /** People on the trip who are sharing where they are, refreshed every 30 seconds while shown. */
 export function useFriendSpots(tripId: string, on: boolean): FriendSpot[] {
+  const sample = !!getState().trips.find(t => t.id === tripId)?.sample;
   const { session } = useSync();
   const shared = !!getState().sync[tripId];
   const [spots, setSpots] = useState<FriendSpot[]>([]);
+  const made = useMemo(() => (sample && on ? sampleSpots() : null), [sample, on]);
   useEffect(() => {
     if (!on || !shared || !session) { setSpots([]); return; }
     let live = true;
@@ -66,7 +69,7 @@ export function useFriendSpots(tripId: string, on: boolean): FriendSpot[] {
     const t = window.setInterval(() => { if (!document.hidden) void load(); }, 30_000);
     return () => { live = false; clearInterval(t); };
   }, [tripId, on, shared, session]);
-  return spots;
+  return made || spots;
 }
 
 /** "2 min ago", "just now". */

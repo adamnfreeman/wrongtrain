@@ -11,6 +11,7 @@ import { CURRENCIES, balances, fmtMoney, settleUp, shares, tripCurrency, venmoLi
 import { newId } from '../model/trip';
 import { fmtHM, shortDate, todayIn } from '../model/time';
 import { drop, extOf, keep, openFile, readLocal, shrink } from '../sync/files';
+import { PictureView } from './picture';
 import { rate } from '../sync/rates';
 import { Empty, Ext, Fold, Pill, SecH } from './bits';
 import { Check, Choice, DeleteButton, Sheet, Text } from './form';
@@ -89,18 +90,21 @@ function Docs() {
 function DocItem({ d }: { d: Doc }) {
   const { ix, edit } = useApp();
   const [msg, setMsg] = useState('');
+  const [pic, setPic] = useState(false);
   const f = forLabel(ix.trip, d.for);
   return (
     <li>
-      <div className="item-h"><span className="item-n">{d.title}</span>{d.private ? <Pill>Private</Pill> : null}</div>
+      <div className="item-h">{d.picture && <button className="docthumb" onClick={() => setPic(true)} aria-label={`Open ${d.title}`}><img src={d.picture} alt="" /></button>}<span className="item-n">{d.title}</span>{d.private ? <Pill>Private</Pill> : null}</div>
       {f && <div className="when">For {f}</div>}
       {d.notes && <p className="item-d">{d.notes}</p>}
       <div className="meta">
         {d.file && <button className="linkbtn" onClick={() => openFile(d.file!.path, d.file!.name).catch(e => setMsg((e as Error).message))}>Open</button>}
+        {d.picture && <button className="linkbtn" onClick={() => setPic(true)}>Open</button>}
         {d.link && <Ext href={d.link}>Open link</Ext>}
         <button className="linkbtn" onClick={() => edit({ kind: 'doc', id: d.id })}>Edit</button>
       </div>
       {msg && <p className="geomsg bad">{msg}</p>}
+      {pic && d.picture && <PictureView src={d.picture} title={d.title} close={() => setPic(false)} />}
     </li>
   );
 }
@@ -110,13 +114,17 @@ export function DocLinks({ kind, id }: { kind: 'plan' | 'leg'; id: string }) {
   const { ix } = useApp();
   const mine = usePrivateDocs(ix.trip.id);
   const [msg, setMsg] = useState('');
+  const [pic, setPic] = useState<Doc | null>(null);
   const list = [...(ix.trip.docs || []), ...mine].filter(d => d.for?.kind === kind && d.for.id === id);
   if (!list.length) return null;
   return (
     <div className="meta doclinks">
-      {list.map(d => d.file
+      {list.map(d => d.picture
+        ? <button key={d.id} className="linkbtn" onClick={() => setPic(d)}>{d.kind === 'ticket' ? 'Ticket' : 'Document'}: {d.title}</button>
+        : d.file
         ? <button key={d.id} className="linkbtn" onClick={() => openFile(d.file!.path, d.file!.name).catch(e => setMsg((e as Error).message))}>{d.kind === 'ticket' ? 'Ticket' : 'Document'}: {d.title}</button>
         : d.link ? <Ext key={d.id} href={d.link}>{d.title}</Ext> : null)}
+      {pic && <PictureView src={pic.picture!} title={pic.title} close={() => setPic(null)} />}
       {msg && <span className="bad">{msg}</span>}
     </div>
   );
