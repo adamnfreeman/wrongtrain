@@ -266,6 +266,9 @@ Next:
    per use and needs the AI limits in 21), the phone's own translation (free, works offline on
    iOS with downloaded languages, needs the iOS app), or a translation API. Camera text
    (menus, signs) would be the next step.
+41. **Welcome screen order**: Plan a trip for me, then Plan it myself, then the sample trip
+   (with its explanation right under it), then Join a trip with a code. Today the sample sits
+   between the two ways of planning. `Welcome` in `src/App.tsx`.
 
 ## Working together
 
