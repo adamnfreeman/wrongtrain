@@ -23,7 +23,7 @@ import { AccountButton, JoinSheet, SyncLine, joinCodeFromLink } from './ui/accou
 import { Toast, useWaitingForMe } from './ui/requests';
 import { PlannerSheet } from './ui/planner';
 import { TripHub } from './ui/trip';
-import { useDock } from './ui/dock';
+import { offCentre, useDock } from './ui/dock';
 import { useRef } from 'react';
 
 /* Swipes the pager quickly across to a tapped tab, however far: the browser's own smooth scroll
@@ -236,7 +236,7 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
   const pager = useRef<HTMLDivElement>(null);
   const bar = useRef<HTMLDivElement>(null);
   const TAB_W = 68;
-  useDock(bar, '.tab', { radius: 110, small: 0.82, big: 1.12 });
+  useDock(bar, '.tab', { radius: 110, small: 0.82, big: 1.2 });
   /* the open page first, the rest just after, so none is blank when slid past */
   const [all, setAll] = useState(false);
   useEffect(() => { const t = window.setTimeout(() => setAll(true), 350); return () => clearTimeout(t); }, []);
@@ -297,7 +297,19 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
       cancelAnimationFrame(frame); clearTimeout(rest); clearTimeout(barRest); clearTimeout(peekOff);
     };
   }, [order]);
-  /* a tab opened any other way (a tap, a link): glide the pager there */
+  /* A tapped tab works like a day on the Days slider: the bar slides it to the middle and the
+     pages follow the bar, landing on that page when it stops. (Moving the page and having the
+     bar follow left the bar behind on the iPhone.) */
+  const tapTab = (t: Tab, el: HTMLElement) => {
+    const row = bar.current;
+    if (!row || Math.abs(offCentre(row, el)) < 4 || matchMedia('(prefers-reduced-motion: reduce)').matches) return go(t);
+    barDragging.current = true;
+    el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    /* the tab opens now (so it lights up straight away); the bar, not the pager, does the moving */
+    settledBy.current = 'pager';
+    go(t);
+  };
+  /* a tab opened any other way (a link, a button on a page): glide the pager there */
   const pagerReady = useRef(false);
   useEffect(() => {
     const pg = pager.current; if (!pg) return;
@@ -348,7 +360,7 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
       <nav className="tabs" aria-label="Sections">
         <div className="tabs-in" ref={bar}>
           {order.map(t => (
-            <button key={t} data-tab={t} className={'tab' + (t === 'now' ? ' tab-now' : '')} aria-current={ui.tab === t ? 'page' : undefined} onClick={() => go(t)}>
+            <button key={t} data-tab={t} className={'tab' + (t === 'now' ? ' tab-now' : '')} aria-current={ui.tab === t ? 'page' : undefined} onClick={e => tapTab(t, e.currentTarget)}>
               <svg viewBox="0 0 24 24" aria-hidden="true">{ICONS[t].icon}</svg>{ICONS[t].label}
               {t === 'prep' && waiting > 0 && <span className="tabn" aria-label={`${waiting} waiting for your OK`}>{waiting}</span>}
             </button>
