@@ -122,9 +122,12 @@ export function Sharing({ trip, onLeft }: { trip: Trip; onLeft: () => void }) {
   const invite = async () => { setBusy(true); setMsg(''); try { setCode(await createInvite(trip.id)); } catch (e) { setMsg(errText(e)); } setBusy(false); };
   const link = code ? `${shareBase()}#join=${code}` : '';
   const send = async () => {
-    const text = `Join “${trip.name}” on WrongTrain with the code ${code}`;
+    /* The code leads: until invite links open the app itself (universal links), a link opens the
+       web copy in Safari, so the message tells people to type the code in the app, with the link
+       only for someone without it. No separate url, so Messages doesn't show a big link preview. */
+    const text = `Join “${trip.name}” on WrongTrain!\n\nCode: ${code.slice(0, 4)} ${code.slice(4)}\n\nOpen WrongTrain, tap “Join a trip with a code” and type it in.\n\nNo app yet? Join on the web: ${link}`;
     const canShare = typeof navigator.share === 'function';
-    try { if (canShare) await navigator.share({ title: trip.name, text, url: link }); else { await navigator.clipboard.writeText(`${text}: ${link}`); setMsg('Copied.'); } }
+    try { if (canShare) await navigator.share({ title: trip.name, text }); else { await navigator.clipboard.writeText(text); setMsg('Copied.'); } }
     catch { /* cancelled */ }
   };
 

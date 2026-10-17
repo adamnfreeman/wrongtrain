@@ -413,7 +413,7 @@ export async function createInvite(id: string): Promise<string> {
 
 /** Joins with an invite code and opens the trip. */
 export async function joinTrip(code: string): Promise<string> {
-  const { data, error } = await supabase.rpc('join_trip', { invite_code: code, member_name: getState().me });
+  const { data, error } = await supabase.rpc('join_trip', { invite_code: code.replace(/\s/g, '').toUpperCase(), member_name: getState().me });
   if (error) throw error;
   const id = String(data);
   const remote = await fetchOne(id);

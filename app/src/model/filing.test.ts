@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { addPart, hasPlanPart, planIsIn, planPart, prepareFiling, undoFiling, type Filing } from './filing';
 import { needsApproval, verdict } from './rules';
 import { makeSample } from './sample';
-import { compactTrip, FILING_SCHEMA, isFiling, notePrompt } from '../../supabase/functions/_shared/filing.ts';
+import { compactTrip, emptyToNull, FILING_SCHEMA, isFiling, notePrompt } from '../../supabase/functions/_shared/filing.ts';
 
 const trip = () => makeSample(new Date('2027-04-12T09:00:00Z'));
 const place = (o: Partial<Extract<Filing['changes'][number], { type: 'place' }>> = {}) => ({
@@ -241,5 +241,23 @@ describe('travel, stays and changes to the plan', () => {
     expect(c.days[0].plan[0]).toHaveProperty('id');
     expect(c.days.some(d => d.stay?.name)).toBe(true);
     expect(JSON.stringify(FILING_SCHEMA)).toContain('planEdit');
+  });
+});
+
+describe('the filing schema the API accepts', () => {
+  it('has at most 16 nullable or union fields (the API refuses more)', () => {
+    let n = 0;
+    const walk = (o: unknown) => {
+      if (!o || typeof o !== 'object') return;
+      const x = o as Record<string, unknown>;
+      if (Array.isArray(x.type) || x.anyOf) n++;
+      Object.values(x).forEach(walk);
+    };
+    walk(FILING_SCHEMA);
+    expect(n).toBeLessThanOrEqual(16);
+  });
+  it('turns empty extras back into null', () => {
+    const f = emptyToNull({ reply: '', done: true, changes: [{ type: 'todo', group: 'Before', text: 'Book', details: '', when: 'May' }] } as never);
+    expect(f.changes[0]).toMatchObject({ details: null, when: 'May' });
   });
 });

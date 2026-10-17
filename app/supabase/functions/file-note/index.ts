@@ -11,7 +11,7 @@
    the secret: see supabase/functions/README.md. */
 import Anthropic from 'npm:@anthropic-ai/sdk@0.132.1';
 import { createClient } from 'npm:@supabase/supabase-js@2.118.0';
-import { FILING_SCHEMA, SYSTEM_PROMPT, isFiling, notePrompt, type Filing } from '../_shared/filing.ts';
+import { FILING_SCHEMA, SYSTEM_PROMPT, emptyToNull, isFiling, notePrompt, type Filing } from '../_shared/filing.ts';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -76,7 +76,7 @@ Deno.serve(async req => {
     const filing = out && out.type === 'text' ? (JSON.parse(out.text) as unknown) : null;
     if (!isFiling(filing)) throw new Error('The answer was not in the expected form.');
     await admin.from('ai_uses').update({ input_tokens: msg.usage.input_tokens, output_tokens: msg.usage.output_tokens }).eq('id', useId);
-    return reply(200, { ...(filing as Filing), left });
+    return reply(200, { ...emptyToNull(filing as Filing), left });
   } catch (e) {
     /* a failed call does not count against the trip */
     await admin.rpc('refund_ai_use', { use_id: useId });
