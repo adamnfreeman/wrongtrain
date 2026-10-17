@@ -66,7 +66,7 @@ on a Mac.
   function (outline, then web research and a plan per city; `supabase/functions/_shared/planner.ts`),
   then `src/model/planner.ts` makes a normal trip. Plans are counted per person in `ai_plans`.
 - Account & settings: the round button in the top corner of every page but Days (`AccountButton` in
-  `src/ui/account.tsx`). Sign in/out, your name, Appearance (`src/ui/theme.tsx`) and the build
+  `src/ui/account.tsx`). Sign in/out, change email (a code to the new address), your name, Appearance (`src/ui/theme.tsx`) and the build
   number and time (set in `vite.config.ts`), so you can tell whether a phone has the latest.
 
 - Trip files: "Open a trip file" on the welcome screen reads a trip saved as JSON
@@ -122,6 +122,9 @@ Touch nothing else on `main`. GitHub Pages updates within a couple of minutes.
 Built and tested, but they need the website-account steps before they work on shared trips:
 - Run the updated `schema.sql` in Supabase (levels of say; also item 1 below).
 - Deploy the ideas box (`file-note`; item 2 below).
+- Change email (Account & settings → Change email, `ChangeEmailSheet` in `src/ui/account.tsx`):
+  in Supabase, Authentication → Emails → "Change email address", make the message show the code
+  (`{{ .Token }}`), like the sign-in email, and keep "Secure email change" on.
 
 ## Where things stand (Oct 16, 2026)
 
@@ -170,10 +173,6 @@ Next:
 11. Later: Sign in with Apple (needs the developer account), universal links so invite links
    open the app, a city list for guessing time zones (Kyoto, Florence and similar don't match
    an IANA zone name), editing the "Before you go" guides.
-12. **Change email** (asked for Oct 16) on Account & settings: move the account to a new address
-   (say to an @wrongtrain.lol one), keeping its trips. There are no passwords (sign-in is an
-   emailed code), so this is the "change password" of WrongTrain. Supabase's `updateUser({ email })`
-   sends a code to the new address to confirm it.
 14. **Tapping a tab** (asked for Oct 16): the tapped button slides to the centre of the bottom
    bar, and the pages swipe quickly across to that page (now they glide slowly or jump).
    `TripApp` in `src/App.tsx`, the pager and bar scroll code.
