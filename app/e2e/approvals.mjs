@@ -90,6 +90,11 @@ await page.click('.tab:has-text("Trip")').then(() => page.click('.tile:has-text(
 await page.fill('#gnote', 'Can we go to Sintra?');
 await page.click('text=Add note');
 check((await stored()).trips[0].notes.some(n => n.text === 'Can we go to Sintra?'), 'a viewer can still leave a note');
+await page.click('#gnotes li:has-text("Sintra") >> text=Edit');
+await page.fill('#gnotes textarea[aria-label="Change your note"]', 'Can we go to Sintra and Cascais?');
+await page.click('#gnotes >> text=Save');
+check((await stored()).trips[0].notes.some(n => n.text === 'Can we go to Sintra and Cascais?' && n.edited), '... and change it afterwards');
+check(await page.locator('#gnotes li:has-text("Sintra") >> text=changed').count() === 1, '... marked as changed');
 
 /* the owner's side, against a stand-in for the server: Ben asked to rename the trip */
 const tripState = await stored();

@@ -26,6 +26,24 @@ import { TripHub } from './ui/trip';
 import { useDock } from './ui/dock';
 import { useRef } from 'react';
 
+/* Swipes the pager quickly across to a tapped tab, however far: the browser's own smooth scroll
+   glides slowly over long distances and is cut short by scroll snapping on iOS. Snapping is off
+   while it moves; the bar follows through the pager's scroll handler. */
+let gliding = 0;
+function glide(pg: HTMLElement, row: HTMLElement | null, to: number) {
+  cancelAnimationFrame(gliding);
+  const from = pg.scrollLeft, d = to - from, start = performance.now();
+  const dur = Math.min(380, 220 + (Math.abs(d) / (pg.clientWidth || 1)) * 30);
+  pg.style.scrollSnapType = 'none'; if (row) row.style.scrollSnapType = 'none';
+  const step = (now: number) => {
+    const t = Math.min(1, (now - start) / dur), e = 1 - (1 - t) ** 3;
+    pg.scrollLeft = from + d * e;
+    if (t < 1) gliding = requestAnimationFrame(step);
+    else { pg.style.scrollSnapType = ''; if (row) row.style.scrollSnapType = ''; }
+  };
+  gliding = requestAnimationFrame(step);
+}
+
 export default function App() {
   if (JAPAN) return <JapanApp TripApp={TripApp} />;
   return <TheApp />;
@@ -287,7 +305,13 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
     if (toTop.current === ui.tab && page) { page.scrollTop = 0; toTop.current = null; }
     if (settledBy.current === 'pager') { settledBy.current = null; return; }
     const left = order.indexOf(ui.tab) * pg.clientWidth;
-    if (Math.abs(pg.scrollLeft - left) > 2) pg.scrollTo({ left, behavior: pagerReady.current ? 'smooth' : 'auto' });
+    /* A tap is not a drag of the bar: let the bar follow the pager, so the tapped tab slides to
+       the middle and stays there (it used to stay put, and the next scroll jumped back). */
+    barDragging.current = false;
+    if (Math.abs(pg.scrollLeft - left) > 2) {
+      if (!pagerReady.current || matchMedia('(prefers-reduced-motion: reduce)').matches) pg.scrollLeft = left;
+      else glide(pg, bar.current, left);
+    }
     pagerReady.current = true;
   }, [ui.tab, ui.day, order]);
 

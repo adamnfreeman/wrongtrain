@@ -4,7 +4,7 @@ import type { Place } from '../model/types';
 import { lineOf, lineOfDest, runs, cityOf, mapsLink } from '../model/trip';
 import { longDate, shortDate, stamp } from '../model/time';
 import { onToday } from '../model/next';
-import { addNote, toggleNote, getState } from '../model/store';
+import { addNote, editNote, toggleNote, getState } from '../model/store';
 import { JAPAN } from '../edition';
 import { visibleTodos } from '../model/todos';
 import { Avatar, useAvatarFor } from './avatar';
@@ -228,6 +228,7 @@ function Notes() {
   const filings = useFilings();
   const [draft, setDraft] = useState('');
   const [msg, setMsg] = useState<{ text: string; bad: boolean } | null>(null);
+  const [fixing, setFixing] = useState<{ id: string; text: string } | null>(null);
   const t = ix.trip, claude = canFile(t.id, !!session), shared = !!getState().sync[t.id];
   /* why Claude is not filing notes here, so a note that just sits there is not a mystery */
   const why = claude || JAPAN ? '' : t.sample ? 'Notes are filed into the trip automatically on your own shared trips, not the sample.'
@@ -241,15 +242,36 @@ function Notes() {
     const id = addNote(t.id, draft); setDraft('');
     if (id && claude) { setMsg(null); void fileNote(t.id, id); } else setMsg({ text: JAPAN ? 'Saved to the Group Notes tab in the sheet.' : shared ? 'Added for everyone on the trip.' : 'Added.', bad: false });
   };
-  const item = (n: (typeof all)[number]) => (
+  /* only the writer may change a note: notes carry a name, not an account, so match the name */
+  const mine = (n: (typeof all)[number]) => !JAPAN && (n.author === (getState().me || 'Me') || !shared);
+  const saveFix = (n: (typeof all)[number]) => {
+    if (!fixing || !editNote(t.id, n.id, fixing.text)) return setMsg({ text: 'Write the note first.', bad: true });
+    setFixing(null);
+    /* not filed yet: file the new wording. Already filed: what was filed stays, and filing again is a tap away */
+    if (claude && !n.done && !n.filed) { setMsg(null); void fileNote(t.id, n.id); }
+    else setMsg({ text: n.filed && claude ? 'Changed. What was already filed from it stays; tap File it again to add anything new.' : 'Changed.', bad: false });
+  };
+  const item = (n: (typeof all)[number]) => fixing?.id === n.id ? (
+    <li key={n.id} className="todo">
+      <span />
+      <div>
+        <textarea className="search notebox" rows={3} maxLength={600} value={fixing.text} autoFocus aria-label="Change your note"
+          onChange={e => setFixing({ id: n.id, text: e.target.value })} />
+        <div className="chips"><button className="chipbtn go" onClick={() => saveFix(n)}>Save</button><button className="chipbtn" onClick={() => setFixing(null)}>Cancel</button></div>
+      </div>
+    </li>
+  ) : (
     <li key={n.id} className={'todo' + (n.done ? ' done' : '')}>
       <button className="box" role="checkbox" aria-checked={n.done} aria-label={(n.done ? 'Reopen: ' : 'Mark dealt with: ') + n.text} disabled={JAPAN} onClick={() => toggleNote(t.id, n.id)}>{n.done ? '✓' : ''}</button>
       <div>
-        <div className="kick notewho"><NoteFace tripId={t.id} name={n.author} />{n.author} · {stamp(n.at)}</div><p className="item-d">{n.text}</p>
+        <div className="kick notewho"><NoteFace tripId={t.id} name={n.author} />{n.author} · {stamp(n.at)}{n.edited && ' · changed'}</div><p className="item-d">{n.text}</p>
         {filings[n.id] ? <Filed tripId={t.id} noteId={n.id} f={filings[n.id]} />
           : <>
             {n.filed && <p className="filed">{n.filed}</p>}
-            {claude && !n.done && <div className="meta"><button className="linkbtn" onClick={() => void fileNote(t.id, n.id)}>{n.filed ? 'File it again' : 'File it into the trip'}</button></div>}
+            {((claude && !n.done) || mine(n)) && <div className="meta">
+              {claude && !n.done && <button className="linkbtn" onClick={() => void fileNote(t.id, n.id)}>{n.filed ? 'File it again' : 'File it into the trip'}</button>}
+              {mine(n) && <button className="linkbtn" onClick={() => setFixing({ id: n.id, text: n.text })}>Edit</button>}
+            </div>}
           </>}
       </div>
     </li>

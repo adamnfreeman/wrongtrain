@@ -171,6 +171,14 @@ export function addNote(tripId: string, text: string): string {
   return id;
 }
 
+/** Changes a note's wording; the app offers it only to whoever wrote it. */
+export function editNote(tripId: string, noteId: string, text: string): boolean {
+  const clean = text.replace(/[ \t]+/g, ' ').trim().slice(0, 600);
+  if (!clean) return false;
+  patchTrip(tripId, t => ({ ...t, notes: t.notes.map(n => (n.id === noteId ? { ...n, text: clean, edited: new Date().toISOString() } : n)) }));
+  return true;
+}
+
 export function toggleNote(tripId: string, noteId: string) {
   patchTrip(tripId, t => ({ ...t, notes: t.notes.map(n => (n.id === noteId ? { ...n, done: !n.done } : n)) }));
 }

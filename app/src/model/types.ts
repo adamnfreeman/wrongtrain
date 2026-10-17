@@ -179,6 +179,8 @@ export interface Note {
   done: boolean;
   /** What Claude did with the note, or why it left it for the owner. Shown under the note. */
   filed?: string;
+  /** When its writer last changed it. */
+  edited?: string;
 }
 
 export interface Guide {

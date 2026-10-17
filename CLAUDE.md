@@ -104,6 +104,9 @@ on a Mac.
   its cards are calmer and swipeable; "What they speak there" on Trip and Phrases
   (`src/model/languages.ts`); a profile photo is moved and zoomed in a circle before it's used;
   Trip shows "Saved on this phone" with a save-a-copy-as-a-file button (`saveTripCopy`).
+  Later on Oct 17: a tapped tab glides quickly to the middle of the bar with its page (`glide` in
+  `src/App.tsx`); Phrases' categories wrap instead of scrolling sideways (a sideways strip caught
+  the page swipe and bounced); the writer of a group note can edit it (`editNote`).
 - Trip files: "Open a trip file" on the welcome screen reads a trip saved as JSON
   (`src/model/tripFile.ts`); opening a newer file of the same trip updates it and keeps ticks,
   notes and the wallet. `node legacy/to-app.mjs` turns the Japan 2026 sheet into one (it asks
@@ -199,18 +202,11 @@ Next:
    real transit directions; step-by-step station guidance; "get me home" options; affiliate links.
 9. **Phrases extras** (asked for Oct 16; the currency converter is done): more phrase languages
    (packs in `src/phrases`); starring phrases so favourites sit at the top, and reordering them.
-10. **Look and feel fixes** (asked for Oct 16, for later): move "The whole route" to the Trip
-    page (not Days); the Days slider still doesn't sit right at the top on the phone (check in
-    the Simulator, which has the notch); the swipe between pages bounces on some pages, such as
-    Phrases (make it the same on every page, or take it out); put Today's sections back unfolded
-    (folding felt less natural than expected).
+10. **The Days slider under the notch** (asked for Oct 16): it still doesn't sit right at the top on
+    the phone; check in the Simulator, which has the notch (`.dslider` in `src/index.css`).
 11. Later: Sign in with Apple (needs the developer account), universal links so invite links
    open the app, a city list for guessing time zones (Kyoto, Florence and similar don't match
    an IANA zone name), editing the "Before you go" guides.
-14. **The open page's tab is always in the middle of the bottom bar** (asked again Oct 16, still
-   wrong on the phone): tap Map while Places is in the middle and Map slides to the middle; today
-   it stays where it was, and the next scroll jumps back to Places, which is confusing. The pages
-   swipe quickly across to match. `TripApp` in `src/App.tsx`, the pager and bar scroll code.
 16. **Right now, next steps** (first version built Oct 16; see "Right now" above). For Andrea: the
    look (it's Adam's quick take: huge time, leave-by box, big ticket and directions buttons). Then:
    live platforms and gates (needs a train or flight info service), a "get there" step list,
@@ -303,8 +299,10 @@ Next:
    Today) but can be brought back, with its photos, money and notes kept, e.g. past trips.
 58. **Budget per kind, in the planner** ("advanced"): set a level for each, e.g. flights cheap,
    hotels expensive, food cheap, sightseeing medium; it feeds the plan (see 44, the range).
-59. **Edit a group note** (Adam, Oct 17): today a note can't be changed once it's added. Let the
-   person who wrote it fix it (and decide what happens to anything Claude already filed from it).
+60. **"Before you go" has a better home** (Adam, Oct 17): on the To do tab, the Before you go
+   summary is folded and feels out of place. Maybe a before-the-trip page of its own.
+61. **Pull down to refresh** (Adam, Oct 17): pulling down on a page fetches the latest from the
+   group, as other apps do.
 
 ## Working together
 

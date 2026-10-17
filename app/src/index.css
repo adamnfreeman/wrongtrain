@@ -173,7 +173,9 @@ mark { background: var(--warn-bg); color: inherit; border-radius: 3px; padding: 
 .chipbtn.pg[aria-pressed="true"] { background: var(--card); border-color: var(--muted); color: var(--ink) }
 
 /* phrases */
-.catstrip { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 9; background: var(--bg); margin-inline: -16px; padding: 8px 16px; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid var(--rule) }
+/* wraps rather than scrolling sideways: on the iPhone a sideways strip inside a page catches the
+   swipe and bounces at its end, instead of passing it on to turn the page */
+.catstrip { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 9; background: var(--bg); margin-inline: -16px; padding: 8px 16px; display: flex; flex-wrap: wrap; gap: 6px; border-bottom: 1px solid var(--rule) }
 .catstrip::-webkit-scrollbar { display: none }
 .catstrip .chipbtn { flex: none; white-space: nowrap }
 .catstrip + #phraselist .blk:first-child { margin-top: 12px }
