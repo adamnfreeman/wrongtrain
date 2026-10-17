@@ -5,7 +5,7 @@ import type { Geo } from './geo';
 import type { Edit } from './editors';
 import { JAPAN } from '../edition';
 
-export const TABS = ['today', 'days', 'map', 'wallet', 'trip', 'transit', 'places', 'phrases', 'prep'] as const;
+export const TABS = ['today', 'days', 'map', 'wallet', 'trip', 'transit', 'places', 'phrases', 'prep', 'now'] as const;
 const ALL_MAIN = ['today', 'days', 'map', 'wallet', 'places', 'transit', 'phrases', 'prep', 'trip'] as const;
 /** The tabs on the bottom bar, in order. Swiping moves between them. The Japan edition has no
     Wallet: what it saves stays on each phone, and that trip's group shares through the sheet. */

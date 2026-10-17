@@ -69,6 +69,13 @@ on a Mac.
   `src/ui/account.tsx`). Sign in/out, change email (a code to the new address), your name, Appearance (`src/ui/theme.tsx`) and the build
   number and time (set in `vite.config.ts`), so you can tell whether a phone has the latest.
 
+- Right now (`src/model/rightNow.ts`, `src/ui/rightnow.tsx`): during the trip, only while
+  something is about to happen: from about 3 hours before a booked flight, 45 minutes before you
+  need to leave for a booked train or bus, 30 minutes before you need to leave for a fixed
+  booking; it closes 10 to 20 minutes after. Then a "Right now" tab appears left of Today and the
+  page opens by itself once per thing, with the time in huge type, when to leave (travel from
+  where you are), the service, seats and details, and big Show ticket and Directions buttons.
+  Not for the sample trip (it would come and go with the clock).
 - Where everyone is (Map → "Where everyone is", `src/sync/locations.ts`, `FriendFinder` in
   `src/ui/map.tsx`): on a shared trip, each person may share where they are for a time they pick
   (1 hour, 4 hours, rest of today, whole trip); while it lasts and the app is open, location stays
@@ -184,18 +191,10 @@ Next:
 14. **Tapping a tab** (asked for Oct 16): the tapped button slides to the centre of the bottom
    bar, and the pages swipe quickly across to that page (now they glide slowly or jump).
    `TripApp` in `src/App.tsx`, the pager and bar scroll code.
-16. **A "Right now" page** (Adam's idea, Oct 16; to be fleshed out). Exactly what you need at
-   this moment and nothing else, in big bold type, everything large and obvious. It is not
-   always there: it shows up only within a window before something where details help, and
-   goes away after. For example a train (platform, car, seats, which train), a flight (gate,
-   terminal, flight number), a bus, or the next booking or meeting (its address, how to get
-   there, when to leave). It shows whatever useful details the trip has for that thing, and
-   the ticket when there is one. Builds on "How much time do I have?" on Today
-   (`src/ui/next.tsx`, `src/model/next.ts`), the day's legs and plan items. When the window
-   opens, the page opens by itself, and a "Right now" button appears in the bottom bar, to the
-   left of Today; when nothing is happening, the button isn't there at all. To settle: how long
-   the window is for each kind of thing, and how often it may open by itself (once per thing,
-   so closing it sticks).
+16. **Right now, next steps** (first version built Oct 16; see "Right now" above). For Andrea: the
+   look (it's Adam's quick take: huge time, leave-by box, big ticket and directions buttons). Then:
+   live platforms and gates (needs a train or flight info service), a "get there" step list,
+   a notification when it opens with the app closed (needs the iOS app and push).
 17. **A photo section** (asked for Oct 16): one place for the whole group's photos from the trip
    (today they sit under each day, `src/ui/photos.tsx`, rows in `trip_photos`): browse by day or
    person, see who added what, save to your phone.

@@ -1,0 +1,73 @@
+/* The "Right now" page: only what you need for the thing that's happening, big and obvious. It
+   exists only while something is on (model/rightNow.ts); App.tsx adds its tab to the left of Today
+   then, and opens it by itself once for each thing. A first version, for Andrea to restyle. */
+import { useState } from 'react';
+import type { Moment } from '../model/rightNow';
+import { fmtT, fmtDur } from '../model/time';
+import { dirLink, fmtDist, mapsLink } from '../model/trip';
+import { usePrivateDocs } from '../model/privateDocs';
+import { openFile } from '../sync/files';
+import { useApp } from './ctx';
+
+const KIND = { flight: 'Your flight', ride: 'Your ride', event: 'Coming up' } as const;
+
+function countdown(m: Moment): string {
+  if (m.inMin <= 0) return m.kind === 'flight' ? 'Boarding' : m.kind === 'ride' ? 'Leaving now' : 'Starting now';
+  return `in ${fmtDur(m.inMin)}`;
+}
+
+export function RightNow({ moment: m, next }: { moment: Moment | null; next: Moment | null }) {
+  const { ix } = useApp();
+  const mine = usePrivateDocs(ix.trip.id);
+  const [msg, setMsg] = useState('');
+  if (!m) return <p className="hint" style={{ marginTop: 40 }}>Nothing coming up right now.</p>;
+
+  const docs = [...(ix.trip.docs || []), ...mine].filter(d => d.file && d.for &&
+    ((m.leg && d.for.kind === 'leg' && d.for.id === m.leg.id) || (m.item && d.for.kind === 'plan' && d.for.id === m.item.id)));
+  const leaveIn = m.leaveBy - (m.at - m.inMin);
+  const pinned = m.place && m.place.lat != null && m.place.lng != null ? m.place : null;
+  const facts: { k: string; v: string }[] = [];
+  if (m.leg) {
+    if (m.leg.how) facts.push({ k: m.kind === 'flight' ? 'Flight' : 'Service', v: m.leg.how });
+    if (m.leg.arrive) facts.push({ k: 'Arrives', v: fmtT(Number(m.leg.arrive.slice(0, 2)) * 60 + Number(m.leg.arrive.slice(3, 5))) });
+    if (m.leg.details) facts.push({ k: 'Details', v: m.leg.details });
+    if (m.leg.tickets) facts.push({ k: 'Tickets', v: m.leg.tickets });
+  } else if (m.item) {
+    if (m.item.text !== m.title) facts.push({ k: 'What', v: m.item.text });
+    if (m.place?.area) facts.push({ k: 'Where', v: m.place.area });
+  }
+
+  return (
+    <div className="rn">
+      <div className="rn-kind">{KIND[m.kind]}</div>
+      <h1 className="rn-title">{m.title}</h1>
+      <div className="rn-time">
+        <span className="rn-clock">{fmtT(m.at)}</span>
+        <span className={'rn-count' + (m.inMin <= 15 ? ' soon' : '')}>{countdown(m)}</span>
+      </div>
+
+      {m.inMin > 0 && (
+        <div className={'rn-leave' + (leaveIn <= 0 ? ' now' : '')}>
+          {leaveIn <= 0 ? <b>Leave now</b> : <><span>Leave by</span><b>{fmtT(m.leaveBy)}</b><span>in {fmtDur(leaveIn)}</span></>}
+          {m.trip && <small>{fmtDist(m.trip.metres)} away, about {fmtDur(m.trip.min)} {m.trip.how}</small>}
+          {m.kind === 'flight' && <small>Be at the airport 2½ hours before.</small>}
+        </div>
+      )}
+
+      {facts.length > 0 && <dl className="rn-facts">{facts.map(f => <div key={f.k}><dt>{f.k}</dt><dd>{f.v}</dd></div>)}</dl>}
+
+      <div className="rn-actions">
+        {docs.map(d => (
+          <button key={d.id} className="rn-btn primary" onClick={() => openFile(d.file!.path, d.file!.name).catch(e => setMsg((e as Error).message))}>
+            Show {d.kind === 'ticket' ? 'ticket' : d.title}
+          </button>
+        ))}
+        {pinned && <a className="rn-btn" href={dirLink(pinned, m.trip?.mode || 'transit')} target="_blank" rel="noopener">Directions</a>}
+        {!pinned && m.place && <a className="rn-btn" href={mapsLink(ix, m.place)} target="_blank" rel="noopener">Find it on the map</a>}
+      </div>
+      {msg && <p className="geomsg bad" role="alert">{msg}</p>}
+
+      {next && <p className="rn-next">Then: <b>{next.title}</b> at {fmtT(next.at)}</p>}
+    </div>
+  );
+}

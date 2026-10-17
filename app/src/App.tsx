@@ -4,6 +4,9 @@ import { readTripFile } from './model/tripFile';
 import { JAPAN } from './edition';
 import { JapanApp, SheetOnly } from './ui/japan';
 import { sendSpot, useSharingUntil } from './sync/locations';
+import { after, rightNow } from './model/rightNow';
+import { liveCtx } from './model/next';
+import { RightNow } from './ui/rightnow';
 import { indexTrip, whereNow } from './model/trip';
 import type { Trip } from './model/types';
 import { shortDate } from './model/time';
@@ -124,7 +127,8 @@ function OpenTripFile({ trips }: { trips: Trip[] }) {
 
 /* ---------- the open trip ---------- */
 
-const ICONS: Record<(typeof MAIN_TABS)[number], { label: string; icon: React.ReactNode }> = {
+const ICONS: Record<string, { label: string; icon: React.ReactNode }> = {
+  now: { label: 'Right now', icon: <path d="M13.5 2.5 5 13.5h6.2l-1 8 8.8-11.2h-6.3z" /> },
   today: { label: 'Today', icon: <><circle cx="12" cy="12" r="8.5" /><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none" /></> },
   days: { label: 'Days', icon: <><rect x="3.5" y="5" width="17" height="15.5" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></> },
   map: { label: 'Map', icon: <><path d="M12 21s7-6.2 7-11.5a7 7 0 0 0-14 0C5 14.8 12 21 12 21z" /><circle cx="12" cy="9.5" r="2.4" /></> },
@@ -183,6 +187,22 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
     return () => window.removeEventListener('hashchange', f);
   }, [ids]);
 
+  /* the thing that matters right now, if anything: checked every half minute during the trip */
+  const [tick, setTick] = useState(0);
+  useEffect(() => { const t = window.setInterval(() => setTick(x => x + 1), 30_000); return () => clearInterval(t); }, []);
+  const rn = useMemo(() => {
+    if (!now.cur || trip.sample) return { m: null, next: null };
+    const c = liveCtx(ix, now.cur, geo.pos), m = rightNow(ix, c);
+    return { m, next: m ? after(ix, c, m) : null };
+  }, [ix, now.cur, geo.pos, tick, trip.sample]); // eslint-disable-line react-hooks/exhaustive-deps
+  /* it opens by itself once for each thing; when the thing is over, back to Today */
+  useEffect(() => {
+    const id = rn.m?.id;
+    if (!id) { if (tabNow.current === 'now') go('today'); return; }
+    const seen = pref<string[]>('rightnow-seen', []);
+    if (!seen.includes(id)) { setPref('rightnow-seen', [...seen.slice(-50), id]); go('now'); }
+  }, [rn.m?.id, go]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const q = ui.q.trim(), searching = q.length > 1;
   const waiting = useWaitingForMe(trip.id);
   const PAGES = { today: Today, days: Days, transit: Transit, places: Places, map: MapView, phrases: Phrases, wallet: Wallet, trip: TripHub, prep: Prep };
@@ -191,7 +211,8 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
      each page scrolls up and down by itself. The bottom bar and the pager move together: drag
      either and the other follows. Wherever the pager comes to rest is the open tab. */
   const tabNow = useRef(ui.tab); tabNow.current = ui.tab;
-  const order = MAIN_TABS as readonly string[];
+  /* "Right now" is a page only while something is happening; its tab sits left of Today */
+  const order = useMemo<readonly Tab[]>(() => (rn.m ? ['now', ...MAIN_TABS] : [...MAIN_TABS]), [!!rn.m]); // eslint-disable-line react-hooks/exhaustive-deps
   const pager = useRef<HTMLDivElement>(null);
   const bar = useRef<HTMLDivElement>(null);
   const TAB_W = 68;
@@ -271,14 +292,14 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
   return (
     <AppCtx.Provider value={{ ix, now, ui, set, go, geo, me, edit }}>
       <div className="pager" ref={pager}>
-        {MAIN_TABS.map(t => {
-          const Page = PAGES[t];
+        {order.map(t => {
+          const Page = t === 'now' ? null : PAGES[t];
           return (
             <section key={t} className="pane" data-tab={t} aria-hidden={t !== ui.tab}>
               <div className="wrap" id={t === ui.tab ? 'view' : undefined}>
                 {(all || t === ui.tab) && <>
                   <AccountButton trip={trip} />
-                  <Page />
+                  {Page ? <Page /> : <RightNow moment={rn.m} next={rn.next} />}
                   {t === 'trip' && (searching ? <Search q={q} /> : <Footer trip={trip} />)}
                 </>}
               </div>
@@ -300,8 +321,8 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
       <div className="tabpeek" ref={peek} aria-hidden="true" />
       <nav className="tabs" aria-label="Sections">
         <div className="tabs-in" ref={bar}>
-          {MAIN_TABS.map(t => (
-            <button key={t} data-tab={t} className="tab" aria-current={ui.tab === t ? 'page' : undefined} onClick={() => go(t)}>
+          {order.map(t => (
+            <button key={t} data-tab={t} className={'tab' + (t === 'now' ? ' tab-now' : '')} aria-current={ui.tab === t ? 'page' : undefined} onClick={() => go(t)}>
               <svg viewBox="0 0 24 24" aria-hidden="true">{ICONS[t].icon}</svg>{ICONS[t].label}
               {t === 'prep' && waiting > 0 && <span className="tabn" aria-label={`${waiting} waiting for your OK`}>{waiting}</span>}
             </button>
