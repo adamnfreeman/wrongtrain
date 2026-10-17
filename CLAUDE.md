@@ -276,6 +276,27 @@ Next:
 42. **Profile picture: zoom and move** (Adam, on the phone): after picking a photo, pinch to zoom
    and drag to place your face in the circle before it's saved (today it takes the middle square).
    `makeAvatar` and `PhotoPicker` in `src/ui/avatar.tsx` and `src/ui/account.tsx`.
+43. **Better words for the levels of say** (Adam: neither the phrases nor their descriptions are
+   right yet). `LEVELS` in `src/model/rules.ts`; with Andrea.
+44. **Budget as a range**: in Plan a trip for me, pick several price levels ($$ to $$$$), e.g. a cheap
+   hotel is fine but a nicer one if it's there. The planner then offers hotels across the range.
+45. **Planner header covers the emojis**: on Plan a trip for me, the top bar cuts off the emojis on
+   the first questions (`src/ui/planner.tsx`, `.sheet-bar`).
+46. **Planning screen cards**: they change too fast (every 8 s); the dots look swipeable but aren't
+   (make them swipeable, or not look it); tapping a card or its link stops the rotation for good,
+   so after opening the insurance link you're stuck on that card: start again after a pause.
+   `src/ui/planning.tsx`. (Opening a link doesn't stop the plan being built.)
+47. **All the referral ids** (Adam to send them): Airalo (Impact), Viator, Klook, SafetyWing,
+   Booking.com... into `REF` in `src/model/partners.ts` (see 34).
+48. **What each AI job costs**: a tracker for each trip plan and each note filed or change made
+   (tokens and dollars). `ai_plans` already counts tokens per plan; add the same for filings
+   and nearby picks, and a view of it (for Adam).
+49. **Pins for planned trips**: a trip made by Plan a trip for me has no pins on the map, because
+   places come without coordinates. Look them up (MapTiler or another geocoder, see 3) as the
+   plan is made, so hotels, food and sights are on the map.
+50. **A Stay page**: each night's hotel with photos, check-in and check-out times, amenities, tips,
+   address and directions, and a booking link for the recommended ones (a referral where one
+   exists, see 34).
 
 ## Working together
 
