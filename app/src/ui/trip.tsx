@@ -11,6 +11,7 @@ import { SecH } from './bits';
 import { JAPAN } from '../edition';
 import { visibleTodos } from '../model/todos';
 import { Languages } from './languages';
+import { saveTripCopy } from '../sync/files';
 import { SHEET_URL } from '../sheet/live';
 
 /** Sections that open from Trip rather than the bottom bar (none now: every section has a tab). */
@@ -53,6 +54,7 @@ export function TripHub() {
       </ul> : <ul className="hubrows">
         <li><button onClick={() => edit({ kind: 'trip' })}><b>{shared ? 'People and sharing' : 'Share with the group'}</b><span>{shared ? 'Invite, roles, who can change the plan' : 'Plan it together, live'}</span></button></li>
         <li><button onClick={() => edit({ kind: 'trip' })}><b>Trip settings</b><span>Name, dates, destinations</span></button></li>
+        <li><button onClick={() => void saveTripCopy(t)}><b>Saved on this phone</b><span>{shared ? 'Changes reach everyone when there\'s signal; the trip, tickets and documents' : 'The trip, tickets and documents'} work with no signal. Tap to save a copy as a file too.</span></button></li>
         <li><button onClick={() => selectTrip(null)}><b>All trips</b><span>{t.sample ? 'Leave the sample, plan your own' : 'Switch trip, or plan a new one'}</span></button></li>
       </ul>}
       {!ui.q && <Languages />}
