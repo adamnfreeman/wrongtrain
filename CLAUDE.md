@@ -209,6 +209,37 @@ Next:
    tries to make Claude do other work), cap input sizes, rate-limit per person as well as per
    trip, and set a monthly spend alert and hard limit in the Anthropic console.
 
+22. **Rethink the Trip page** (Adam, Oct 16: "makes no sense"). Move "All trips" into Account &
+   settings. Decide what Trip is for once Places, Photos, Notes and settings have homes of their own.
+23. **Places, broken down**: pick a category (with icons, like "Something nearby") and a
+   location, instead of one long overwhelming list; for food, types of food (icons would do).
+24. **"Something nearby" moods**: "Coffee & cake" becomes just "Coffee"; an icon for each mood.
+25. **Photos as their own page**, with comments and hearts (builds on 17).
+26. **Tab order**: Wallet goes between Transit and Phrases.
+27. **Currency converter in Wallet → Money** (also in 9).
+28. **Trip settings: first and last day** shown and changeable there.
+29. **"Who's going" fills itself**: today it's names typed in Trip settings, used to split money,
+   and it doesn't grow when someone joins with a code. Add people who join automatically (their
+   name on the trip), keep it editable, and explain what it's for on the page.
+30. **Wallet files**: a photo saved as an ID opened the iOS share menu instead of showing the
+   picture. Show images (and PDFs) in the app; thumbnails for each item; a bigger Open button.
+   `openFile` in `src/sync/files.ts`, `src/ui/wallet.tsx`.
+31. **To-do kinds**: personal to-dos (just mine) and group checks (everyone ticks their own, and
+   you see who has: "Visit Japan Web", "get yen"), plus coloured tags for the kind of to-do:
+   book, buy, call, email, fill out.
+32. **Adding things should be the star** (Adam: a big feature is "add anything and it lands in the
+   right place"). Today it's tucked into To do as Group notes. Give it its own page or a
+   prominent way in from everywhere (see VISION.md, "Just say it").
+33. **Save to phone, prominently**: the trip already works offline, but people don't know; make
+   "saved on this phone" visible and offer a clear Save-to-phone action on the trip (also files,
+   tickets).
+34. **Referral links, done well** (VISION.md, `src/model/partners.ts`): get the partner ids in
+   (Airalo via Impact, Viator, Klook, SafetyWing, Booking.com), and show genuinely useful
+   suggestions where they help (an eSIM before you fly, a rail pass on a train-heavy trip, tours
+   for an idle afternoon, a hotel on a night with no stay) rather than ads. Rules to keep it
+   honest: always labelled, never only paid options (show the best choice even when it pays
+   nothing), never ranked by commission.
+
 ## Working together
 
 Two people work on this at once: Adam (adam@thefreemans.io, the technical side) and Andrea
