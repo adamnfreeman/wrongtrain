@@ -1,0 +1,2 @@
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["./web-BtELLQGr.js","./dist-62TeNfsI.js"])))=>i.map(i=>d[i]);
+import{i as e}from"./dist-62TeNfsI.js";import{t}from"./preload-helper-CRzLMJPS.js";var n=e(`SplashScreen`,{web:()=>t(()=>import(`./web-BtELLQGr.js`).then(e=>new e.SplashScreenWeb),__vite__mapDeps([0,1]),import.meta.url)});export{n as SplashScreen};
