@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import type { Trip } from '../model/types';
 import { getState, setMe, useStore } from '../model/store';
-import { createInvite, deleteAccount, errText, joinTrip, leaveTrip, members, removeMember, setMyName, shareTrip, signOut, sendCode, useSync, verifyCode, type Member, isSignedIn } from '../sync/engine';
+import { changeEmail, createInvite, deleteAccount, verifyEmailChange, errText, joinTrip, leaveTrip, members, removeMember, setMyName, shareTrip, signOut, sendCode, useSync, verifyCode, type Member, isSignedIn } from '../sync/engine';
 import { DeleteButton, Sheet, Text } from './form';
 import { shareBase } from '../native';
 import { ROLES } from '../model/rules';
@@ -221,6 +221,7 @@ function AccountSheet({ trip, close }: { trip?: Trip; close: () => void }) {
   const sync = useSync();
   const [name, setName] = useState(me);
   const [signIn, setSignIn] = useState(false);
+  const [newEmail, setNewEmail] = useState(false);
   const saveName = () => { setMe(name); if (name.trim()) void setMyName(name.trim()); };
   return (
     <Sheet title="Account & settings" cancelLabel="Done" onCancel={() => { saveName(); close(); }}>
@@ -233,7 +234,8 @@ function AccountSheet({ trip, close }: { trip?: Trip; close: () => void }) {
           : !sync.ready ? <p className="hint">Checking…</p>
           : sync.session ? <>
             <p>Signed in as <b>{sync.session.user.email}</b></p>
-            <button className="chipbtn" style={{ marginTop: 10 }} onClick={() => void signOut()}>Sign out</button>
+            <div className="chips"><button className="chipbtn" onClick={() => void signOut()}>Sign out</button>
+              <button className="chipbtn" onClick={() => setNewEmail(true)}>Change email</button></div>
           </> : <>
             <p>Sign in to share trips with your group. Trips on this phone stay here either way.</p>
             <button className="chipbtn go" style={{ marginTop: 10 }} onClick={() => setSignIn(true)}>Sign in</button>
@@ -259,6 +261,45 @@ function AccountSheet({ trip, close }: { trip?: Trip; close: () => void }) {
         }}>Delete my account</button>
       </section>}
       {signIn && <SignInSheet close={() => setSignIn(false)} />}
+      {newEmail && sync.session && <ChangeEmailSheet now={sync.session.user.email || ''} close={() => setNewEmail(false)} />}
+    </Sheet>
+  );
+}
+
+/** Moving the account to a new email: a code goes to the new address, and entering it makes the switch. */
+function ChangeEmailSheet({ now, close }: { now: string; close: () => void }) {
+  const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
+  const [sent, setSent] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [done, setDone] = useState(false);
+  const ok = /^\S+@\S+\.\S+$/.test(email.trim()) && email.trim().toLowerCase() !== now.toLowerCase();
+  const send = async () => {
+    setBusy(true); setMsg('');
+    try { await changeEmail(email); setSent(true); } catch (e) { setMsg(errText(e)); }
+    setBusy(false);
+  };
+  const verify = async () => {
+    setBusy(true); setMsg('');
+    try { await verifyEmailChange(email, code); setDone(true); } catch (e) { setMsg(errText(e)); }
+    setBusy(false);
+  };
+  return (
+    <Sheet title="Change email" cancelLabel={done ? 'Done' : 'Cancel'} onCancel={close}
+      onSave={done ? undefined : sent ? verify : send} saveLabel={busy ? '…' : sent ? 'Change' : 'Send code'}
+      canSave={!busy && (sent ? code.replace(/\D/g, '').length >= 6 : ok)}>
+      {done ? <p style={{ marginTop: 12 }}>Done. You now sign in with <b>{email.trim()}</b>. Your trips, name and everything else stay as they were.</p>
+        : !sent ? <>
+          <p className="fhint" style={{ marginTop: 8 }}>Now: <b>{now}</b>. Your trips stay with your account; only the address you sign in with changes.</p>
+          <Text label="New email" value={email} onChange={setEmail} placeholder="you@example.com" autoFocus />
+          <div className="chips"><button type="button" className="chipbtn go" disabled={!ok || busy} onClick={send}>{busy ? 'Sending…' : 'Send code'}</button></div>
+        </> : <>
+          <p className="fhint" style={{ marginTop: 10 }}>We sent a six-digit code to <b>{email.trim()}</b>. If a code also arrives at {now}, that's to confirm it's you; the one to enter here is from the new address.</p>
+          <Text label="Code" value={code} onChange={v => setCode(v.replace(/[^\d ]/g, '').slice(0, 8))} placeholder="123456" autoFocus />
+          <div className="chips"><button type="button" className="chipbtn go" disabled={busy || code.replace(/\D/g, '').length < 6} onClick={verify}>{busy ? 'Checking…' : 'Change email'}</button></div>
+        </>}
+      {msg && <p className="geomsg bad" role="alert">{msg}</p>}
     </Sheet>
   );
 }

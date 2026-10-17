@@ -348,6 +348,19 @@ export async function verifyCode(email: string, code: string) {
   if (error) throw error;
 }
 
+/** Moves the account to a new email. Supabase emails a six-digit code to the new address (and,
+    with "Secure email change" on, to the old one too); the change is made once a code is entered.
+    Trips, names and roles stay, because they belong to the account, not the address. */
+export async function changeEmail(email: string) {
+  const { error } = await supabase.auth.updateUser({ email: email.trim() });
+  if (error) throw error;
+}
+
+export async function verifyEmailChange(email: string, code: string) {
+  const { error } = await supabase.auth.verifyOtp({ email: email.trim(), token: code.replace(/\s/g, ''), type: 'email_change' });
+  if (error) throw error;
+}
+
 export async function signOut() {
   unlisten();
   await supabase.auth.signOut();
