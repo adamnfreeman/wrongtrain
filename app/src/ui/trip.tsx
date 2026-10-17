@@ -10,6 +10,7 @@ import { RouteList } from './day';
 import { SecH } from './bits';
 import { JAPAN } from '../edition';
 import { visibleTodos } from '../model/todos';
+import { Languages } from './languages';
 import { SHEET_URL } from '../sheet/live';
 
 /** Sections that open from Trip rather than the bottom bar (none now: every section has a tab). */
@@ -54,6 +55,7 @@ export function TripHub() {
         <li><button onClick={() => edit({ kind: 'trip' })}><b>Trip settings</b><span>Name, dates, destinations</span></button></li>
         <li><button onClick={() => selectTrip(null)}><b>All trips</b><span>{t.sample ? 'Leave the sample, plan your own' : 'Switch trip, or plan a new one'}</span></button></li>
       </ul>}
+      {!ui.q && <Languages />}
       {!ui.q && days.length > 0 && <section className="sec"><SecH title="The whole route" /><RouteList /></section>}
     </>
   );
