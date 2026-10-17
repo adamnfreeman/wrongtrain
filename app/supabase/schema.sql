@@ -245,6 +245,28 @@ begin
   update trips t set rule = set_trip_rule.rule where t.id = trip_id;
 end $$;
 
+-- Invite codes still open on a trip, for the owner and organizers to see and cancel.
+create or replace function public.list_invites(trip_id text)
+returns table (code text, created_at timestamptz, expires_at timestamptz) language plpgsql security definer set search_path = public as $$
+declare t text := trip_id;
+begin
+  if coalesce(my_role(t), '') not in ('owner', 'organizer') then raise exception 'only the owner or an organizer can do that'; end if;
+  return query select i.code, i.created_at, i.expires_at from invites i where i.trip_id = t and i.expires_at > now() order by i.created_at desc;
+end $$;
+
+-- Cancels an invite code, so a forwarded link stops working: the owner, an organizer or whoever made it.
+create or replace function public.cancel_invite(invite_code text)
+returns void language plpgsql security definer set search_path = public as $$
+declare i invites%rowtype;
+begin
+  select * into i from invites where code = upper(replace(invite_code, ' ', ''));
+  if i.code is null then return; end if;
+  if i.created_by is distinct from auth.uid() and coalesce(my_role(i.trip_id), '') not in ('owner', 'organizer') then raise exception 'not your invite'; end if;
+  delete from invites where code = i.code;
+end $$;
+revoke all on function public.list_invites(text), public.cancel_invite(text) from public, anon;
+grant execute on function public.list_invites(text), public.cancel_invite(text) to authenticated;
+
 -- The owner deletes the trip for everyone: members, requests, photos and locations go with it.
 create or replace function public.delete_trip(trip_id text)
 returns void language plpgsql security definer set search_path = public as $$
@@ -297,6 +319,12 @@ begin
     values (t, auth.uid(), coalesce(member_name, ''),
             (select case tr.rule when 'open' then 'editor' when 'look' then 'viewer' else 'contributor' end from trips tr where tr.id = t))
     on conflict (trip_id, user_id) do update set name = excluded.name;
+  -- and onto "Who's going", so money can be split with them straight away
+  if trim(coalesce(member_name, '')) <> '' then
+    update trips tr set data = jsonb_set(tr.data, '{travelers}', coalesce(tr.data -> 'travelers', '[]'::jsonb) || to_jsonb(trim(member_name))),
+      version = tr.version + 1, updated_at = now()
+      where tr.id = t and not exists (select 1 from jsonb_array_elements_text(coalesce(tr.data -> 'travelers', '[]'::jsonb)) x where lower(x) = lower(trim(member_name)));
+  end if;
   return t;
 end $$;
 

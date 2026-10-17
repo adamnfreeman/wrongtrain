@@ -324,7 +324,8 @@ export function TripSettings({ trip, close }: Props) {
         <Text label="Last day" type="date" value={end} onChange={setEnd} />
       </div>
       <p className="fhint">{endHint(trip, start, end)}</p>
-      <Text label="Who's going" value={people} onChange={setPeople} placeholder="Names, separated by commas" />
+      <Text label="Who's going" value={people} onChange={setPeople} placeholder="Names, separated by commas"
+        hint="Used to split costs in Wallet → Money. On a shared trip, people who join with a code are added here by themselves." />
       <Choice label="Phrases" value={pack} onChange={setPack} options={packOptions} hint="The language on the Phrases tab." />
       <h3 className="fsec">Sharing</h3>
       <Sharing trip={trip} onLeft={close} />
