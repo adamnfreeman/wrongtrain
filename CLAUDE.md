@@ -273,6 +273,9 @@ Next:
 41. **Welcome screen order**: Plan a trip for me, then Plan it myself, then the sample trip
    (with its explanation right under it), then Join a trip with a code. Today the sample sits
    between the two ways of planning. `Welcome` in `src/App.tsx`.
+42. **Profile picture: zoom and move** (Adam, on the phone): after picking a photo, pinch to zoom
+   and drag to place your face in the circle before it's saved (today it takes the middle square).
+   `makeAvatar` and `PhotoPicker` in `src/ui/avatar.tsx` and `src/ui/account.tsx`.
 
 ## Working together
 
@@ -283,6 +286,14 @@ Two people work on this at once: Adam (adam@thefreemans.io, the technical side) 
   `/start <what>` begins a piece of work on its own branch, `/save` backs it up to GitHub,
   `/catchup` brings in the other person's finished work, `/done` checks it and adds it to `app`.
 - Never commit straight to `app`; `/done` merges into it after the build and tests pass.
+- **The project sheet** ("WrongTrain project: to-dos and changelog",
+  https://docs.google.com/spreadsheets/d/1PpEdGILeWLNULUx0Iaor2YOd6S4gfaMA88Gd5K2aYWY/edit) mirrors
+  the to-do list above and records every change. Keep it up to date as part of the work, without
+  being asked: a new to-do gets a row on To-dos (Status Open); when one is finished, set its Status
+  to Done and fill in "Done on" (never delete rows; Done rows strike through by themselves); every
+  change added to `app`, every publish to wrongtrain.lol, every change to the Japan sheet and every
+  phone build gets a row at the top of Changelog (date and time, build number, what, short details,
+  who, where). Use the Google Sheets connector; if it isn't connected, say so and list the rows to add.
 - Look and feel lives mostly in `src/index.css` and `src/ui/`.
 - Design work needs only `npm run dev` in a browser; Xcode is only for putting it on a phone.
 - One-time setup on each Mac, so Claude can push. In Terminal: `gh auth login` (GitHub.com,
