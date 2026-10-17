@@ -129,11 +129,7 @@ check(!(await page.evaluate(() => localStorage.getItem('wt-plan-draft'))), 'the 
   steps.length = 0;
   await page.goto('http://localhost:8096/');
   await page.click('text=Plan a trip for me');
-  check(await sheet.getByLabel('Test mode').count() === 0, 'the real app has no test mode switch');
-  /* the switch is only there while developing; the test turns test mode on behind the scenes */
-  await page.evaluate(() => localStorage.setItem('wt-pref-plan-test-dev', 'true'));
-  await page.reload();
-  await page.click('text=Plan a trip for me');
+  await sheet.getByLabel('Test mode').check();
   check(await sheet.locator('.testbanner').count() === 1, 'test mode says it replays a saved plan, at no charge');
   await sheet.getByLabel('Where to').fill('Anywhere');
   await next(); await next(); await next();

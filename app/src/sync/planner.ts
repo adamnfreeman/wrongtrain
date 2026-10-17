@@ -10,10 +10,10 @@ import { supabase } from './engine';
 
 const LAST = 'wt-plan-last';
 type Saved = { answers?: Answers; outline: Outline; stops: (StopPlan | null)[] };
-/* Off in the real app (Oct 16): the switch shows only while developing (npm run dev). A new key,
-   so a phone that had it on before is back to real plans; tests turn it on through the key. */
+/* Test mode is a switch anyone can use while WrongTrain is invite-only: on the planner's first page
+   and in Account & settings. Before launch, set canTest to import.meta.env.DEV to hide it. */
 const TEST_KEY = 'plan-test-dev';
-export const canTest = import.meta.env.DEV;
+export const canTest = true;
 export const isTestMode = () => pref(TEST_KEY, false);
 export const setTestMode = (on: boolean) => setPref(TEST_KEY, on);
 /** The last real plan made on this phone, or the built-in one. */

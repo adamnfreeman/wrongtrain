@@ -92,10 +92,11 @@ on a Mac.
   for your Japan page name and passcode and saves to the Desktop; run it again after sheet
   changes). The file holds booking numbers and logins: never put it in the repo.
 
-- Testing the planner cheaply: test mode (replays a saved plan; the switch shows only under
-  `npm run dev` since Oct 16, `canTest` in `src/sync/planner.ts`), `plan_cache`, and the
+- Testing the planner cheaply: test mode (replays a saved plan; a switch on the
+  planner's first page and in Account & settings while the app is invite-only; `canTest` in
+  `src/sync/planner.ts`, set it to `import.meta.env.DEV` before launch), `plan_cache`, and the
   `PLANNER_MODEL` (now `claude-haiku-5-5`) and `PLAN_TESTERS` secrets; see
-  `app/supabase/functions/README.md`. **Before launch:** delete `PLANNER_MODEL` (back to the best model).
+  `app/supabase/functions/README.md`. **Before launch:** delete `PLANNER_MODEL` (back to the best model) and hide test mode.
 
 ## Commands (in `app/`)
 
@@ -249,7 +250,9 @@ Next:
    trip that isn't shared (a shared one has "Leave"). Make it easy to find (e.g. from All trips),
    and for a shared trip let the owner delete it for everyone, with a clear warning.
 36. **The logo** (for Andrea): the simple line logo feels a bit like a gummy worm. Try it on a
-   diagonal, and see whether it says "trip" and "train" enough on its own.
+   diagonal, and see whether it says "trip" and "train" enough on its own. Then put it in the app:
+   on the welcome screen (it only shows the word "WrongTrain" today), the loading screen,
+   Account & settings, and anywhere else the brand should show.
 37. **A new tagline** (Adam: "Every trip is a line" isn't for him). It's the welcome screen's
    heading (`Welcome` in `src/App.tsx`). Find one that says what WrongTrain does for a group of
    friends (see VISION.md), with Andrea.

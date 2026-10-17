@@ -44,6 +44,11 @@ await page.waitForSelector('text=Explore a sample trip');
 await page.click('.acctbtn');
 await page.waitForSelector('.sheet-wrap >> text=Signed in as');
 
+/* test mode, while the app is invite-only */
+await page.getByLabel('Test mode').check();
+check(await page.evaluate(() => localStorage.getItem('wt-pref-plan-test-dev')) === 'true', 'Account & settings has a Test mode switch for the planner');
+await page.getByLabel('Test mode').uncheck();
+
 /* a profile picture: chosen, shrunk to a small square, shown, and put on your trips */
 await page.setInputFiles('input[aria-label="Profile photo"]', 'public/apple-touch-icon.png');
 await page.waitForSelector('.photopick img.avatar');
