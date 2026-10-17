@@ -10,8 +10,12 @@ import { supabase } from './engine';
 
 const LAST = 'wt-plan-last';
 type Saved = { answers?: Answers; outline: Outline; stops: (StopPlan | null)[] };
-export const isTestMode = () => pref('plan-test', false);
-export const setTestMode = (on: boolean) => setPref('plan-test', on);
+/* Off in the real app (Oct 16): the switch shows only while developing (npm run dev). A new key,
+   so a phone that had it on before is back to real plans; tests turn it on through the key. */
+const TEST_KEY = 'plan-test-dev';
+export const canTest = import.meta.env.DEV;
+export const isTestMode = () => pref(TEST_KEY, false);
+export const setTestMode = (on: boolean) => setPref(TEST_KEY, on);
 /** The last real plan made on this phone, or the built-in one. */
 export function savedPlan(): Saved { try { return JSON.parse(localStorage.getItem(LAST) || 'null') || FIXTURE; } catch { return FIXTURE; } }
 /** Keeps a real plan, for test mode to replay. */

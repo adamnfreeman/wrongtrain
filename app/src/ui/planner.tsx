@@ -10,7 +10,7 @@ import {
   DAY_STYLES, DIETS, PACES, STYLES, VIBES, blankAnswers, dollars, stopDates,
   type Answers, type Outline,
 } from '../../supabase/functions/_shared/planner.ts';
-import { fillStop, isTestMode, loadDraft, makeOutline, rememberPlan, saveDraft, savedPlan, setTestMode, type Draft, type StopState } from '../sync/planner';
+import { canTest, fillStop, isTestMode, loadDraft, makeOutline, rememberPlan, saveDraft, savedPlan, setTestMode, type Draft, type StopState } from '../sync/planner';
 import { Check } from './form';
 import { isSignedIn } from '../sync/engine';
 import { SignInSheet } from './account';
@@ -104,7 +104,7 @@ export function PlannerSheet({ close }: { close: () => void }) {
       </PlanningScreen>}
       {step === 'fill' && draft.outline && <Filling o={draft.outline} states={states} onRetry={() => void fill(draft)} />}
       {msg && <p className="geomsg bad" role="alert">{msg}</p>}
-      {step === 'where' && <Check label="Test mode" checked={test} onChange={v => { setTest(v); setTestMode(v); }}
+      {step === 'where' && canTest && <Check label="Test mode" checked={test} onChange={v => { setTest(v); setTestMode(v); }}
         hint="Replays the last plan made on this phone instead of planning a new one. Free and quick, for trying things out." />}
       {step === 'where' && draft.outline && <p className="fhint">You have a plan in progress. <button type="button" className="linkbtn" onClick={() => setStep(draft.stops ? 'fill' : 'outline')}>Carry on with it</button> or <button type="button" className="linkbtn" onClick={() => { saveDraft(null); setDraftState({ answers: blankAnswers() }); }}>start again</button>.</p>}
     </Sheet>
