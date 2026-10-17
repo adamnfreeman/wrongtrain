@@ -392,6 +392,19 @@ export async function shareTrip(id: string): Promise<void> {
   listen();
 }
 
+/** Invite codes still open on a trip (owner and organizers only). */
+export async function listInvites(id: string): Promise<{ code: string; created_at: string; expires_at: string }[]> {
+  const { data, error } = await supabase.rpc('list_invites', { trip_id: id });
+  if (error) throw error;
+  return (data || []) as { code: string; created_at: string; expires_at: string }[];
+}
+
+/** Cancels a code, so a forwarded invite stops working. */
+export async function cancelInvite(code: string) {
+  const { error } = await supabase.rpc('cancel_invite', { invite_code: code });
+  if (error) throw error;
+}
+
 export async function createInvite(id: string): Promise<string> {
   const { data, error } = await supabase.rpc('create_invite', { trip_id: id });
   if (error) throw error;
@@ -439,6 +452,14 @@ export async function setMyAvatar(avatar: string | null) {
 /** Leaves a shared trip; your copy is removed from this phone. */
 export async function leaveTrip(id: string) {
   const { error } = await supabase.rpc('leave_trip', { trip_id: id });
+  if (error) throw error;
+  const s = getState(); const sync = { ...s.sync }; delete sync[id];
+  setSynced(s.trips.filter(t => t.id !== id), sync, s.activeId === id ? null : s.activeId);
+}
+
+/** The owner deletes a shared trip for everyone: online, and from this phone. */
+export async function deleteSharedTrip(id: string) {
+  const { error } = await supabase.rpc('delete_trip', { trip_id: id });
   if (error) throw error;
   const s = getState(); const sync = { ...s.sync }; delete sync[id];
   setSynced(s.trips.filter(t => t.id !== id), sync, s.activeId === id ? null : s.activeId);

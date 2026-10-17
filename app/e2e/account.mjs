@@ -55,11 +55,19 @@ await page.getByLabel('Test mode').uncheck();
 
 /* a profile picture: chosen, shrunk to a small square, shown, and put on your trips */
 await page.setInputFiles('input[aria-label="Profile photo"]', 'public/apple-touch-icon.png');
+await page.waitForSelector('.crop img');
+check(await page.locator('.cropzoom').count() === 1, 'a new photo opens in the circle to move and zoom');
+await page.click('.sheet-wrap >> text=Use photo');
 await page.waitForSelector('.photopick img.avatar');
 await page.waitForSelector('.photopick >> text=Saved on this phone');
 check(await page.locator('.photopick [role=alert]').count() === 0, 'before the database is ready: no error, the picture is kept on the phone and says so');
+const before = await page.getAttribute('.photopick img.avatar', 'src');
 await page.setInputFiles('input[aria-label="Profile photo"]', 'public/apple-touch-icon.png');
+await page.waitForSelector('.crop img');
+await page.locator('.cropzoom').fill('2');
+await page.click('.sheet-wrap >> text=Use photo');
 await page.waitForFunction(() => !document.querySelector('.photopick .fhint'));
+await page.waitForFunction(b => document.querySelector('.photopick img.avatar')?.getAttribute('src') !== b, before);
 const pic = await page.getAttribute('.photopick img.avatar', 'src');
 check(/^data:image\/jpeg;base64,/.test(pic) && pic.length < 60000, `the photo becomes a small JPEG (${Math.round(pic.length / 1024)} KB as text)`);
 check(asked.some(a => a.avatar === pic), '... and goes on your trips');

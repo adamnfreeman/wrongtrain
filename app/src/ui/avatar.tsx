@@ -24,12 +24,19 @@ export async function saveMyAvatar(a: string | null): Promise<boolean> {
 }
 export const myAvatar = () => mine;
 
-/** A photo from the phone, as a small square JPEG data URL: the middle of it, 192 px across. */
-export async function makeAvatar(file: Blob): Promise<string> {
+/** Where the circle sits on the photo: zoom (1 = the whole short side) and how far it's been
+    dragged, as a share of the circle's width (0, 0 = the middle). */
+export interface Crop { zoom: number; x: number; y: number }
+
+/** A photo from the phone, as a small square JPEG data URL, 192 px across: the part inside the
+    circle (by default the middle). */
+export async function makeAvatar(file: Blob, crop: Crop = { zoom: 1, x: 0, y: 0 }): Promise<string> {
   const img = await createImageBitmap(file);
-  const side = Math.min(img.width, img.height), size = 192;
+  const side = Math.min(img.width, img.height) / crop.zoom, size = 192;
+  const sx = Math.min(img.width - side, Math.max(0, (img.width - side) / 2 - crop.x * side));
+  const sy = Math.min(img.height - side, Math.max(0, (img.height - side) / 2 - crop.y * side));
   const c = document.createElement('canvas'); c.width = c.height = size;
-  c.getContext('2d')!.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, size, size);
+  c.getContext('2d')!.drawImage(img, sx, sy, side, side, 0, 0, size, size);
   img.close?.();
   for (const q of [0.82, 0.7, 0.55]) {
     const url = c.toDataURL('image/jpeg', q);

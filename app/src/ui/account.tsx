@@ -2,14 +2,14 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Trip } from '../model/types';
 import { getState, setMe, useStore } from '../model/store';
-import { changeEmail, createInvite, deleteAccount, verifyEmailChange, errText, joinTrip, leaveTrip, members, removeMember, setMyName, shareTrip, signOut, sendCode, useSync, verifyCode, type Member, isSignedIn } from '../sync/engine';
+import { cancelInvite, changeEmail, createInvite, listInvites, deleteAccount, verifyEmailChange, errText, joinTrip, leaveTrip, members, removeMember, setMyName, shareTrip, signOut, sendCode, useSync, verifyCode, type Member, isSignedIn } from '../sync/engine';
 import { Check, DeleteButton, Sheet, Text } from './form';
 import { shareBase } from '../native';
 import { ROLES } from '../model/rules';
-import { RoleControl, RuleSetting } from './requests';
+import { RoleControl, RuleSetting, useAccess } from './requests';
 import { ThemeSwitch } from './theme';
 import { canTest, isTestMode, setTestMode } from '../sync/planner';
-import { Avatar, makeAvatar, myAvatar, saveMyAvatar, useMyAvatar } from './avatar';
+import { Avatar, makeAvatar, myAvatar, saveMyAvatar, useMyAvatar, type Crop } from './avatar';
 import { JAPAN } from '../edition';
 import { savedCreds } from '../sheet/live';
 
@@ -173,9 +173,11 @@ export function Sharing({ trip, onLeft }: { trip: Trip; onLeft: () => void }) {
           <p className="code" aria-label="Invite code">{code.slice(0, 4)} {code.slice(4)}</p>
           <div className="chips" style={{ justifyContent: 'center' }}>
             <button type="button" className="chipbtn go" onClick={send}>{typeof navigator.share === 'function' ? 'Send…' : 'Copy invite'}</button>
+            <button type="button" className="chipbtn" onClick={async () => { try { await cancelInvite(code); setCode(''); } catch (e) { setMsg(errText(e)); } }}>Cancel this code</button>
           </div>
         </div>
       )}
+      {isShared && sync.session && <OpenInvites tripId={trip.id} fresh={code} />}
       {msg && <p className={'geomsg' + (msg === 'Copied.' ? '' : ' bad')} role="alert">{msg}</p>}
       {isShared && sync.session && (
         <div style={{ marginTop: 16 }}>
@@ -202,6 +204,27 @@ export function SyncLine({ trip }: { trip: Trip }) {
   if (!shared[trip.id]) return null;
   const st = !sync.session ? 'signedout' : sync.trips[trip.id] || (shared[trip.id].dirty ? 'waiting' : 'saved');
   return <p className={'syncline ' + st}>{st === 'signedout' ? 'Shared · signed out, so changes stay on this phone until you sign in.' : LINE[st]}</p>;
+}
+
+/** Codes still open, for the owner and organizers: cancel one and a forwarded link stops working. */
+function OpenInvites({ tripId, fresh }: { tripId: string; fresh: string }) {
+  const { decides } = useAccess(tripId);
+  const [list, setList] = useState<{ code: string; expires_at: string }[]>([]);
+  const [msg, setMsg] = useState('');
+  useEffect(() => { if (decides) listInvites(tripId).then(setList).catch(() => {}); }, [tripId, decides, fresh]);
+  const open = list.filter(i => i.code !== fresh);
+  if (!decides || !open.length) return null;
+  return (
+    <div style={{ marginTop: 14 }}>
+      <span className="flabel">Other invite codes still open</span>
+      <ul className="sheet">{open.map(i => (
+        <li key={i.code}><div className="item-h"><span className="item-n mono">{i.code.slice(0, 4)} {i.code.slice(4)}</span><span className="grow" />
+          <button className="linkbtn" onClick={async () => { try { await cancelInvite(i.code); setList(list.filter(x => x.code !== i.code)); } catch (e) { setMsg(errText(e)); } }}>Cancel</button></div>
+          <div className="meta"><span>Works until {new Date(i.expires_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span></div></li>
+      ))}</ul>
+      {msg && <p className="geomsg bad" role="alert">{msg}</p>}
+    </div>
+  );
 }
 
 /* ---------- account & settings ---------- */
@@ -288,12 +311,12 @@ function PhotoPicker({ name }: { name: string }) {
   const [msg, setMsg] = useState('');
   const [later, setLater] = useState(false);
   const signedIn = !!useSync().session;
-  const pick = async (f: File | undefined) => {
-    if (!f) return;
-    setMsg(''); setLater(false);
-    try { const shared = await saveMyAvatar(await makeAvatar(f)); setLater(signedIn && !shared); }
+  const [file, setFile] = useState<File | null>(null);
+  const pick = (f: File | undefined) => { if (f) { setMsg(''); setLater(false); setFile(f); } if (input.current) input.current.value = ''; };
+  const use = async (crop: Crop) => {
+    const f = file; setFile(null); if (!f) return;
+    try { const shared = await saveMyAvatar(await makeAvatar(f, crop)); setLater(signedIn && !shared); }
     catch (e) { setMsg(e instanceof Error ? e.message : errText(e)); }
-    if (input.current) input.current.value = '';
   };
   return (
     <div className="photopick">
@@ -302,10 +325,45 @@ function PhotoPicker({ name }: { name: string }) {
         <button type="button" className="chipbtn" onClick={() => input.current?.click()}>{pic ? 'Change photo' : 'Add a photo'}</button>
         {pic && <button type="button" className="chipbtn" onClick={() => { setLater(false); void saveMyAvatar(null); }}>Remove</button>}
       </div>
-      <input ref={input} type="file" accept="image/*" hidden aria-label="Profile photo" onChange={e => void pick(e.target.files?.[0])} />
+      <input ref={input} type="file" accept="image/*" hidden aria-label="Profile photo" onChange={e => pick(e.target.files?.[0])} />
+      {file && <CropSheet file={file} onUse={c => void use(c)} close={() => setFile(null)} />}
       {msg && <p className="geomsg bad" role="alert">{msg}</p>}
       {later && <p className="fhint">Saved on this phone. Your group will see it once it can reach your trips.</p>}
     </div>
+  );
+}
+
+/** Placing a photo in the circle: drag to move, pinch or the slider to zoom. */
+function CropSheet({ file, onUse, close }: { file: File; onUse: (c: Crop) => void; close: () => void }) {
+  const V = 240;
+  const [url] = useState(() => URL.createObjectURL(file));
+  useEffect(() => () => URL.revokeObjectURL(url), [url]);
+  const [dim, setDim] = useState<{ w: number; h: number } | null>(null);
+  const [c, setC] = useState<Crop>({ zoom: 1, x: 0, y: 0 });
+  const drag = useRef<{ x: number; y: number; c: Crop; d?: number } | null>(null);
+  const clamp = (v: Crop, d = dim): Crop => {
+    if (!d) return v;
+    const z = Math.min(4, Math.max(1, v.zoom)), side = Math.min(d.w, d.h);
+    /* how far the circle may move before it leaves the photo, as a share of the circle */
+    const mx = ((d.w / side) * z - 1) / 2, my = ((d.h / side) * z - 1) / 2;
+    return { zoom: z, x: Math.min(mx, Math.max(-mx, v.x)), y: Math.min(my, Math.max(-my, v.y)) };
+  };
+  const scale = dim ? (V / Math.min(dim.w, dim.h)) * c.zoom : 1;
+  return (
+    <Sheet title="Your photo" onCancel={close} onSave={() => onUse(c)} saveLabel="Use photo">
+      <p className="fhint" style={{ marginTop: 8 }}>Drag to move it, pinch or use the slider to zoom.</p>
+      <div className="crop" style={{ width: V, height: V }}
+        onPointerDown={e => { (e.target as HTMLElement).setPointerCapture?.(e.pointerId); drag.current = { x: e.clientX, y: e.clientY, c }; }}
+        onPointerMove={e => { const s = drag.current; if (!s || s.d) return; setC(clamp({ ...s.c, x: s.c.x + (e.clientX - s.x) / V, y: s.c.y + (e.clientY - s.y) / V })); }}
+        onPointerUp={() => { drag.current = null; }}
+        onTouchStart={e => { if (e.touches.length === 2) { const [a, b] = [e.touches[0], e.touches[1]]; drag.current = { x: 0, y: 0, c, d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) }; } }}
+        onTouchMove={e => { const s = drag.current; if (s?.d && e.touches.length === 2) { const [a, b] = [e.touches[0], e.touches[1]]; setC(clamp({ ...s.c, zoom: s.c.zoom * Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) / s.d })); } }}
+        onTouchEnd={() => { if (drag.current?.d) drag.current = null; }}>
+        <img src={url} alt="" draggable={false} onLoad={e => setDim({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
+          style={dim ? { width: dim.w * scale, height: dim.h * scale, transform: `translate(calc(-50% + ${c.x * V}px), calc(-50% + ${c.y * V}px))` } : { opacity: 0 }} />
+      </div>
+      <input className="cropzoom" type="range" min={1} max={4} step={0.01} value={c.zoom} aria-label="Zoom" onChange={e => setC(clamp({ ...c, zoom: +e.target.value }))} />
+    </Sheet>
   );
 }
 

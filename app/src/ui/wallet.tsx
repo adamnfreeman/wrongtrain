@@ -3,17 +3,17 @@
    Documents for the group are part of the trip; private ones (IDs, passports) stay on this phone
    (model/privateDocs.ts). A document can be for a plan item or a travel leg, and then shows there
    on the timeline (DocLinks). Files are kept on the phone for use with no signal (sync/files.ts). */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Doc, DocKind, Expense, FileRef, Trip } from '../model/types';
 import { getState, patchTrip, pref, setPref, useStore } from '../model/store';
 import { deletePrivateDoc, privateDocs, savePrivateDoc, usePrivateDocs } from '../model/privateDocs';
 import { CURRENCIES, balances, fmtMoney, settleUp, shares, tripCurrency, venmoLink } from '../model/money';
 import { newId } from '../model/trip';
 import { fmtHM, shortDate, todayIn } from '../model/time';
-import { drop, extOf, keep, openFile, readLocal, shrink } from '../sync/files';
-import { PictureView } from './picture';
+import { drop, extOf, keep, openFile, readLocal, shrink, useFileUrl } from '../sync/files';
 import { rate } from '../sync/rates';
-import { Empty, Ext, Fold, Pill, SecH } from './bits';
+import { PictureView } from './picture';
+import { Empty, Ext, Pill, SecH } from './bits';
 import { Check, Choice, DeleteButton, Sheet, Text } from './form';
 import { useApp } from './ctx';
 
@@ -92,19 +92,24 @@ function DocItem({ d }: { d: Doc }) {
   const [msg, setMsg] = useState('');
   const [pic, setPic] = useState(false);
   const f = forLabel(ix.trip, d.for);
+  /* a file that's a picture or PDF opens in the app, with a thumbnail for pictures */
+  const kind = d.file ? (d.file.type.startsWith('image/') ? 'image' : d.file.type === 'application/pdf' ? 'pdf' : '') : '';
+  const { url } = useFileUrl(kind ? d.file!.path : undefined);
+  const thumb = d.picture || (kind === 'image' ? url : '');
+  const share = d.file ? () => openFile(d.file!.path, d.file!.name).catch(e => setMsg((e as Error).message)) : undefined;
   return (
     <li>
-      <div className="item-h">{d.picture && <button className="docthumb" onClick={() => setPic(true)} aria-label={`Open ${d.title}`}><img src={d.picture} alt="" /></button>}<span className="item-n">{d.title}</span>{d.private ? <Pill>Private</Pill> : null}</div>
+      <div className="item-h">{(thumb || kind === 'pdf') && <button className="docthumb" onClick={() => setPic(true)} aria-label={`Open ${d.title}`}>{thumb ? <img src={thumb} alt="" /> : <span className="docpdf">PDF</span>}</button>}<span className="item-n">{d.title}</span>{d.private ? <Pill>Private</Pill> : null}</div>
       {f && <div className="when">For {f}</div>}
       {d.notes && <p className="item-d">{d.notes}</p>}
       <div className="meta">
-        {d.file && <button className="linkbtn" onClick={() => openFile(d.file!.path, d.file!.name).catch(e => setMsg((e as Error).message))}>Open</button>}
-        {d.picture && <button className="linkbtn" onClick={() => setPic(true)}>Open</button>}
+        {(d.picture || (kind && url)) && <button className="chipbtn go openbtn" onClick={() => setPic(true)}>Open</button>}
+        {d.file && !kind && <button className="chipbtn go openbtn" onClick={share}>Open</button>}
         {d.link && <Ext href={d.link}>Open link</Ext>}
         <button className="linkbtn" onClick={() => edit({ kind: 'doc', id: d.id })}>Edit</button>
       </div>
       {msg && <p className="geomsg bad">{msg}</p>}
-      {pic && d.picture && <PictureView src={d.picture} title={d.title} close={() => setPic(false)} />}
+      {pic && (d.picture || url) && <PictureView src={d.picture || url} title={d.title} pdf={kind === 'pdf'} onShare={share} close={() => setPic(false)} />}
     </li>
   );
 }
@@ -234,6 +239,7 @@ function Money() {
   };
   return (
     <>
+      <Converter trip={t} home={cur} />
       <section className="blk">
         <SecH title="Settle up" />
         {pay.length ? (
@@ -249,6 +255,16 @@ function Money() {
             ))}
           </ul>
         ) : <p className="note">{expenses.length ? 'Everyone is square.' : 'Nothing to settle yet.'}</p>}
+        {/* payments already made stay here, stamped, so it's clear they were paid and not forgotten */}
+        {(t.settlements || []).length > 0 && (
+          <ul className="sheet paidlist">{t.settlements!.slice().reverse().map(s => (
+            <li key={s.id} className="paid">
+              <div className="item-h"><span className="item-n">{s.from === me ? 'You' : s.from} → {s.to === me ? 'you' : s.to}</span><span className="grow" /><b>{fmtMoney(Math.round(s.amount * 100), cur)}</b></div>
+              <div className="meta"><span>Paid {shortDate(s.at.slice(0, 10))}{s.via === 'venmo' ? ' with Venmo' : s.via === 'cash' ? ' in cash' : ''}</span></div>
+              <span className="stamp" aria-label="Paid">PAID</span>
+            </li>
+          ))}</ul>
+        )}
         {me && (
           <div className="sbar" style={{ marginTop: 10 }}>
             <div className="sin"><input className="search" style={{ paddingRight: 12 }} aria-label="Your Venmo username" placeholder="Your Venmo username, so people can pay you"
@@ -263,15 +279,55 @@ function Money() {
         {expenses.length ? <ul className="sheet">{expenses.map(e => <ExpenseItem key={e.id} e={e} cur={cur} />)}</ul> : <Empty>Paid for the group? Add it here and the app works out who owes what.</Empty>}
         <button className="linkbtn" onClick={() => edit({ kind: 'expense' })}>+ Add an expense</button>
       </section>
-      {(t.settlements || []).length > 0 && (
-        <Fold title="Payments made" count={t.settlements!.length}>
-          <ul className="sheet">{t.settlements!.slice().reverse().map(s => (
-            <li key={s.id}><div className="item-h"><span className="item-n">{s.from} → {s.to}</span><span className="grow" /><span>{fmtMoney(Math.round(s.amount * 100), cur)}</span></div>
-              <div className="meta"><span>{shortDate(s.at.slice(0, 10))}{s.via === 'venmo' ? ' · Venmo' : ''}</span></div></li>
-          ))}</ul>
-        </Fold>
-      )}
+
     </>
+  );
+}
+
+/* ---------- the currency converter ---------- */
+
+/** The currency where you're going, from the destination's country. */
+const COUNTRY_CURRENCY: Record<string, string> = {
+  JP: 'JPY', US: 'USD', GB: 'GBP', CH: 'CHF', MX: 'MXN', CA: 'CAD', AU: 'AUD', NZ: 'NZD', KR: 'KRW', TH: 'THB', SG: 'SGD',
+  HK: 'HKD', CN: 'CNY', IS: 'ISK', CZ: 'CZK', PL: 'PLN', HU: 'HUF', TR: 'TRY', IN: 'INR', ID: 'IDR', VN: 'VND', PH: 'PHP',
+  BR: 'BRL', ZA: 'ZAR', AE: 'AED', MA: 'MAD', SE: 'SEK', NO: 'NOK', DK: 'DKK',
+  ...Object.fromEntries(['FR', 'DE', 'IT', 'ES', 'PT', 'NL', 'BE', 'AT', 'IE', 'FI', 'GR', 'LU', 'SK', 'SI', 'EE', 'LV', 'LT', 'HR', 'MT', 'CY'].map(c => [c, 'EUR'])),
+};
+const nice = (n: number) => (n >= 100 ? Math.round(n / 50) * 50 || 1 : n >= 10 ? 10 : 1);
+
+/** Two amounts, both ways, big enough to read at a till; type either to convert. The rate is kept
+    on the phone, so it works with no signal once it has been fetched. */
+function Converter({ trip, home }: { trip: Trip; home: string }) {
+  const local = trip.destinations.map(d => COUNTRY_CURRENCY[d.country]).find(c => c && c !== home) || '';
+  const key = `rate-${local}-${home}`;
+  const [kept, setKept] = useState(() => pref<{ r: number; at: string } | null>(key, null));
+  const [a, setA] = useState(''), [b, setB] = useState('');
+  useEffect(() => {
+    if (!local) return;
+    let live = true;
+    rate(local, home).then(r => { if (live && r) { const v = { r, at: new Date().toISOString() }; setKept(v); setPref(key, v); } }).catch(() => {});
+    return () => { live = false; };
+  }, [local, home, key]);
+  if (!local) return null;
+  const r = kept?.r;
+  const show = (n: number, c: string) => fmtMoney(Math.round(n * 100), c);
+  const unitL = r ? nice(1 / r) : 0;
+  return (
+    <section className="blk conv" id="converter">
+      <SecH title="Currency"><span className="kicker">{local} ↔ {home}</span></SecH>
+      {r ? <>
+        <p className="conv-rate"><b>{show(1000, local)}</b> = <b>{show(1000 * r, home)}</b></p>
+        <p className="conv-rate"><b>{show(10, home)}</b> = <b>{show(10 / r, local)}</b></p>
+        <div className="conv-in">
+          <label><span>{local}</span><input className="search" inputMode="decimal" placeholder={String(unitL * 10 || 1000)} value={a}
+            onChange={e => { setA(e.target.value); const n = parseFloat(e.target.value.replace(/,/g, '')); setB(isFinite(n) ? (n * r).toFixed(2) : ''); }} /></label>
+          <span aria-hidden="true">=</span>
+          <label><span>{home}</span><input className="search" inputMode="decimal" placeholder="10" value={b}
+            onChange={e => { setB(e.target.value); const n = parseFloat(e.target.value.replace(/,/g, '')); setA(isFinite(n) ? (n / r).toFixed(local === 'JPY' || local === 'KRW' ? 0 : 2) : ''); }} /></label>
+        </div>
+        <p className="fhint">Today's rate from the European Central Bank{kept?.at ? `, as of ${shortDate(kept.at.slice(0, 10))}` : ''}. Card and cash rates are a little worse.</p>
+      </> : <p className="fhint">The rate loads when there's signal, then works offline.</p>}
+    </section>
   );
 }
 

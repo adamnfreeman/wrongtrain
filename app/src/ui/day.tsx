@@ -8,6 +8,7 @@ import { cityOf, codeOf, lineOf, mapsLink, stayLine, destOf } from '../model/tri
 import { dayOfMonth, fmtHM, fmtT, longDate } from '../model/time';
 import { anchorsFor } from '../model/next';
 import { toggleTodo } from '../model/store';
+import { TODO_TAGS } from '../model/todos';
 import { Ext, Pill, Rich, SecH, Txt, line } from './bits';
 import { useApp } from './ctx';
 
@@ -234,13 +235,17 @@ export function VegToggle() {
 /* ---------- to-dos ---------- */
 
 export function TodoItem({ t, brief }: { t: Todo; brief?: boolean }) {
-  const { ix, edit } = useApp();
+  const { ix, edit, me } = useApp();
+  /* a group check is ticked per person: your box shows your tick, the line shows everyone's */
+  const mineTicked = t.everyone ? (t.checks || []).some(c => c.trim().toLowerCase() === (me || 'Me').trim().toLowerCase()) : t.done;
+  const tag = TODO_TAGS.find(x => x.value === t.tag);
   return (
     <li className={'todo' + (t.done ? ' done' : '')}>
-      <button className="box" role="checkbox" aria-checked={t.done} aria-label={(t.done ? 'Untick: ' : 'Tick off: ') + t.text}
-        onClick={() => toggleTodo(ix.trip.id, t.id)}>{t.done ? '✓' : ''}</button>
+      <button className="box" role="checkbox" aria-checked={mineTicked} aria-label={(mineTicked ? 'Untick: ' : 'Tick off: ') + t.text}
+        onClick={() => toggleTodo(ix.trip.id, t.id)}>{mineTicked ? '✓' : ''}</button>
       <div>
-        <div className="item-h"><span className="item-n">{t.text}</span></div>
+        <div className="item-h"><span className="item-n">{t.text}</span>{tag && <span className={'ttag t-' + tag.value}>{tag.label}</span>}{t.mine && <Pill>Just you</Pill>}</div>
+        {t.everyone && <div className="checks">Everyone: {(t.checks || []).length} of {ix.trip.travelers.length || '?'}{(t.checks || []).length ? ` · ${t.checks!.join(', ')}` : ''}</div>}
         {t.when && <div className="when">{t.when}</div>}
         {!brief && <Txt text={t.details} className="item-d" />}
         {!brief && (

@@ -56,10 +56,10 @@ create function pg_temp.d() returns jsonb language sql as $$ select data from tr
 create function pg_temp.v() returns bigint language sql as $$ select version from trips where id = 't1' $$;
 create function pg_temp.save(j jsonb) returns bigint language sql as $$ select public.save_trip('t1', j, pg_temp.v()) $$;
 select pg_temp.ok(pg_temp.fails($$select pg_temp.save(pg_temp.d() || '{"name":"Ben''s trip"}')$$), 'Ben cannot rename the trip directly');
-select pg_temp.ok(pg_temp.save(pg_temp.d() || '{"notes":[{"id":"n1","text":"Sento?"}]}') = 3, 'Ben can add a note (now 3)');
-select pg_temp.ok(pg_temp.save(pg_temp.d() || '{"places":[{"id":"p1","name":"Ramen","wishlist":true}],"todos":[{"id":"x1","done":false}],"todoGroups":["Packing"]}') = 4, '... and an idea and a to-do (now 4)');
-select pg_temp.ok(pg_temp.save(pg_temp.d() || '{"todos":[{"id":"x1","done":true}],"updatedAt":"later"}') = 5, '... and tick it off (now 5)');
-select pg_temp.ok(pg_temp.save(pg_temp.d() || '{"places":[{"id":"p1","name":"Ramen, cash only","wishlist":true}]}') = 6, '... and fix a place''s details (now 6)');
+select pg_temp.ok(pg_temp.save(pg_temp.d() || '{"notes":[{"id":"n1","text":"Sento?"}]}') = 4, 'Ben can add a note (now 4; joining put him on Who''s going, 3)');
+select pg_temp.ok(pg_temp.save(pg_temp.d() || '{"places":[{"id":"p1","name":"Ramen","wishlist":true}],"todos":[{"id":"x1","done":false}],"todoGroups":["Packing"]}') = 5, '... and an idea and a to-do (now 5)');
+select pg_temp.ok(pg_temp.save(pg_temp.d() || '{"todos":[{"id":"x1","done":true}],"updatedAt":"later"}') = 6, '... and tick it off (now 6)');
+select pg_temp.ok(pg_temp.save(pg_temp.d() || '{"places":[{"id":"p1","name":"Ramen, cash only","wishlist":true}]}') = 7, '... and fix a place''s details (now 7)');
 select pg_temp.ok(pg_temp.fails($$select pg_temp.save(pg_temp.d() || '{"places":[{"id":"p1","name":"Ramen","dayIds":["d1"]}]}')$$), 'but putting a place on a day needs approval');
 select pg_temp.ok(pg_temp.fails($$select pg_temp.save(pg_temp.d() || '{"places":[{"id":"p1"},{"id":"p2","dayIds":["d1"]}]}')$$), '... so does a new place already on a day');
 select pg_temp.ok(pg_temp.fails($$select pg_temp.save(pg_temp.d() || '{"notes":[]}')$$), '... and removing a note');
@@ -82,7 +82,7 @@ select pg_temp.ok((select count(*) from trip_requests) = 0, 'someone not on the 
 select pg_temp.ok(pg_temp.fails($$select public.request_change('t1', '{}', '{}', '{}')$$), '... or make one');
 
 select pg_temp.act('ana');
-select pg_temp.ok(public.decide_request((select id from req), true, null, pg_temp.d() || '{"name":"Roma"}', pg_temp.v()) = 7, 'Ana approves it, saving the trip (now 7)');
+select pg_temp.ok(public.decide_request((select id from req), true, null, pg_temp.d() || '{"name":"Roma"}', pg_temp.v()) = 8, 'Ana approves it, saving the trip (now 8)');
 select pg_temp.ok(pg_temp.d() ->> 'name' = 'Roma' and (select status from trip_requests where id = (select id from req)) = 'approved', '... renamed, and marked approved');
 select pg_temp.ok(pg_temp.fails($$select public.decide_request((select id from req), false, null, null, null)$$), 'a decided request cannot be decided again');
 
@@ -221,12 +221,12 @@ grant select on code9 to authenticated;
 select pg_temp.act('cat');
 select public.join_trip((select c from code9), 'Cat');
 select pg_temp.ok((select role from trip_members where trip_id = 't9' and user_id = auth.uid()) = 'viewer', 'on a trip set to "look", Cat joins able to look and leave notes');
-select pg_temp.ok(pg_temp.fails($$select public.save_trip('t9', (select data from trips where id = 't9') || '{"places":[{"id":"p1"}]}', 1)$$), '... and cannot add a place');
+select pg_temp.ok(pg_temp.fails($$select public.save_trip('t9', (select data from trips where id = 't9') || '{"places":[{"id":"p1"}]}', (select version from trips where id = 't9'))$$), '... and cannot add a place');
 select pg_temp.act('ana');
 select public.set_member_role('t9', '00000000-0000-0000-0000-00000000000c', 'contributor');
 select pg_temp.act('cat');
-select pg_temp.ok(public.save_trip('t9', (select data from trips where id = 't9') || '{"places":[{"id":"p1"}]}', 1) = 2, 'Ana makes her a contributor: now she adds a place');
-select pg_temp.ok(pg_temp.fails($$select public.save_trip('t9', '{"name":"Porto"}', 2)$$), '... but renaming the trip is a request');
+select pg_temp.ok(public.save_trip('t9', (select data from trips where id = 't9') || '{"places":[{"id":"p1"}]}', (select version from trips where id = 't9')) > 0, 'Ana makes her a contributor: now she adds a place');
+select pg_temp.ok(pg_temp.fails($$select public.save_trip('t9', '{"name":"Porto"}', (select version from trips where id = 't9'))$$), '... but renaming the trip is a request');
 
 -- profile pictures: your own, as a small JPEG, seen only by people on your trips
 select pg_temp.act('cat');
@@ -256,3 +256,29 @@ select pg_temp.ok((select until from trip_locations where trip_id = 't9' and use
 select public.stop_sharing_location('t9');
 select pg_temp.act('ana');
 select pg_temp.ok((select count(*) from trip_locations where trip_id = 't9') = 0, 'when Cat stops, it is gone');
+
+-- deleting a trip for everyone: only its owner can
+select pg_temp.act('cat');
+select pg_temp.ok(pg_temp.fails($$select public.delete_trip('t9')$$), 'someone on the trip who is not the owner cannot delete it');
+select pg_temp.act('ana');
+select public.delete_trip('t9');
+select pg_temp.ok((select count(*) from trips where id = 't9') = 0 and (select count(*) from trip_members where trip_id = 't9') = 0, 'the owner deletes it for everyone, people and all');
+
+-- invites: listed and cancelled by the owner; joining puts you on "Who's going"
+reset role;
+insert into auth.users values ('00000000-0000-0000-0000-00000000000b', 'ben@example.com') on conflict do nothing;
+select pg_temp.act('ana');
+select public.share_trip('t10', '{"name":"Porto","travelers":["Ana"]}', 'Ana');
+create temp table code10 as select public.create_invite('t10') as c;
+create temp table code11 as select public.create_invite('t10') as c;
+grant select on code10, code11 to authenticated;
+select pg_temp.ok((select count(*) from public.list_invites('t10')) = 2, 'the owner sees the open invite codes');
+select public.cancel_invite((select c from code11));
+select pg_temp.ok((select count(*) from public.list_invites('t10')) = 1, '... and cancels one');
+select pg_temp.act('ben');
+select pg_temp.ok(pg_temp.fails($$select public.join_trip((select c from code11), 'Ben')$$), 'a cancelled code no longer lets anyone in');
+select pg_temp.ok(pg_temp.fails($$select * from public.list_invites('t10')$$), 'someone not on the trip cannot list its codes');
+select public.join_trip((select c from code10), 'Ben');
+select pg_temp.ok((select data -> 'travelers' from trips where id = 't10') = '["Ana", "Ben"]'::jsonb, 'joining puts Ben on Who''s going');
+select public.join_trip((select c from code10), 'Ben');
+select pg_temp.ok((select jsonb_array_length(data -> 'travelers') from trips where id = 't10') = 2, '... once');

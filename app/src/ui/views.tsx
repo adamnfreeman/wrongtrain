@@ -6,6 +6,7 @@ import { longDate, shortDate, stamp } from '../model/time';
 import { onToday } from '../model/next';
 import { addNote, toggleNote, getState } from '../model/store';
 import { JAPAN } from '../edition';
+import { visibleTodos } from '../model/todos';
 import { Avatar, useAvatarFor } from './avatar';
 import { Requests } from './requests';
 import { useSync } from '../sync/engine';
@@ -20,7 +21,7 @@ import { useApp } from './ctx';
 /* ---------- Today ---------- */
 
 export function Today() {
-  const { ix, now, go } = useApp();
+  const { ix, now, go, me } = useApp();
   const days = ix.trip.days;
   if (!days.length) return <Empty>This trip has no days yet.</Empty>;
   if (now.phase === 'during' && now.cur) {
@@ -35,7 +36,7 @@ export function Today() {
   }
   const rs = runs(ix);
   const big = now.phase === 'after' ? 'Trip complete' : now.togo > 1 ? `${now.togo} days to go` : now.togo === 1 ? 'Tomorrow' : 'Time to go';
-  const open = ix.trip.todos.filter(t => t.group === ix.trip.todoGroups[0] && !t.done);
+  const open = visibleTodos(ix.trip.todos, me).filter(t => t.group === ix.trip.todoGroups[0] && !t.done);
   return (
     <>
       <header className="board">
@@ -183,7 +184,7 @@ function IdeaItem({ p, day }: { p: Place; day?: string }) {
 /* ---------- To do ---------- */
 
 export function Prep() {
-  const { ix, edit } = useApp();
+  const { ix, edit, me } = useApp();
   const t = ix.trip;
   return (
     <>
@@ -192,7 +193,7 @@ export function Prep() {
       <Notes />
       <p className="lede" style={{ marginTop: 22 }}>Tap a box to tick it off for everyone on the trip.</p>
       {t.todoGroups.map(g => {
-        const items = t.todos.filter(x => x.group === g), open = items.filter(x => !x.done), done = items.filter(x => x.done);
+        const items = visibleTodos(t.todos, me).filter(x => x.group === g), open = items.filter(x => !x.done), done = items.filter(x => x.done);
         return (
           <section key={g} className="blk">
             <SecH title={g}><span className="kicker">{open.length} open</span></SecH>

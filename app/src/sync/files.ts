@@ -127,6 +127,19 @@ export async function fetchMissing(paths: string[]) {
 }
 
 /** Removes a file from the phone and the trip's storage. */
+/** Saves a copy of a trip as a file (Files, AirDrop, email...): "Open a trip file" reads it back. */
+export async function saveTripCopy(trip: { id: string; name: string }) {
+  const name = `${trip.name.replace(/[^\w\s-]/g, '').trim() || 'Trip'} (WrongTrain).json`;
+  const blob = new Blob([JSON.stringify({ wrongtrain: 1, trip }, null, 1)], { type: 'application/json' });
+  if (native) {
+    const path = `private/export-${trip.id}.json`;
+    await saveLocal(path, blob);
+    return openFile(path, name);
+  }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
 export async function drop(path: string) {
   await removeLocal(path);
   setPending(pending().filter(p => p !== path));

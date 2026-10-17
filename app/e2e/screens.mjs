@@ -98,7 +98,7 @@ for (const scheme of ['light', 'dark']) {
     check(sheetAt === from + 3, `the sheet follows the bar as it is dragged (page ${sheetAt}, from ${from})`);
     await page.evaluate(() => { const row = document.querySelector('.tabs-in'); row.dispatchEvent(new TouchEvent('touchend', { bubbles: true, touches: [], changedTouches: [new Touch({ identifier: 2, target: row, clientX: 20, clientY: 800 })] })); });
     await wait(700);
-    check(await page.locator('.tab[aria-current="page"]:has-text("Wallet")').count() === 1, '... and where it stops, three along, Wallet is open');
+    check(await page.locator('.tab[aria-current="page"]:has-text("Places")').count() === 1, '... and where it stops, three along, Places is open');
     await open('Places');
     await page.click('#view >> text=Veg-friendly only');
     const nonVeg = await page.locator('#results .pill:has-text("Not veg")').count();

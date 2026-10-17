@@ -161,6 +161,14 @@ export interface Todo {
   done: boolean;
   doneBy?: string;
   link?: string;
+  /** What kind of thing it is, shown as a coloured tag (model/todos.ts). */
+  tag?: 'book' | 'buy' | 'call' | 'email' | 'fill';
+  /** A personal to-do: only this person (by name) sees it. */
+  mine?: string;
+  /** A group check: everyone ticks their own, and it's done when all of Who's going have. */
+  everyone?: boolean;
+  /** Who has ticked a group check, by name. */
+  checks?: string[];
 }
 
 export interface Note {

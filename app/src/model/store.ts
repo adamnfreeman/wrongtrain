@@ -11,6 +11,7 @@ import { newId } from './trip';
 import { freshenSample, makeSample } from './sample';
 import { backupSoon } from '../native';
 import { updateFromFile } from './tripFile';
+import { tick } from './todos';
 
 /** What this phone knows about a shared trip's server copy. */
 export interface SyncInfo {
@@ -153,10 +154,7 @@ export function replaceTrip(t: Trip) {
 export function toggleTodo(tripId: string, todoId: string) {
   const was = state.trips.find(t => t.id === tripId)?.todos.find(x => x.id === todoId);
   if (was) todoHook?.(tripId, todoId, !was.done);
-  patchTrip(tripId, t => ({
-    ...t,
-    todos: t.todos.map(x => (x.id === todoId ? { ...x, done: !x.done, doneBy: !x.done ? state.me || undefined : undefined } : x)),
-  }));
+  patchTrip(tripId, t => tick(t, todoId, state.me));
 }
 
 /** Adds a group note and returns its id, or '' when there was nothing to add. */
