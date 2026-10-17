@@ -89,7 +89,8 @@ await page.screenshot({ path: `${OUT}/w-2-money.png` });
 page.once('dialog', d => d.accept());
 await page.locator('.blk:has-text("Settle up") li:has-text("You →") >> text=Mark as paid').click();
 await wait(200);
-check((await stored()).settlements?.length === 1 && await page.locator('.blk:has-text("Settle up") li:has-text("You →")').count() === 0, 'marking it paid settles Ben up');
+check((await stored()).settlements?.length === 1 && await page.locator('.blk:has-text("Settle up") li:not(.paid):has-text("You →")').count() === 0, 'marking it paid settles Ben up');
+check(await page.locator('.paidlist li.paid:has-text("You →") .stamp').count() === 1, '... and the payment stays, stamped PAID');
 
 /* photos on a shared trip, against a stand-in server */
 {

@@ -93,6 +93,17 @@ on a Mac.
   settling up, and a Right now train that always leaves about 35 minutes after you look
   (`freshenSample`, leg `l-now`; Right now doesn't open by itself in the sample). An older saved
   sample without these is replaced when the app loads.
+- Added Oct 17 (overnight): Wallet → Money has a currency converter (rates both ways, typed
+  either way, kept for offline) and payments made stay in Settle up stamped PAID; Wallet files that
+  are pictures or PDFs open in the app (`PictureView`) with thumbnails; the tab order is Today, Days,
+  Map, Places, Transit, Wallet, Phrases, To do, Trip; Trip settings has a Last day and, for the
+  owner of a shared trip, "Delete this trip for everyone" (`delete_trip`); invite codes can be
+  cancelled (`list_invites`, `cancel_invite`) and people who join are added to Who's going
+  (`join_trip`); to-dos can be personal, a group check (each person ticks their own) and tagged
+  (book, buy, call, email, fill out; `src/model/todos.ts`); the planner takes a budget range and
+  its cards are calmer and swipeable; "What they speak there" on Trip and Phrases
+  (`src/model/languages.ts`); a profile photo is moved and zoomed in a circle before it's used;
+  Trip shows "Saved on this phone" with a save-a-copy-as-a-file button (`saveTripCopy`).
 - Trip files: "Open a trip file" on the welcome screen reads a trip saved as JSON
   (`src/model/tripFile.ts`); opening a newer file of the same trip updates it and keeps ticks,
   notes and the wallet. `node legacy/to-app.mjs` turns the Japan 2026 sheet into one (it asks
@@ -146,7 +157,7 @@ Touch nothing else on `main`. GitHub Pages updates within a couple of minutes.
 ## Waiting to be switched on (Adam, when ready; not now)
 
 Built and tested, but they need the website-account steps before they work on shared trips:
-- Run the updated `schema.sql` in Supabase (levels of say, profile pictures, where everyone is; also item 1 below).
+- Run the updated `schema.sql` in Supabase (levels of say, profile pictures, where everyone is, invites, deleting shared trips, joiners on Who's going; also item 1 below).
 - Deploy the ideas box (`file-note`; item 2 below).
 - Change email (Account & settings → Change email, `ChangeEmailSheet` in `src/ui/account.tsx`):
   in Supabase, Authentication → Emails → "Change email address", make the message show the code
@@ -186,8 +197,7 @@ Next:
    adds you to a friend's item, and each night's stay can differ per pair; in-the-moment help
    (more moods done; "who's playing tonight" needs event listings); leave-now notifications and
    real transit directions; step-by-step station guidance; "get me home" options; affiliate links.
-9. **Wallet and Phrases extras** (asked for Oct 16): a currency calculator (type an amount in
-   either currency; rates already come from Frankfurter for Money); more phrase languages
+9. **Phrases extras** (asked for Oct 16; the currency converter is done): more phrase languages
    (packs in `src/phrases`); starring phrases so favourites sit at the top, and reordering them.
 10. **Look and feel fixes** (asked for Oct 16, for later): move "The whole route" to the Trip
     page (not Days); the Days slider still doesn't sit right at the top on the phone (check in
@@ -213,9 +223,6 @@ Next:
    tier with limits plus a per-trip pass (`trip_passes` exists), a subscription, or both, and
    affiliate income (VISION.md). Decide which features are paid. Also: how many AI trip plans
    come free (today the cap is 5 a month per person, in `claim_plan`); one free plan, then paid?
-20. **Cancel an invite** (asked for Oct 16): removing someone who has joined already works
-   (People and sharing, `removeMember`); also let the owner cancel an invite code nobody has
-   used yet, so a forwarded link stops working.
 21. **Nobody uses WrongTrain as free Claude on our key** (asked for Oct 16). Today: AI runs only in
    Edge Functions with fixed jobs (file a note, plan a trip, pick nearby places), each with a
    structured answer, and uses are capped (`ai_uses` per trip, `ai_plans` per person per 30
@@ -229,34 +236,15 @@ Next:
    location, instead of one long overwhelming list; for food, types of food (icons would do).
 24. **"Something nearby" moods**: "Coffee & cake" becomes just "Coffee"; an icon for each mood.
 25. **Photos as their own page**, with comments and hearts (builds on 17).
-26. **Tab order**: Wallet goes between Transit and Phrases.
-27. **Currency converter in Wallet → Money** (also in 9), showing the rate plainly both ways, e.g.
-   "¥1,000 = $6.70" and "$10 = ¥1,493", big enough to read at a till.
-28. **Trip settings: first and last day** shown and changeable there.
-29. **"Who's going" fills itself**: today it's names typed in Trip settings, used to split money,
-   and it doesn't grow when someone joins with a code. Add people who join automatically (their
-   name on the trip), keep it editable, and explain what it's for on the page.
-30. **Wallet files**: a photo saved as an ID opened the iOS share menu instead of showing the
-   picture. Show images (and PDFs) in the app; thumbnails for each item; a bigger Open button.
-   `openFile` in `src/sync/files.ts`, `src/ui/wallet.tsx`.
-31. **To-do kinds**: personal to-dos (just mine) and group checks (everyone ticks their own, and
-   you see who has: "Visit Japan Web", "get yen"), plus coloured tags for the kind of to-do:
-   book, buy, call, email, fill out.
 32. **Adding things should be the star** (Adam: a big feature is "add anything and it lands in the
    right place"). Today it's tucked into To do as Group notes. Give it its own page or a
    prominent way in from everywhere (see VISION.md, "Just say it").
-33. **Save to phone, prominently**: the trip already works offline, but people don't know; make
-   "saved on this phone" visible and offer a clear Save-to-phone action on the trip (also files,
-   tickets).
 34. **Referral links, done well** (VISION.md, `src/model/partners.ts`): get the partner ids in
    (Airalo via Impact, Viator, Klook, SafetyWing, Booking.com), and show genuinely useful
    suggestions where they help (an eSIM before you fly, a rail pass on a train-heavy trip, tours
    for an idle afternoon, a hotel on a night with no stay) rather than ads. Rules to keep it
    honest: always labelled, never only paid options (show the best choice even when it pays
    nothing), never ranked by commission.
-35. **Deleting trips, clearly**: today "Delete this trip" is only in Trip settings, and only for a
-   trip that isn't shared (a shared one has "Leave"). Make it easy to find (e.g. from All trips),
-   and for a shared trip let the owner delete it for everyone, with a clear warning.
 36. **The logo** (for Andrea): the simple line logo feels a bit like a gummy worm. Try it on a
    diagonal, and see whether it says "trip" and "train" enough on its own. Then put it in the app:
    on the welcome screen (it only shows the word "WrongTrain" today), the loading screen,
@@ -276,22 +264,13 @@ Next:
 41. **Welcome screen order**: Plan a trip for me, then Plan it myself, then the sample trip
    (with its explanation right under it), then Join a trip with a code. Today the sample sits
    between the two ways of planning. `Welcome` in `src/App.tsx`.
-42. **Profile picture: zoom and move** (Adam, on the phone): after picking a photo, pinch to zoom
-   and drag to place your face in the circle before it's saved (today it takes the middle square).
-   `makeAvatar` and `PhotoPicker` in `src/ui/avatar.tsx` and `src/ui/account.tsx`.
 43. **Better words for the levels of say** (Adam: neither the phrases nor their descriptions are
    right yet). `LEVELS` in `src/model/rules.ts`; with Andrea.
-44. **Budget as a range**: in Plan a trip for me, pick several price levels ($$ to $$$$), e.g. a cheap
-   hotel is fine but a nicer one if it's there. The planner then offers hotels across the range.
 45. **Planner header covers the emojis**: on Plan a trip for me, the top bar cuts off the emojis on
    the first questions (`src/ui/planner.tsx`, `.sheet-bar`).
-46. **Planning screen cards**: they change too fast (every 8 s); the dots look swipeable but aren't
-   (make them swipeable, or not look it); tapping a card or its link stops the rotation for good,
-   so after opening the insurance link you're stuck on that card: start again after a pause.
-   `src/ui/planning.tsx`. (Opening a link doesn't stop the plan being built.)
-47. **All the referral ids** into `REF` in `src/model/partners.ts` (see 34). Viator, Klook and
-   SafetyWing ids are on the project sheet's Accounts tab; still needed: the Airalo tracking link
-   (Impact, pending) and the Booking.com aid.
+47. **The last referral ids**: Viator, Klook and SafetyWing are in `REF` (`src/model/partners.ts`)
+   since Oct 17. Still needed: the Airalo tracking link (Impact, pending) and the Booking.com aid
+   (and then a Booking.com link for stays, see 50).
 48. **What each AI job costs**: a tracker for each trip plan and each note filed or change made
    (tokens and dollars). `ai_plans` already counts tokens per plan; add the same for filings
    and nearby picks, and a view of it (for Adam).
@@ -301,10 +280,6 @@ Next:
 50. **A Stay page**: each night's hotel with photos, check-in and check-out times, amenities, tips,
    address and directions, and a booking link for the recommended ones (a referral where one
    exists, see 34).
-51. **Which languages are spoken where** (Adam: didn't know Belgium speaks French): for each
-   destination, say which language(s) people speak there (by region where it matters: Brussels
-   French and Dutch, Flanders Dutch, Wallonia French), how far English gets you, and offer that
-   phrase pack. On the trip overview, the Before you go guides and Phrases; the planner can add it.
 52. **Line symbols and live transit** (Adam): show each train or metro line the way the city does:
    Tokyo's coloured circles with a letter (Ginza line: orange "G", stations "G09"), Seoul and
    Taipei's coloured line codes, Paris's numbered circles, London's line colours, New York's
