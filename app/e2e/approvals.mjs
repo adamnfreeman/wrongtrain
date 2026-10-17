@@ -1,5 +1,5 @@
-// Changes that need the owner's OK, without reaching the server: a trip shared with you as an
-// editor (rule "approve") keeps additions but turns a rename into a request, kept on the phone
+// Changes that need the owner's OK, without reaching the server: a trip shared with you as a
+// contributor ("can add ideas") keeps additions but turns a rename into a request, kept on the phone
 // until there is signal; as a viewer, only notes go in.
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
@@ -37,12 +37,12 @@ await page.click('text=Plan it myself');
 await sheet.getByLabel('Stop 1').fill('Lisbon');
 await sheet.getByText('Create').click();
 await page.waitForSelector('.tabs');
-await shareAs('editor');
+await shareAs('contributor');
 
-/* an editor's rename becomes a request */
+/* a contributor's rename becomes a request */
 await page.click('.tab:has-text("Trip")').then(() => page.click('.hubrows button:has-text("Trip settings")'));
 await sheet.waitFor();
-check(await sheet.locator('text=Changes by others').count() === 1, 'settings explain the trip rule');
+check(await sheet.locator('text=Your level').count() === 1 && await sheet.locator('text=Can add ideas').count() > 0, 'settings say what your level lets you do');
 await sheet.getByLabel('Trip name').fill('Ben’s trip');
 await sheet.getByText('Save', { exact: true }).click();
 await page.waitForSelector('.toast');
@@ -79,7 +79,7 @@ check((await page.evaluate(() => localStorage.getItem('wt-outbox'))) === '[]', '
 await shareAs('viewer');
 await page.click('.tab:has-text("Trip")').then(() => page.click('.hubrows button:has-text("Trip settings")'));
 await sheet.waitFor();
-check(await sheet.locator('text=you can see everything and leave notes').count() === 1, 'settings tell a viewer what they can do');
+check(await sheet.locator('text=They see everything and leave notes').count() === 1 && await sheet.locator('text=Look and leave notes').count() > 0, 'settings tell a viewer what they can do');
 await sheet.getByLabel('Trip name').fill('Mine now');
 await sheet.getByText('Save', { exact: true }).click();
 await page.waitForSelector('.toast.bad');
@@ -133,7 +133,7 @@ check(mine.trips[0].name === 'Lisboa' && mine.sync[trip.id].version === 4 && !mi
 check(await op.locator('.tabn').count() === 0, 'the badge goes once it is decided');
 await op.click('.tab:has-text("Trip")').then(() => op.click('.hubrows button:has-text("Trip settings")'));
 await op.locator('.sheet-wrap').last().waitFor();
-check(await op.locator('.sheet-wrap select:has(option:text("Approve changes"))').count() === 1, 'the owner can set the trip rule');
+check(await op.locator('.sheet-wrap .sayopt').count() === 3 && await op.locator('.sheet-wrap .sayopt[aria-checked="true"]:has-text("near the hotels")').count() === 1, 'the owner can set the level people join with');
 await op.locator('.sheet-wrap').last().screenshot({ path: `${OUT}/a-4-settings.png` });
 await owner.close();
 

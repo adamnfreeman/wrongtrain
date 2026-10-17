@@ -5,19 +5,18 @@ import { useEffect, useState } from 'react';
 import type { Trip } from '../model/types';
 import { useStore } from '../model/store';
 import { stamp } from '../model/time';
-import { RULES, ROLES, canDecide, type Role, type Rule } from '../model/rules';
+import { LEVELS, ROLES, canDecide, joinLevel, type Role, type Rule } from '../model/rules';
 import {
   approveRequest, clearNotice, denyRequest, errText, setMemberRole, setTripRule, useSync, withdrawRequest,
   type Member, type TripRequest,
 } from '../sync/engine';
 import { Fold, Pill, SecH } from './bits';
-import { Choice } from './form';
 
 /** Your role and the trip's rule, when the trip is shared. */
 export function useAccess(tripId: string): { role?: Role; rule: Rule; decides: boolean } {
   const info = useStore().sync[tripId];
   const role = info?.role;
-  return { role, rule: info?.rule || 'approve', decides: !!role && canDecide(role) };
+  return { role, rule: info?.rule || 'open', decides: !!role && canDecide(role) };
 }
 
 /** How many requests are waiting for you to decide, for the badge on the To do tab. */
@@ -107,20 +106,43 @@ function RequestItem({ r, decides, mine }: { r: TripRequest; decides: boolean; m
 
 const roleLabel = (r: Role) => (r === 'owner' ? 'Owner' : ROLES.find(x => x.value === r)!.label);
 
-/** The trip rule: a choice for the owner, a line of explanation for everyone else. */
+/** The three levels of say, in the words people pick them by. Used when a trip is made and in
+    Trip settings, where it sets the level people get when they join. */
+export function SayPicker({ value, onChange, label = 'How much say does everyone get?' }: {
+  value: Exclude<Rule, 'all'>; onChange: (v: Exclude<Rule, 'all'>) => void; label?: string;
+}) {
+  return (
+    <div className="field" role="radiogroup" aria-label={label}>
+      <span className="flabel">{label}</span>
+      <div className="saypick">
+        {LEVELS.map(l => (
+          <button key={l.rule} type="button" role="radio" aria-checked={value === l.rule} className="sayopt" onClick={() => onChange(l.rule)}>
+            <b>“{l.pitch}”</b>
+            <span>{l.label}. {l.hint}</span>
+          </button>
+        ))}
+      </div>
+      <p className="fhint">You can change anyone's level later, one person at a time, in Trip settings.</p>
+    </div>
+  );
+}
+
+/** The level people get when they join: a choice for the owner, a line of explanation for everyone else. */
 export function RuleSetting({ trip }: { trip: Trip }) {
   const { role, rule } = useAccess(trip.id);
   const [msg, setMsg] = useState('');
-  const info = RULES.find(r => r.value === rule)!;
-  if (role !== 'owner') return (
-    <p className="fhint">
-      Changes by others: <b>{info.label}</b>. {info.hint}
-      {role && <> You're {role === 'organizer' ? 'an' : 'a'} <b>{roleLabel(role)}</b>{role === 'organizer' ? ': you can change anything and approve requests.' : role === 'viewer' ? ': you can see everything and leave notes.' : '.'}</>}
-    </p>
-  );
+  const join = joinLevel(rule);
+  if (role !== 'owner') {
+    const mine = role ? ROLES.find(r => r.value === role) : undefined;
+    return (
+      <p className="fhint">
+        {mine ? <>Your level: <b>{mine.label}</b>. {mine.hint}</> : <>People who join: <b>{join.label}</b>. {join.hint}</>}
+      </p>
+    );
+  }
   return (
     <>
-      <Choice<Rule> label="Changes by others" value={rule} options={RULES} hint={info.hint}
+      <SayPicker label="When people join, they get" value={join.rule}
         onChange={async v => { setMsg(''); try { await setTripRule(trip.id, v); } catch (e) { setMsg(errText(e)); } }} />
       {msg && <p className="geomsg bad" role="alert">{msg}</p>}
     </>

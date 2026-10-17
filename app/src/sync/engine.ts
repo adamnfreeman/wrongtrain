@@ -15,7 +15,7 @@ import { createClient, type RealtimeChannel, type Session } from '@supabase/supa
 import { useSyncExternalStore } from 'react';
 import type { Trip } from '../model/types';
 import { getState, onTripChange, onTripGate, setSynced, type SyncInfo } from '../model/store';
-import { applyChange, changeOf, verdict, type Change, type Role, type Rule } from '../model/rules';
+import { applyChange, changeOf, joinLevel, verdict, type Change, type Role, type Rule } from '../model/rules';
 import { merge3, same } from '../model/merge';
 import { receive, saved, type Remote } from './core';
 import { SUPABASE_KEY, SUPABASE_URL } from './config';
@@ -106,7 +106,7 @@ function gate(id: string, before: Trip, after: Trip): boolean {
   const info = getState().sync[id];
   /* not shared, or your role not heard yet: the server still checks, and save() turns a refusal into a request */
   if (!info?.role) return true;
-  const v = verdict(before, after, info.rule || 'approve', info.role);
+  const v = verdict(before, after, info.role);
   if (v === 'ok') return true;
   if (v === 'blocked') { notify('You can see this trip and leave notes. Ask the owner if you want to change it.', true); return false; }
   ask(id, changeOf(before, after));
@@ -371,7 +371,9 @@ export async function shareTrip(id: string): Promise<void> {
   if (trip.sample) throw new Error('Make your own copy of the sample to share it');
   const { error } = await supabase.rpc('share_trip', { trip_id: id, trip_data: trip, member_name: s.me });
   if (error) throw error;
-  setInfo(id, { version: 1, base: trip, dirty: false, rule: 'approve', role: 'owner' });
+  setInfo(id, { version: 1, base: trip, dirty: false, rule: 'open', role: 'owner' });
+  /* the level of say picked when the trip was made: open unless they chose otherwise */
+  if (trip.say && trip.say !== 'open') await setTripRule(id, trip.say).catch(() => {});
   setTripStatus(id, 'saved');
   listen();
 }
@@ -390,8 +392,8 @@ export async function joinTrip(code: string): Promise<string> {
   const remote = await fetchOne(id);
   if (!remote) throw new Error('Joined, but the trip could not be loaded');
   apply(remote);
-  /* joining makes you an editor; the owner can change that later */
-  const s = getState(); setSynced(s.trips, { ...s.sync, [id]: { ...s.sync[id], rule: remote.rule || 'approve', role: s.sync[id]?.role || 'editor' } }, id);
+  /* you join with the level the trip was set up with; the owner can change it later */
+  const s = getState(); setSynced(s.trips, { ...s.sync, [id]: { ...s.sync[id], rule: remote.rule || 'open', role: s.sync[id]?.role || joinLevel(remote.rule).role } }, id);
   listen();
   void fetchRequests().catch(() => {});
   return id;

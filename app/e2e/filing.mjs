@@ -1,5 +1,5 @@
 // Claude filing group notes, with the file-note Edge Function and the database stood in for.
-// An editor's note: the idea and the to-do go straight in, putting it on a day goes to the owner
+// A contributor's note ("can add ideas"): the idea and the to-do go straight in, putting it on a day goes to the owner
 // as a request. The owner's note: everything goes in, and Undo takes it all back. Then a trip
 // whose free allowance is used up, and a viewer, who cannot file.
 import { chromium } from 'playwright';
@@ -34,7 +34,7 @@ const UID = '00000000-0000-0000-0000-00000000000b';
 const b64 = o => Buffer.from(JSON.stringify(o)).toString('base64url');
 const jwt = `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ sub: UID, role: 'authenticated', exp: 4102444800 })}.x`;
 const session = { access_token: jwt, token_type: 'bearer', expires_in: 3600, expires_at: 4102444800, refresh_token: 'r', user: { id: UID, email: 'ben@example.com', aud: 'authenticated' } };
-let role = 'editor', version = 3, calls = [], requests = [], answer = null;
+let role = 'contributor', version = 3, calls = [], requests = [], answer = null;
 await ctx.unroute(/supabase\.co/);
 await ctx.route(/supabase\.co/, async r => {
   const u = r.request().url(), json = (b, status = 200) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(b) });
@@ -70,8 +70,8 @@ const fileAnswer = {
   reply: 'Added Time Out Market to the Lisbon ideas and a to-do for the Viva Viagem card.', done: true, left: 3,
 };
 
-/* an editor's note */
-await signInAs('editor');
+/* a contributor's note */
+await signInAs('contributor');
 check(await page.locator('#gnotes >> text=WrongTrain files it into the trip').count() === 1, 'the notes box says notes are filed for everyone');
 answer = fileAnswer;
 await page.fill('#gnote', 'Lunch at Time Out Market on day 2, and we need Viva Viagem cards');

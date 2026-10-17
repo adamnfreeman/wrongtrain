@@ -34,10 +34,16 @@ on a Mac.
 - Shared trips sync through Supabase: `supabase/schema.sql`, `src/sync/engine.ts`, three-way
   merge in `src/model/merge.ts`. After changing `schema.sql`, paste it into the Supabase SQL
   Editor and run it (safe to run again).
-- Approvals: the owner sets a rule per trip (open / approve changes, the default / approve
-  everything) and roles (organizer, editor, viewer). Edits that need the owner's OK become
-  requests, approved or denied on the To do tab. `src/model/rules.ts` and
-  `change_needs_approval` in `schema.sql` must agree.
+- Levels of say (`src/model/rules.ts`): each person is an organizer, an editor ("can change
+  anything"), a contributor ("can add ideas"; plan changes become requests, approved or denied on
+  the To do tab) or a viewer ("look and leave notes"). The level people join with is picked when
+  the trip is made, in funny words ("My friends are chill...", `SayPicker`), and is the trip's
+  rule online; default "can change anything". The owner changes anyone's level in Trip settings.
+  `rules.ts` and `change_needs_approval` in `schema.sql` must agree. Database checks:
+  `supabase/test/rules.sql` (runs on a local Postgres, or on PGlite in Node).
+- The ideas box files everything: places, to-dos, plan items and changes to them, travel and
+  stays (`supabase/functions/_shared/filing.ts`, applied in `src/model/filing.ts`). It only leaves
+  a note open when it can't tell what or where.
 - Supabase project: `https://wklwpihkpiuniazhidjz.supabase.co`. The publishable key in
   `src/sync/config.ts` is public by design. Never put the secret/service_role key anywhere.
 - Ideas box: a group note on a shared trip goes to the `file-note` Edge Function
@@ -111,6 +117,12 @@ kept in `legacy/apps-script/`; the running copy lives in the sheet.
 Build on the `app` branch, then on `main` replace the `app/` folder with `app/dist/` and push.
 Touch nothing else on `main`. GitHub Pages updates within a couple of minutes.
 
+## Waiting to be switched on (Adam, when ready; not now)
+
+Built and tested, but they need the website-account steps before they work on shared trips:
+- Run the updated `schema.sql` in Supabase (levels of say; also item 1 below).
+- Deploy the ideas box (`file-note`; item 2 below).
+
 ## Where things stand (Oct 16, 2026)
 
 Done: trip model, sample trip, all screens, trip editor, sharing (invite codes, live sync,
@@ -162,29 +174,9 @@ Next:
    (say to an @wrongtrain.lol one), keeping its trips. There are no passwords (sign-in is an
    emailed code), so this is the "change password" of WrongTrain. Supabase's `updateUser({ email })`
    sends a code to the new address to confirm it.
-13. **Notes go straight through** (decided Oct 16; see VISION.md). Two parts: (a) a new shared
-   trip starts on the Open rule, not Approve changes (`src/model/rules.ts`, `schema.sql`
-   default); (b) the ideas box (`supabase/functions/_shared/filing.ts`) files everything it
-   can place, including travel, bookings and times (legs, day plans, stays), instead of leaving
-   them for the owner. It only leaves a note open when it truly can't tell what or where; for a
-   chain with no city given ("muji, donqui, uniqlo") it picks the sensible spot and says so.
 14. **Tapping a tab** (asked for Oct 16): the tapped button slides to the centre of the bottom
    bar, and the pages swipe quickly across to that page (now they glide slowly or jump).
    `TripApp` in `src/App.tsx`, the pager and bar scroll code.
-15. **Three levels of say, picked when you create the trip** (Adam's idea, Oct 16). Ask on the
-   new-trip and planner screens, in plain, funny words, then let the owner change it per person
-   in Trip settings:
-   1. "My friends are chill and know what they're doing": no approvals, anyone changes anything.
-   2. "Some of these people shouldn't be allowed near the hotels": they can add ideas, places
-      and notes, but can't remove things or change the itinerary (days, times, travel, stays)
-      without the owner's OK.
-   3. "My mother-in-law is trying to run this trip and nobody wants her to": zero control; they
-      can look and leave notes, nothing else.
-   Most of the machinery exists: the trip rule (Open / Approve changes / Approve everything in
-   `src/model/rules.ts`) and roles (organizer / editor / viewer). The new parts: the choice at
-   creation, these words, and a level per person (today the rule is per trip and only the role
-   is per person), kept in agreement with `change_needs_approval` in `schema.sql`. Default is
-   level 1, per item 13.
 16. **A "Right now" page** (Adam's idea, Oct 16; to be fleshed out). Exactly what you need at
    this moment and nothing else, in big bold type, everything large and obvious. It is not
    always there: it shows up only within a window before something where details help, and
