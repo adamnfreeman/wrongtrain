@@ -297,6 +297,10 @@ Next:
 50. **A Stay page**: each night's hotel with photos, check-in and check-out times, amenities, tips,
    address and directions, and a booking link for the recommended ones (a referral where one
    exists, see 34).
+51. **Which languages are spoken where** (Adam: didn't know Belgium speaks French): for each
+   destination, say which language(s) people speak there (by region where it matters: Brussels
+   French and Dutch, Flanders Dutch, Wallonia French), how far English gets you, and offer that
+   phrase pack. On the trip overview, the Before you go guides and Phrases; the planner can add it.
 
 ## Working together
 
