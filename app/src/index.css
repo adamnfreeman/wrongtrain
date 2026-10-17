@@ -529,3 +529,6 @@ select.input { background-image: linear-gradient(45deg, transparent 50%, var(--m
 .conv-in label span { font: 700 12px var(--f-display); letter-spacing: .08em; color: var(--muted) }
 .conv-in input { font: 700 20px var(--f-display); padding-right: 12px }
 .conv-in > span { font: 800 22px var(--f-display); padding-bottom: 10px; color: var(--muted) }
+.docthumb .docpdf { display: grid; place-items: center; height: 100%; font: 800 12px var(--f-display); color: var(--muted) }
+.openbtn { padding: 8px 18px; font-size: 15px }
+.pview-pdf { width: 100%; height: 100%; border: 0; background: #fff }

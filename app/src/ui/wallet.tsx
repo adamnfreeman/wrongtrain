@@ -10,7 +10,7 @@ import { deletePrivateDoc, privateDocs, savePrivateDoc, usePrivateDocs } from '.
 import { CURRENCIES, balances, fmtMoney, settleUp, shares, tripCurrency, venmoLink } from '../model/money';
 import { newId } from '../model/trip';
 import { fmtHM, shortDate, todayIn } from '../model/time';
-import { drop, extOf, keep, openFile, readLocal, shrink } from '../sync/files';
+import { drop, extOf, keep, openFile, readLocal, shrink, useFileUrl } from '../sync/files';
 import { rate } from '../sync/rates';
 import { PictureView } from './picture';
 import { Empty, Ext, Pill, SecH } from './bits';
@@ -92,19 +92,24 @@ function DocItem({ d }: { d: Doc }) {
   const [msg, setMsg] = useState('');
   const [pic, setPic] = useState(false);
   const f = forLabel(ix.trip, d.for);
+  /* a file that's a picture or PDF opens in the app, with a thumbnail for pictures */
+  const kind = d.file ? (d.file.type.startsWith('image/') ? 'image' : d.file.type === 'application/pdf' ? 'pdf' : '') : '';
+  const { url } = useFileUrl(kind ? d.file!.path : undefined);
+  const thumb = d.picture || (kind === 'image' ? url : '');
+  const share = d.file ? () => openFile(d.file!.path, d.file!.name).catch(e => setMsg((e as Error).message)) : undefined;
   return (
     <li>
-      <div className="item-h">{d.picture && <button className="docthumb" onClick={() => setPic(true)} aria-label={`Open ${d.title}`}><img src={d.picture} alt="" /></button>}<span className="item-n">{d.title}</span>{d.private ? <Pill>Private</Pill> : null}</div>
+      <div className="item-h">{(thumb || kind === 'pdf') && <button className="docthumb" onClick={() => setPic(true)} aria-label={`Open ${d.title}`}>{thumb ? <img src={thumb} alt="" /> : <span className="docpdf">PDF</span>}</button>}<span className="item-n">{d.title}</span>{d.private ? <Pill>Private</Pill> : null}</div>
       {f && <div className="when">For {f}</div>}
       {d.notes && <p className="item-d">{d.notes}</p>}
       <div className="meta">
-        {d.file && <button className="linkbtn" onClick={() => openFile(d.file!.path, d.file!.name).catch(e => setMsg((e as Error).message))}>Open</button>}
-        {d.picture && <button className="linkbtn" onClick={() => setPic(true)}>Open</button>}
+        {(d.picture || (kind && url)) && <button className="chipbtn go openbtn" onClick={() => setPic(true)}>Open</button>}
+        {d.file && !kind && <button className="chipbtn go openbtn" onClick={share}>Open</button>}
         {d.link && <Ext href={d.link}>Open link</Ext>}
         <button className="linkbtn" onClick={() => edit({ kind: 'doc', id: d.id })}>Edit</button>
       </div>
       {msg && <p className="geomsg bad">{msg}</p>}
-      {pic && d.picture && <PictureView src={d.picture} title={d.title} close={() => setPic(false)} />}
+      {pic && (d.picture || url) && <PictureView src={d.picture || url} title={d.title} pdf={kind === 'pdf'} onShare={share} close={() => setPic(false)} />}
     </li>
   );
 }
