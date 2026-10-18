@@ -170,7 +170,7 @@ Touch nothing else on `main`. GitHub Pages updates within a couple of minutes.
 
 ## Waiting to be switched on (Adam, when ready; not now)
 
-Nothing right now. Oct 17: schema.sql run (through hearts and comments on photos), the three
+Nothing right now. Oct 17: schema.sql run (through the per-person AI limits), a monthly spend limit set in the Anthropic console, the three
 Claude functions deployed, the change-email template set ("Secure email change" is off: the app
 asks for the new address's code only), MapTiler key in.
 
@@ -210,13 +210,6 @@ Next:
    tier with limits plus a per-trip pass (`trip_passes` exists), a subscription, or both, and
    affiliate income (VISION.md). Decide which features are paid. Also: how many AI trip plans
    come free (today the cap is 5 a month per person, in `claim_plan`); one free plan, then paid?
-21. **Nobody uses WrongTrain as free Claude on our key** (Oct 17: done in code). Each Claude job is
-   fixed (file a note, plan a trip, pick nearby places) with a structured answer; its instructions
-   say that what people type is data, never orders; input is capped (note 600 characters, 120
-   days of a trip, the planner's answers and outline cut to size by `clamp`); and uses are limited
-   per trip (20), per person across trips (6 a minute, 60 a day, in `claim_ai_use`) and per
-   person for plans (5 a month). Left for Adam: a monthly spend limit and alert in the Anthropic
-   console (Settings → Limits).
 
 22. **Rethink the Trip page** (Adam, Oct 16: "makes no sense"). Move "All trips" into Account &
    settings. Decide what Trip is for once Places, Photos, Notes and settings have homes of their own.
