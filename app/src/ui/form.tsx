@@ -2,6 +2,7 @@
    zone picker, line colour swatches, and a map you tap to drop a pin. */
 import { type ReactNode, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { TILES, addLogo } from '../sync/maptiler';
 import L from 'leaflet';
 import { LINE_COLORS, type LineColor } from '../model/types';
 import { parseCoords } from '../model/edit';
@@ -160,7 +161,7 @@ export function PinPicker({ lat, lng, onChange, near }: {
     if (!el.current) return;
     const m = L.map(el.current, { scrollWheelZoom: false });
     map.current = m;
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(m);
+    L.tileLayer(TILES.url, TILES).addTo(m); addLogo(m);
     if (lat != null && lng != null) m.setView([lat, lng], 15);
     else if (near?.length) m.fitBounds(L.latLngBounds(near), { padding: [20, 20], maxZoom: 14 });
     else m.setView([20, 0], 2);

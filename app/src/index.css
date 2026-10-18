@@ -568,3 +568,6 @@ select.input { background-image: linear-gradient(45deg, transparent 50%, var(--m
 .pcomment .linkbtn { color: #888; font-size: 13px }
 .pcomment-new { display: flex; gap: 8px; align-items: center; padding-top: 6px }
 .pcomment-new input { flex: 1; background: #1a1a1a; border: 1px solid #333; color: #fff; border-radius: 999px; padding: 10px 14px; font: 15px var(--f-body) }
+
+.mt-logo { display: block; line-height: 0; margin: 0 0 4px 4px }
+.mt-logo img { height: 18px; width: auto }

@@ -88,6 +88,11 @@ on a Mac.
   removes one) and Share it through the phone's share sheet (Instagram, Messages, Save Image;
   `sharePath` in `src/sync/files.ts`). Hearts and comments are kept on the phone to show offline,
   but need signal to add. The sample has made-up ones. Not in the Japan edition.
+- Map (`src/ui/map.tsx`, `src/ui/form.tsx`): MapTiler tiles and lookups (`src/sync/maptiler.ts`;
+  the key is public by design, limited to wrongtrain.lol, localhost and the app in MapTiler's
+  dashboard). Places without coordinates (filed by Claude, made by the planner) get a pin when the
+  Map page opens: the city is looked up first and a place's match (points of interest only, 90%+
+  sure) must lie within 50 km of it; each place is tried once per phone.
 - Profile pictures (`src/ui/avatar.tsx`): chosen on Account & settings, cropped and shrunk on the
   phone to a ~10 KB JPEG, kept on the phone and on each trip you're on (`trip_members.avatar`,
   readable only by people on that trip). Shown on the corner button, the people list and group
@@ -165,14 +170,11 @@ Touch nothing else on `main`. GitHub Pages updates within a couple of minutes.
 
 ## Waiting to be switched on (Adam, when ready; not now)
 
-Built and tested, but they need the website-account steps before they work on shared trips:
-- Run the updated `schema.sql` in Supabase again (Oct 17: hearts and comments on photos; earlier: levels of say, profile pictures, where everyone is, invites, deleting shared trips, joiners on Who's going; also item 1 below).
-- Deploy the ideas box (`file-note`; item 2 below).
-- Change email (Account & settings → Change email, `ChangeEmailSheet` in `src/ui/account.tsx`):
-  in Supabase, Authentication → Emails → "Change email address", make the message show the code
-  (`{{ .Token }}`), like the sign-in email, and keep "Secure email change" on.
+Nothing right now. Oct 17: schema.sql run (through hearts and comments on photos), the three
+Claude functions deployed, the change-email template set ("Secure email change" is off: the app
+asks for the new address's code only), MapTiler key in.
 
-## Where things stand (Oct 16, 2026)
+## Where things stand (Oct 17, 2026)
 
 Done: trip model, sample trip, all screens, trip editor, sharing (invite codes, live sync,
 offline queue), email sign-in, iOS project with icon and launch screen, first build running on
@@ -180,21 +182,7 @@ the iPhone, owner approvals (trip rule, roles, requests and the approval list), 
 (Claude files group notes; not deployed yet).
 
 Next:
-1. **Run the updated `schema.sql` in Supabase** for approvals (roles, trip rule, requests).
-   Do this before installing or publishing this version: it reads the new `rule` column, so
-   shared trips stop syncing until the database has it. Builds signed with the
-   personal team work on the iPhone; build from Xcode (`npm run ios`, then Run), since building
-   into `ios/App/build` inside the iCloud-synced Desktop fails code signing.
-2. **Deploy the ideas box**: run `schema.sql` again, create an Anthropic API key, store it as
-   the `ANTHROPIC_API_KEY` secret and deploy `file-note`. Click-by-click steps are in
-   `app/supabase/functions/README.md`.
-3. **Map tiles.** The map uses OpenStreetMap's tile server, which does not allow app use and
-   may block requests from the iOS web view. Switch to MapTiler (waiting on an API key); the
-   tile URL is in `src/ui/map.tsx` and `src/ui/form.tsx`. MapTiler geocoding would also let
-   places Claude files get map pins (they are filed without coordinates for now).
 4. **Apple Developer account**: enrollment pending. Then App Store Connect, TestFlight.
-5. **Untested by a person yet**: sharing between two real devices (the live test covers it
-   with throwaway users).
 6. **"Something nearby"** (built Oct 16) on Today: pick a mood, get 5 places from OpenStreetMap
    (Overpass), chosen by Claude on shared trips (`suggest-nearby`), else the nearest. The public
    Overpass server will not do for many users: move to a paid places API or our own server.
@@ -272,9 +260,6 @@ Next:
 48. **What each AI job costs**: a tracker for each trip plan and each note filed or change made
    (tokens and dollars). `ai_plans` already counts tokens per plan; add the same for filings
    and nearby picks, and a view of it (for Adam).
-49. **Pins for planned trips**: a trip made by Plan a trip for me has no pins on the map, because
-   places come without coordinates. Look them up (MapTiler or another geocoder, see 3) as the
-   plan is made, so hotels, food and sights are on the map.
 50. **A Stay page**: each night's hotel with photos, check-in and check-out times, amenities, tips,
    address and directions, and a booking link for the recommended ones (a referral where one
    exists, see 34).
@@ -288,8 +273,6 @@ Next:
    OpenStreetMap / MapTiler), so check that first. Alternatives: open routing on GTFS data
    (Transitous / MOTIS), HERE Public Transit, and in Japan NAVITIME or Ekispert, which also know
    platform numbers.
-54. **Paid, at a glance** (Wallet → Money → Settle up): a debt marked paid disappears, which
-   feels like it was never added. Keep it, with a PAID stamp (or similar) over it.
 55. **Right now, bolder** (Adam likes the sizes): the "Kyoto → Uji" title in a colour (yellow-ish,
    but "Leave now" already uses the warning yellow, so pick a distinct accent), and an overall
    bolder feel. With Andrea (see 16).

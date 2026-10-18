@@ -1,6 +1,7 @@
 /* Every place with a pin, coloured by kind, with your own location when you switch it on, and
    friends on the trip who are sharing where they are (sync/locations.ts). */
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { TILES, addLogo, findPins } from '../sync/maptiler';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { Place } from '../model/types';
@@ -25,6 +26,8 @@ export function MapView() {
   const map = useRef<L.Map | null>(null);
   const me = useRef<{ dot: L.Marker; ring: L.Circle } | null>(null);
   const centered = useRef(false);
+  /* places filed by Claude or made by the planner come without pins: look them up while the map is open */
+  useEffect(() => { void findPins(ix.trip); }, [ix.trip.id, ix.trip.places.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const shown = (p: Place) => p.lat != null && p.lng != null && !ui.hide[pinGroup(p).key] && (ui.dest === 'all' || p.destinationId === ui.dest);
   const pins = ix.trip.places.filter(shown);
@@ -41,7 +44,7 @@ export function MapView() {
     const css = getComputedStyle(document.documentElement), col = (v: string) => css.getPropertyValue(v).trim();
     const m = L.map(el.current, { scrollWheelZoom: false });
     map.current = m;
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(m);
+    L.tileLayer(TILES.url, TILES).addTo(m); addLogo(m);
     const pts: L.LatLngExpression[] = [];
     pins.forEach(p => {
       const g = pinGroup(p);
