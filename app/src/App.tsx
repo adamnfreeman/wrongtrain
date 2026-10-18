@@ -23,6 +23,7 @@ import { AccountButton, JoinSheet, SyncLine, joinCodeFromLink } from './ui/accou
 import { Toast, useWaitingForMe } from './ui/requests';
 import { PlannerSheet } from './ui/planner';
 import { TripHub } from './ui/trip';
+import { AddAnything, AddButton } from './ui/addAnything';
 import { PhotosPage } from './ui/photos';
 import { offCentre, useDock } from './ui/dock';
 import { useRef } from 'react';
@@ -187,6 +188,7 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
     setUi(u => { if (u.tab !== tab || (day && day !== u.day)) toTop.current = tab; return { ...u, tab, day: day || u.day, q: '' }; });
   }, []);
   const [editing, edit] = useState<Edit | null>(null);
+  const [adding, setAdding] = useState(false);
   const close = useCallback(() => edit(null), []);
   /* Today needs it during the trip, and for "Something nearby" at any time */
   /* while you share where you are with the group, location stays on as you move between pages */
@@ -360,6 +362,9 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
         {!JAPAN && editing?.kind === 'doc' && <DocEditor trip={trip} id={editing.id} forRef={editing.for} close={close} />}
         {!JAPAN && editing?.kind === 'expense' && <ExpenseEditor trip={trip} id={editing.id} close={close} />}
       </div>
+      {/* the main way in: on every page but Right now, out of the way of any open editor */}
+      {!JAPAN && !editing && !adding && ui.tab !== 'now' && <AddButton onOpen={() => setAdding(true)} />}
+      {adding && <AddAnything close={() => setAdding(false)} />}
       <div className="statusbg" aria-hidden="true" />
       <div className="tabpeek" ref={peek} aria-hidden="true" />
       <nav className="tabs" aria-label="Sections">

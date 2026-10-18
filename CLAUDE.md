@@ -88,6 +88,10 @@ on a Mac.
   removes one) and Share it through the phone's share sheet (Instagram, Messages, Save Image;
   `sharePath` in `src/sync/files.ts`). Hearts and comments are kept on the phone to show offline,
   but need signal to add. The sample has made-up ones. Not in the Japan edition.
+- Add anything (`src/ui/addAnything.tsx`): the round Add button above the bottom bar on every page
+  but Right now (not in the Japan edition). Opens a box: type anything, it becomes a group note
+  and, on a shared trip, is filed into the trip (`fileNote`), with what was filed and Undo shown
+  in the box. Examples to tap for first-timers.
 - Map (`src/ui/map.tsx`, `src/ui/form.tsx`): MapTiler tiles and lookups (`src/sync/maptiler.ts`;
   the key is public by design, limited to wrongtrain.lol, localhost and the app in MapTiler's
   dashboard). Places without coordinates (filed by Claude, made by the planner) get a pin when the
@@ -216,9 +220,10 @@ Next:
 23. **Places, broken down**: pick a category (with icons, like "Something nearby") and a
    location, instead of one long overwhelming list; for food, types of food (icons would do).
 24. **"Something nearby" moods**: "Coffee & cake" becomes just "Coffee"; an icon for each mood.
-32. **Adding things should be the star** (Adam: a big feature is "add anything and it lands in the
-   right place"). Today it's tucked into To do as Group notes. Give it its own page or a
-   prominent way in from everywhere (see VISION.md, "Just say it").
+32. **Adding things, next steps** (first version built Oct 17: the round **Add** button on every
+   page but Right now, `src/ui/addAnything.tsx`; what you type is filed like a group note and kept
+   on the To do tab). For Andrea: its look and place. Ideas: voice input, a photo of a booking
+   email or ticket, sharing to WrongTrain from other apps (needs the iOS app's share extension).
 34. **Referral links, done well** (VISION.md, `src/model/partners.ts`): get the partner ids in
    (Airalo via Impact, Viator, Klook, SafetyWing, Booking.com), and show genuinely useful
    suggestions where they help (an eSIM before you fly, a rail pass on a train-heavy trip, tours

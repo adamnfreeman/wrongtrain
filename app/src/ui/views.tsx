@@ -295,7 +295,7 @@ function Notes() {
 }
 
 /** What Claude just did with a note: still working, what it filed (with Undo), or what went wrong. */
-function Filed({ tripId, noteId, f }: { tripId: string; noteId: string; f: NoteFiling }) {
+export function Filed({ tripId, noteId, f }: { tripId: string; noteId: string; f: NoteFiling }) {
   const reply = useApp().ix.trip.notes.find(n => n.id === noteId)?.filed;
   if (f.state === 'busy') return <p className="filed" role="status">Filing this into the trip…</p>;
   if (f.state === 'error') return (

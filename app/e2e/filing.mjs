@@ -130,6 +130,18 @@ await wait(500);
 check(calls.length === 0, 'a viewer’s note is not sent to Claude');
 check(await page.locator('#gnotes >> text=File it into the trip').count() === 0, '... and a viewer gets no button for it');
 
+/* the Add button on any page files the same way, and shows what was filed in its box */
+calls = []; answer = fileAnswer;
+await signInAs('owner');
+await page.locator('.addfab').click();
+const box = page.locator('.sheet-wrap[aria-label="Add anything"]');
+await box.locator('textarea').fill('Lunch at Time Out Market on day 2, and we need Viva Viagem cards');
+await box.getByRole('button', { name: 'Add it to the trip' }).click();
+await box.locator('text=Undo').waitFor({ timeout: 5000 }).catch(() => {});
+check(calls.length === 1, 'the Add button sends what you typed to be filed');
+check(/Time Out Market/.test(await box.locator('.addlog').textContent()), '... and shows what was filed, in the box');
+await box.getByRole('button', { name: 'Done' }).click();
+
 check(errors.length === 0, 'no script errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
 await browser.close();
 srv.kill();

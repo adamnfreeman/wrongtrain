@@ -571,3 +571,15 @@ select.input { background-image: linear-gradient(45deg, transparent 50%, var(--m
 
 .mt-logo { display: block; line-height: 0; margin: 0 0 4px 4px }
 .mt-logo img { height: 18px; width: auto }
+
+/* Add anything (ui/addAnything.tsx): a round button above the bottom bar, on every page */
+.addfab { position: fixed; right: 16px; bottom: calc(86px + env(safe-area-inset-bottom, 0px)); z-index: 1001;
+  appearance: none; border: 0; border-radius: 999px; padding: 0 18px 0 14px; height: 52px; display: inline-flex; align-items: center; gap: 6px;
+  background: var(--accent, var(--ink)); color: var(--on-accent, var(--bg)); font: 700 16px/1 var(--f-body); cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0,0,0,.28) }
+.addfab svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round }
+.wrap { padding-bottom: calc(150px + env(safe-area-inset-bottom, 0px)) }
+.addbox { font-size: 18px; min-height: 110px }
+.addeg { margin-top: 14px }
+.addeg .chipbtn { white-space: normal; text-align: left }
+.addlog { margin-top: 14px }
