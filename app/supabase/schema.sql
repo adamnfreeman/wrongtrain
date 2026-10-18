@@ -396,6 +396,7 @@ create table if not exists public.ai_uses (
   created_at     timestamptz not null default now()
 );
 create index if not exists ai_uses_trip on public.ai_uses (trip_id);
+create index if not exists ai_uses_user on public.ai_uses (user_id, created_at);
 
 -- A paid pass for a trip. Nothing writes here yet: in-app purchase (RevenueCat) will.
 create table if not exists public.trip_passes (
@@ -416,13 +417,20 @@ language sql stable security definer set search_path = public as $$
 $$;
 
 -- Counts one use against the trip, for someone on it. Returns the use's id and how many are left,
--- or fails with 'allowance used up'.
+-- or fails with 'allowance used up' (the trip's), 'too many at once' (6 a minute per person) or
+-- 'daily limit reached' (60 a day per person, across every trip).
 create or replace function public.claim_ai_use(trip_id text, user_id uuid, kind text)
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare t text := trip_id; u uuid := user_id; used integer; cap integer := ai_allowance(trip_id); r uuid;
 begin
   if not exists (select 1 from trip_members m where m.trip_id = t and m.user_id = u) then raise exception 'not on this trip'; end if;
   perform 1 from trips where id = t for update;  -- one claim at a time per trip
+  -- per person too, across all their trips: a new trip must not mean 20 more free uses
+  perform pg_advisory_xact_lock(hashtext(u::text));
+  if (select count(*) from ai_uses a where a.user_id = u and a.created_at > now() - interval '1 minute') >= 6 then
+    raise exception 'too many at once'; end if;
+  if (select count(*) from ai_uses a where a.user_id = u and a.created_at > now() - interval '1 day') >= 60 then
+    raise exception 'daily limit reached'; end if;
   select count(*) into used from ai_uses a where a.trip_id = t;
   if used >= cap then raise exception 'allowance used up'; end if;
   insert into ai_uses (trip_id, user_id, kind) values (t, u, claim_ai_use.kind) returning id into r;

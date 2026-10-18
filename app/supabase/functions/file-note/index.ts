@@ -37,6 +37,7 @@ Deno.serve(async req => {
   let body: { trip_id?: string; note?: { text?: string; author?: string } };
   try { body = await req.json(); } catch { return reply(400, { error: 'input', message: 'Not JSON.' }); }
   const tripId = String(body.trip_id || ''), text = String(body.note?.text || '').trim().slice(0, 600);
+  const author = String(body.note?.author || '').slice(0, 60);
   if (!tripId || !text) return reply(400, { error: 'input', message: 'A trip and a note are needed.' });
 
   /* as the caller: their access rules decide whether they can see the trip at all */
@@ -52,6 +53,8 @@ Deno.serve(async req => {
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
   const { data: use, error: useErr } = await admin.rpc('claim_ai_use', { trip_id: tripId, user_id: who.user.id, kind: 'file-note' });
   if (useErr) {
+    if (/too many at once/i.test(useErr.message)) return reply(429, { error: 'busy', message: 'That was a lot at once. Try again in a minute.' });
+    if (/daily limit/i.test(useErr.message)) return reply(429, { error: 'daily', message: "You've used WrongTrain's AI a lot today. Try again tomorrow." });
     if (/allowance used up/i.test(useErr.message)) return reply(402, { error: 'allowance', message: 'This trip has used its free filings. The note stays open for the owner.' });
     return reply(500, { error: 'server', message: useErr.message });
   }
@@ -59,11 +62,14 @@ Deno.serve(async req => {
 
   try {
     const today = new Date().toISOString().slice(0, 10);
-    const { prompt, back } = buildNotePrompt(row.data, { text, author: String(body.note?.author || '') }, owner, today);
+    /* a trip stuffed far beyond any real one isn't sent: it would only cost money */
+    const built = buildNotePrompt(row.data, { text, author }, owner, today);
+    if (built.prompt.length > 120_000) { await admin.rpc('refund_ai_use', { use_id: useId }); return reply(413, { error: 'size', message: 'This trip is too big to file notes into.' }); }
+    const { prompt, back } = built;
     const msg = await anthropic.beta.messages.create({
       /* Haiku: filing a note is routine; far cheaper than Opus, which cost 8¢ a note (Oct 17) */
       model: 'claude-haiku-5-5',
-      max_tokens: 16000,
+      max_tokens: 4000,
       /* a routine job: keep it quick and cheap */
       output_config: { effort: 'low', format: { type: 'json_schema', schema: FILING_SCHEMA } },
       system: SYSTEM_PROMPT,

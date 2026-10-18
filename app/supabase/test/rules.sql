@@ -147,6 +147,21 @@ insert into trip_passes (trip_id) values ('t1');
 set role service_role;
 select pg_temp.ok((public.claim_ai_use('t1', '00000000-0000-0000-0000-00000000000b', 'file-note') ->> 'left')::int = 479, 'a pass raises the allowance');
 reset role;
+-- per person, across trips: 6 a minute, 60 a day
+insert into ai_uses (trip_id, user_id, kind) select 't1', '00000000-0000-0000-0000-00000000000b', 'file-note' from generate_series(1, 5);
+set role service_role;
+select pg_temp.ok(pg_temp.fails($$select public.claim_ai_use('t1', '00000000-0000-0000-0000-00000000000b', 'file-note')$$), 'one person gets 6 a minute, even with allowance left');
+reset role;
+update ai_uses set created_at = now() - interval '2 hours' where user_id = '00000000-0000-0000-0000-00000000000b';
+insert into ai_uses (trip_id, user_id, kind, created_at) select 't1', '00000000-0000-0000-0000-00000000000b', 'file-note', now() - interval '3 hours' from generate_series(1, 54);
+set role service_role;
+select pg_temp.ok(pg_temp.fails($$select public.claim_ai_use('t1', '00000000-0000-0000-0000-00000000000b', 'file-note')$$), '... and 60 a day');
+reset role;
+update ai_uses set created_at = now() - interval '2 days' where user_id = '00000000-0000-0000-0000-00000000000b';
+set role service_role;
+select pg_temp.ok((public.claim_ai_use('t1', '00000000-0000-0000-0000-00000000000b', 'file-note') ->> 'id') is not null, '... starting again the next day');
+reset role;
+delete from ai_uses where user_id = '00000000-0000-0000-0000-00000000000b';
 
 select pg_temp.act('ana');
 select public.leave_trip('t1');

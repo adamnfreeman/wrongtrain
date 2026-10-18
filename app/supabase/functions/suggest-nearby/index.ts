@@ -60,6 +60,8 @@ Deno.serve(async req => {
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
   const { data: use, error: useErr } = await admin.rpc('claim_ai_use', { trip_id: tripId, user_id: who.user.id, kind: 'suggest-nearby' });
   if (useErr) {
+    if (/too many at once/i.test(useErr.message)) return reply(429, { error: 'busy', message: 'That was a lot at once. Try again in a minute.' });
+    if (/daily limit/i.test(useErr.message)) return reply(429, { error: 'daily', message: "You've used WrongTrain's AI a lot today. Try again tomorrow." });
     if (/allowance used up/i.test(useErr.message)) return reply(402, { error: 'allowance', message: 'This trip has used its free suggestions.' });
     return reply(500, { error: 'server', message: useErr.message });
   }

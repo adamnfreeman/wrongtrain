@@ -20,6 +20,7 @@ import {
   BUILD_SYSTEM, OUTLINE_SCHEMA, OUTLINE_SYSTEM, RESEARCH_SYSTEM, STOP_SCHEMA,
   buildPrompt, cleanOutline, cleanStopPlan, outlinePrompt, researchPrompt, stopDates,
   type Answers, type Outline, type StopPlan,
+  clamp,
 } from '../_shared/planner.ts';
 
 const CORS = {
@@ -108,7 +109,9 @@ Deno.serve(async req => {
 
   let body: { step?: string; plan_id?: string; answers?: Answers; outline?: Outline; index?: number; notes?: string };
   try { body = await req.json(); } catch { return reply(400, { error: 'input', message: 'Not JSON.' }); }
-  const answers = body.answers;
+  const answers = clamp(body.answers);
+  if (body.outline) body.outline = clamp(body.outline);
+  if (JSON.stringify(body.answers || {}).length > 20_000 || JSON.stringify(body.outline || {}).length > 40_000) return reply(413, { error: 'size', message: 'That is more than a trip plan needs.' });
   if (!answers || typeof answers.where !== 'string' || !Array.isArray(answers.travelers)) return reply(400, { error: 'input', message: 'The answers are missing.' });
   answers.days = Math.min(60, Math.max(2, Math.round(Number(answers.days) || 10)));
   const cap = TESTERS.includes((who.user.email || '').toLowerCase()) ? 1000 : 5;
@@ -161,7 +164,7 @@ Deno.serve(async req => {
     }
 
     if (body.step === 'build') {
-      const notes = String(body.notes || '').slice(0, 60000);
+      const notes = String(body.notes || '').slice(0, 40000);
       if (!notes) return reply(400, { error: 'input', message: 'The research notes are missing.' });
       const { out, usage } = await ask<StopPlan>(BUILD_SYSTEM, buildPrompt(ask1, notes), STOP_SCHEMA, 'low');
       const { error } = await admin.rpc('claim_plan_step', { plan_id: body.plan_id, user_id: who.user.id, input_tokens: usage.input_tokens, output_tokens: usage.output_tokens });

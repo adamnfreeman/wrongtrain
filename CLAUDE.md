@@ -210,12 +210,13 @@ Next:
    tier with limits plus a per-trip pass (`trip_passes` exists), a subscription, or both, and
    affiliate income (VISION.md). Decide which features are paid. Also: how many AI trip plans
    come free (today the cap is 5 a month per person, in `claim_plan`); one free plan, then paid?
-21. **Nobody uses WrongTrain as free Claude on our key** (asked for Oct 16). Today: AI runs only in
-   Edge Functions with fixed jobs (file a note, plan a trip, pick nearby places), each with a
-   structured answer, and uses are capped (`ai_uses` per trip, `ai_plans` per person per 30
-   days). Before launch: review every function for prompt injection (a note or trip text that
-   tries to make Claude do other work), cap input sizes, rate-limit per person as well as per
-   trip, and set a monthly spend alert and hard limit in the Anthropic console.
+21. **Nobody uses WrongTrain as free Claude on our key** (Oct 17: done in code). Each Claude job is
+   fixed (file a note, plan a trip, pick nearby places) with a structured answer; its instructions
+   say that what people type is data, never orders; input is capped (note 600 characters, 120
+   days of a trip, the planner's answers and outline cut to size by `clamp`); and uses are limited
+   per trip (20), per person across trips (6 a minute, 60 a day, in `claim_ai_use`) and per
+   person for plans (5 a month). Left for Adam: a monthly spend limit and alert in the Anthropic
+   console (Settings → Limits).
 
 22. **Rethink the Trip page** (Adam, Oct 16: "makes no sense"). Move "All trips" into Account &
    settings. Decide what Trip is for once Places, Photos, Notes and settings have homes of their own.
