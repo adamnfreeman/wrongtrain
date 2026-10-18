@@ -88,6 +88,8 @@ on a Mac.
   removes one) and Share it through the phone's share sheet (Instagram, Messages, Save Image;
   `sharePath` in `src/sync/files.ts`). Hearts and comments are kept on the phone to show offline,
   but need signal to add. The sample has made-up ones. Not in the Japan edition.
+- Pull down to refresh (`src/ui/pull.ts`), on every page: fetches the trip, photos, hearts and comments
+  (the Japan edition re-reads the sheet, event `wt-refresh`).
 - Add anything (`src/ui/addAnything.tsx`): the round Add button above the bottom bar on every page
   but Right now (not in the Japan edition). Opens a box: type anything, it becomes a group note
   and, on a shared trip, is filed into the trip (`fileNote`), with what was filed and Undo shown
@@ -219,7 +221,7 @@ Next:
    settings. Decide what Trip is for once Places, Photos, Notes and settings have homes of their own.
 23. **Places, broken down**: pick a category (with icons, like "Something nearby") and a
    location, instead of one long overwhelming list; for food, types of food (icons would do).
-24. **"Something nearby" moods**: "Coffee & cake" becomes just "Coffee"; an icon for each mood.
+24. **"Something nearby" moods**: an icon for each mood ("Coffee & cake" became "Coffee" Oct 17).
 32. **Adding things, next steps** (first version built Oct 17: the round **Add** button on every
    page but Right now, `src/ui/addAnything.tsx`; what you type is filed like a group note and kept
    on the To do tab). For Andrea: its look and place. Ideas: voice input, a photo of a booking
@@ -246,9 +248,6 @@ Next:
    per use and needs the AI limits in 21), the phone's own translation (free, works offline on
    iOS with downloaded languages, needs the iOS app), or a translation API. Camera text
    (menus, signs) would be the next step.
-41. **Welcome screen order**: Plan a trip for me, then Plan it myself, then the sample trip
-   (with its explanation right under it), then Join a trip with a code. Today the sample sits
-   between the two ways of planning. `Welcome` in `src/App.tsx`.
 43. **Better words for the levels of say** (Adam: neither the phrases nor their descriptions are
    right yet). `LEVELS` in `src/model/rules.ts`; with Andrea.
 45. **Planner header covers the emojis**: on Plan a trip for me, the top bar cuts off the emojis on
@@ -285,8 +284,6 @@ Next:
    hotels expensive, food cheap, sightseeing medium; it feeds the plan (see 44, the range).
 60. **"Before you go" has a better home** (Adam, Oct 17): on the To do tab, the Before you go
    summary is folded and feels out of place. Maybe a before-the-trip page of its own.
-61. **Pull down to refresh** (Adam, Oct 17): pulling down on a page fetches the latest from the
-   group, as other apps do.
 
 ## Working together
 

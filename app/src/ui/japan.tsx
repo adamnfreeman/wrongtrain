@@ -50,9 +50,11 @@ export function JapanApp({ TripApp }: { TripApp: (p: { trip: Trip; me: string })
     const timer = window.setInterval(() => { if (!document.hidden) void refresh(creds, false); }, EVERY);
     const back = () => { if (!document.hidden && Date.now() - last.current > 60_000) void refresh(creds, false); };
     const out = () => signOut();
+    const pulled = () => void refresh(creds, false); // pull down to refresh (ui/pull.ts)
     document.addEventListener('visibilitychange', back);
     window.addEventListener('wt-japan-signout', out);
-    return () => { clearInterval(timer); document.removeEventListener('visibilitychange', back); window.removeEventListener('wt-japan-signout', out); };
+    window.addEventListener('wt-refresh', pulled);
+    return () => { clearInterval(timer); document.removeEventListener('visibilitychange', back); window.removeEventListener('wt-japan-signout', out); window.removeEventListener('wt-refresh', pulled); };
   }, [creds, refresh, signOut]);
 
   /* ticks and notes go on to the sheet; if one doesn't make it, put it back and say so */

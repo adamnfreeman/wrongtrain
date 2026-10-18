@@ -10,7 +10,7 @@
 /** The moods to choose from. Each is a set of OpenStreetMap tags; a value is a regular expression. */
 export const MOODS = [
   { key: 'food', label: 'Food', hint: 'somewhere to eat', tags: [['amenity', '^(restaurant|fast_food|food_court)$']] },
-  { key: 'coffee', label: 'Coffee & cake', hint: 'coffee, cake or a sweet', tags: [['amenity', '^(cafe|ice_cream)$'], ['shop', '^(bakery|pastry|confectionery)$']] },
+  { key: 'coffee', label: 'Coffee', hint: 'coffee, cake or a sweet', tags: [['amenity', '^(cafe|ice_cream)$'], ['shop', '^(bakery|pastry|confectionery)$']] },
   { key: 'drinks', label: 'Drinks', hint: 'a bar or pub', tags: [['amenity', '^(bar|pub|biergarten|nightclub)$']] },
   { key: 'sights', label: 'Sightseeing', hint: 'the sights worth seeing', tags: [['tourism', '^(attraction|viewpoint)$'], ['historic', '^(castle|monument|memorial|ruins|archaeological_site|city_gate|building|church|temple|shrine)$']] },
   { key: 'culture', label: 'Culture', hint: 'museums, galleries and theatre', tags: [['tourism', '^(museum|gallery)$'], ['amenity', '^(theatre|arts_centre)$']] },

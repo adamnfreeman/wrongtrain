@@ -24,6 +24,7 @@ import { Toast, useWaitingForMe } from './ui/requests';
 import { PlannerSheet } from './ui/planner';
 import { TripHub } from './ui/trip';
 import { AddAnything, AddButton } from './ui/addAnything';
+import { usePullToRefresh } from './ui/pull';
 import { PhotosPage } from './ui/photos';
 import { offCentre, useDock } from './ui/dock';
 import { useRef } from 'react';
@@ -95,8 +96,8 @@ function Welcome({ trips }: { trips: Trip[] }) {
         </header>
         <button className="gobtn" style={{ width: '100%' }} onClick={() => setSheet('plan')}>Plan a trip for me</button>
         <p className="hint" style={{ marginTop: 0 }}>Answer a few questions and WrongTrain suggests where to go, for how long, where to stay, what to eat and see. Then change anything.</p>
-        <button className="gobtn ghost" style={{ width: '100%' }} onClick={openSample}>Explore a sample trip</button>
         <button className="gobtn ghost" style={{ width: '100%' }} onClick={() => setSheet('new')}>Plan it myself</button>
+        <button className="gobtn ghost" style={{ width: '100%' }} onClick={openSample}>Explore a sample trip</button>
         <p className="hint">The sample is a made-up ten days through Kyoto, Nara, Osaka and Tokyo, set so that today is day two. Like it? <button className="linkbtn" onClick={() => setSheet('copy')}>Start from the sample</button> and change it to suit you.</p>
         <button className="gobtn ghost" style={{ width: '100%' }} onClick={() => setSheet('join')}>Join a trip with a code</button>
         <OpenTripFile trips={trips} />
@@ -241,6 +242,8 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
   const bar = useRef<HTMLDivElement>(null);
   const TAB_W = 68;
   useDock(bar, '.tab', { radius: 110, small: 0.82, big: 1.2 });
+  const pullLabel = useRef<HTMLDivElement>(null);
+  usePullToRefresh(pager, pullLabel, trip.id);
   /* the open page first, the rest just after, so none is blank when slid past */
   const [all, setAll] = useState(false);
   useEffect(() => { const t = window.setTimeout(() => setAll(true), 350); return () => clearTimeout(t); }, []);
@@ -366,6 +369,7 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
       {!JAPAN && !editing && !adding && ui.tab !== 'now' && <AddButton onOpen={() => setAdding(true)} />}
       {adding && <AddAnything close={() => setAdding(false)} />}
       <div className="statusbg" aria-hidden="true" />
+      <div className="ptr" ref={pullLabel} role="status" aria-live="polite" />
       <div className="tabpeek" ref={peek} aria-hidden="true" />
       <nav className="tabs" aria-label="Sections">
         <div className="tabs-in" ref={bar}>

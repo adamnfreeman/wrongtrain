@@ -583,3 +583,11 @@ select.input { background-image: linear-gradient(45deg, transparent 50%, var(--m
 .addeg { margin-top: 14px }
 .addeg .chipbtn { white-space: normal; text-align: left }
 .addlog { margin-top: 14px }
+
+/* pull down to refresh (ui/pull.ts): a label under the clock */
+.ptr { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 8px); z-index: 1002; transform: translate(-50%, -60px);
+  background: var(--card); color: var(--ink); border: 1px solid var(--rule); border-radius: 999px; padding: 8px 14px;
+  font: 600 13px/1 var(--f-body); box-shadow: 0 4px 14px rgba(0,0,0,.18); transition: transform .18s ease; pointer-events: none; white-space: nowrap }
+.ptr[data-state="pull"], .ptr[data-state="ready"], .ptr[data-state="busy"], .ptr[data-state="done"], .ptr[data-state="bad"] { transform: translate(-50%, 0) }
+.ptr[data-state="ready"] { border-color: var(--accent) }
+.ptr[data-state="bad"] { color: var(--warn) }
