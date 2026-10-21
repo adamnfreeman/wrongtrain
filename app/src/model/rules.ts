@@ -44,7 +44,7 @@ export const ROLES: { value: Exclude<Role, 'owner'>; label: string; hint: string
 export const canDecide = (role: Role) => role === 'owner' || role === 'organizer';
 
 /** Parts of a trip anyone may add to under the approve rule. Everything else is the plan. */
-const OPEN_KEYS = ['notes', 'todos', 'todoGroups', 'places', 'docs', 'expenses', 'settlements', 'venmo'] as const;
+const OPEN_KEYS = ['notes', 'todos', 'todoGroups', 'places', 'docs', 'expenses', 'settlements', 'venmo', 'going'] as const;
 
 type Verdict = 'ok' | 'request' | 'blocked';
 
@@ -59,7 +59,7 @@ export function verdict(before: Trip, after: Trip, role: Role): Verdict {
     'all' (only notes) for a viewer. */
 export function needsApproval(before: Trip, after: Trip, rule: Rule): boolean {
   if (rule === 'open') return false;
-  const free: readonly string[] = rule === 'all' ? ['notes'] : OPEN_KEYS;
+  const free: readonly string[] = rule === 'all' ? ['notes', 'going'] : OPEN_KEYS;
   const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
   for (const k of keys) {
     if (k === 'updatedAt' || free.includes(k)) continue;

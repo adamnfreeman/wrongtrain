@@ -8,7 +8,7 @@
 /** Affiliate ids, by partner. Empty: a plain link, no commission. The ids are also on the project
     sheet's Accounts tab. Not secret: they're in every link we show. */
 export const REF = {
-  /** Airalo partner programme (Impact): the tracking link prefix. Application pending. */
+  /** Airalo declined WrongTrain's referral application (Oct 20, 2026): its eSIM link goes out plain. */
   airalo: '',
   /** Viator Partner Program: partner id (pid) and campaign (mcid) */
   viatorPid: 'P00326374', viatorMcid: '42383',

@@ -192,3 +192,41 @@ export function parseCoords(s: string): { lat: number; lng: number } | null {
 }
 
 export { newId };
+
+/* ---------- one plan item: change it, move it, who's going ---------- */
+
+/** Replaces a plan item, moving it to another day if toDay differs; the plan stays in time order. */
+export function savePlanItem(t: Trip, fromDay: string, item: PlanItem, toDay: string): Trip {
+  return {
+    ...t,
+    days: t.days.map(d => {
+      let plan = d.plan;
+      if (d.id === fromDay) plan = plan.filter(p => p.id !== item.id);
+      if (d.id === toDay) plan = sortPlan([...plan.filter(p => p.id !== item.id), item]);
+      return plan === d.plan ? d : { ...d, plan };
+    }),
+    updatedAt: stampNow(),
+  };
+}
+
+export function deletePlanItem(t: Trip, dayId: string, itemId: string): Trip {
+  const going = { ...(t.going || {}) }; delete going[itemId];
+  return { ...t, days: t.days.map(d => (d.id === dayId ? { ...d, plan: d.plan.filter(p => p.id !== itemId) } : d)), going, updatedAt: stampNow() };
+}
+
+/** Sets who's going to a plan item. Everyone (or nobody listed) clears it back to "everyone". */
+export function setGoing(t: Trip, itemId: string, names: string[] | null): Trip {
+  const going = { ...(t.going || {}) };
+  const all = new Set(t.travelers.map(n => n.trim().toLowerCase()));
+  if (!names || (names.length >= all.size && names.every(n => all.has(n.trim().toLowerCase())))) delete going[itemId];
+  else going[itemId] = names;
+  return { ...t, going, updatedAt: stampNow() };
+}
+
+/** You in or out of a plan item. */
+export function toggleGoing(t: Trip, itemId: string, me: string): Trip {
+  const now = t.going?.[itemId] ?? t.travelers;
+  const isIn = now.some(n => n.trim().toLowerCase() === me.trim().toLowerCase());
+  const travelers = t.travelers.some(n => n.trim().toLowerCase() === me.trim().toLowerCase()) ? t.travelers : [...t.travelers, me];
+  return setGoing({ ...t, travelers }, itemId, isIn ? now.filter(n => n.trim().toLowerCase() !== me.trim().toLowerCase()) : [...now, me]);
+}

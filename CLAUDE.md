@@ -106,6 +106,16 @@ on a Mac.
   middle of the bar (`.tabs::before`; on the tab it was cut off once the tab grew); one Add photos
   button (the round one); the viewer's Share is the share icon; wishlist places show under their
   own kind too; Wallet's button says Add document or Add expense to match (`useWalletSeg`).
+- Plan items (`src/ui/planItem.tsx`): tap one on a day to edit it (words, day, times, booked,
+  who's going; "Fits best on" suggests days by city and how full they are) or take it off. Who's
+  going lives in `trip.going` (item id to names; none means everyone), free for anyone to change
+  (`OPEN_KEYS` and `change_needs_approval`); under each item, faces when it isn't everyone and an
+  I'm in / I'm out button. A day's getting-around notes fold away when it has legs.
+- Notes tab (last; `src/ui/mynotes.tsx`): your own notes for the trip, on this phone only, and
+  below them comments about the app for Adam (`app_feedback`, `src/sync/feedback.ts`: kind, text,
+  build, phone; each person sees only their own; Adam reads them in Supabase's Table Editor).
+- Photos: ☆ in the viewer keeps a photo in your favourites (on this phone); "★ Favourites" on the
+  Photos page. Moving pages by the bottom bar blurs them by speed (`--mb`, `onBar` in App.tsx).
 - Pull down to refresh (`src/ui/pull.ts`), on every page: fetches the trip, photos, hearts and comments
   (the Japan edition re-reads the sheet, event `wt-refresh`).
 - Add anything (`src/ui/addAnything.tsx`): the round Add button above the bottom bar on every page
@@ -206,7 +216,8 @@ the iPhone, owner approvals (trip rule, roles, requests and the approval list), 
 (Claude files group notes; not deployed yet).
 
 Next:
-4. **Apple Developer account**: enrollment pending. Then App Store Connect, TestFlight.
+4. **Apple Developer account**: approved Oct 20, but App Store Connect won't open for the account;
+   waiting on Apple support. Then TestFlight.
 6. **"Something nearby"** (built Oct 16) on Today: pick a mood, get 5 places from OpenStreetMap
    (Overpass), chosen by Claude on shared trips (`suggest-nearby`), else the nearest. The public
    Overpass server will not do for many users: move to a paid places API or our own server.
@@ -266,9 +277,8 @@ Next:
    right yet). `LEVELS` in `src/model/rules.ts`; with Andrea.
 45. **Planner header covers the emojis**: on Plan a trip for me, the top bar cuts off the emojis on
    the first questions (`src/ui/planner.tsx`, `.sheet-bar`).
-47. **The last referral ids**: Viator, Klook and SafetyWing are in `REF` (`src/model/partners.ts`)
-   since Oct 17. Still needed: the Airalo tracking link (Impact, pending) and the Booking.com aid
-   (and then a Booking.com link for stays, see 50).
+47. **The last referral id**: the Booking.com aid (then a Booking.com link for stays, see 50). Airalo
+   declined (Oct 20): its eSIM link goes out plain, with no referral.
 48. **What each AI job costs**: a tracker for each trip plan and each note filed or change made
    (tokens and dollars). `ai_plans` already counts tokens per plan; add the same for filings
    and nearby picks, and a view of it (for Adam).
@@ -293,9 +303,9 @@ Next:
    Today) but can be brought back, with its photos, money and notes kept, e.g. past trips.
 58. **Budget per kind, in the planner** ("advanced"): set a level for each, e.g. flights cheap,
    hotels expensive, food cheap, sightseeing medium; it feeds the plan (see 44, the range).
-62. **Feedback from testers** (Adam, Oct 20): once it's on TestFlight, a place in the app where
-   friends tell Adam what doesn't work, what they'd like to see and what should change (with the
-   build number and phone sent along), and where Adam reads and answers them.
+63. **Real-time flight alerts** (Adam, Oct 20): delays, gate and terminal changes and
+   cancellations for the trip's booked flights, as they happen (needs a flight status service and,
+   with the app closed, push notifications; see Right now, 16).
 
 ## Working together
 

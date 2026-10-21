@@ -1,11 +1,11 @@
 /* Photos: the Photos page (everyone's photos from the trip, by day or by person), the photos
    under each day, and the full-screen viewer, where people heart, comment and share a photo to
    anywhere the phone can (Instagram, Messages, saving it). See sync/photos.ts. */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import type { Day, Trip } from '../model/types';
 import { canDecide } from '../model/rules';
-import { getState, useStore } from '../model/store';
+import { getState, pref, setPref, useStore } from '../model/store';
 import { longDate, stamp } from '../model/time';
 import { shareBlob, sharePath, useFileUrl } from '../sync/files';
 import { type Comment, addComment, addPhotos, deleteComment, deletePhoto, refresh, seedSampleTalk, toggleHeart, usePhotos, useTalk, type Photo, type Talk } from '../sync/photos';
@@ -48,6 +48,16 @@ function useTripPhotos() {
   return { list: sample || real, me, sample: !!sample };
 }
 
+/* ---------- favourites: starred on this phone ---------- */
+
+let favs: string[] = pref<string[]>('fav-photos', []);
+const favListeners = new Set<() => void>();
+const useFavPhotos = () => useSyncExternalStore(f => { favListeners.add(f); return () => favListeners.delete(f); }, () => favs);
+function toggleFavPhoto(id: string) {
+  favs = favs.includes(id) ? favs.filter(x => x !== id) : [...favs, id];
+  setPref('fav-photos', favs); favListeners.forEach(f => f());
+}
+
 /* ---------- the Photos page ---------- */
 
 export function PhotosPage() {
@@ -57,7 +67,8 @@ export function PhotosPage() {
   const { session } = useSync();
   const { list, me, sample } = useTripPhotos();
   const talk = useTalk(t.id);
-  const [by, setBy] = useState<'day' | 'person'>('day');
+  const [by, setBy] = useState<'day' | 'person' | 'fav'>('day');
+  const fav = useFavPhotos();
   const [open, setOpen] = useState<{ list: Photo[]; at: number } | null>(null);
   /* keep it fresh while the page is open */
   useEffect(() => {
@@ -66,6 +77,10 @@ export function PhotosPage() {
     return () => clearInterval(tick);
   }, [t.id, shared, sample]);
   const groups = useMemo(() => {
+    if (by === 'fav') {
+      const ps = list.filter(p => fav.includes(p.id));
+      return ps.length ? [{ key: 'fav', title: 'Your favourites', ps }] : [];
+    }
     if (by === 'person') {
       const m = new Map<string, Photo[]>();
       for (const p of list) { const k = p.author_name || 'Someone'; m.set(k, [...(m.get(k) || []), p]); }
@@ -76,7 +91,7 @@ export function PhotosPage() {
     const loose = list.filter(p => !t.days.some(d => d.id === p.day_id));
     if (loose.length) out.push({ key: 'other', title: 'Other days', ps: loose });
     return out;
-  }, [by, list, t.days]);
+  }, [by, list, t.days, fav]);
   const hearts = (p: Photo) => talk.hearts.filter(h => h.photo_id === p.id).length;
   const canAdd = !sample && shared && !!session;
 
@@ -92,6 +107,7 @@ export function PhotosPage() {
         <div className="chips" role="group" aria-label="Show photos" style={{ marginTop: 12 }}>
           <button className={'chipbtn' + (by === 'day' ? ' on' : '')} aria-pressed={by === 'day'} onClick={() => setBy('day')}>By day</button>
           <button className={'chipbtn' + (by === 'person' ? ' on' : '')} aria-pressed={by === 'person'} onClick={() => setBy('person')}>By person</button>
+          <button className={'chipbtn' + (by === 'fav' ? ' on' : '')} aria-pressed={by === 'fav'} onClick={() => setBy('fav')}>★ Favourites</button>
         </div>
       )}
       {groups.map(g => (
@@ -100,6 +116,7 @@ export function PhotosPage() {
           <div className="pgrid">{g.ps.map((p, i) => <Thumb key={p.id} p={p} hearts={hearts(p)} onOpen={() => setOpen({ list: g.ps, at: i })} />)}</div>
         </section>
       ))}
+      {by === 'fav' && !groups.length && <p className="note">No favourites yet. Open a photo and tap ☆ to keep it here.</p>}
       {!list.length && canAdd && <p className="note">No photos yet. Tap Add photos, and everyone on the trip sees them here and under each day.</p>}
       {sample && <p className="note">In the sample, the photos are drawings and the hearts and comments stay on this phone.</p>}
       {open && open.list[open.at] && <Viewer list={open.list} at={open.at} me={me} onMove={i => setOpen({ ...open, at: i })} onClose={() => setOpen(null)} />}
@@ -179,6 +196,7 @@ function Viewer({ list, at, me, onMove, onClose }: { list: Photo[]; at: number; 
   const comments = talk.comments.filter(c => c.photo_id === p.id);
   const [msg, setMsg] = useState('');
   const [talking, setTalking] = useState(false);
+  const starred = useFavPhotos().includes(p.id);
   const [draft, setDraft] = useState('');
   const face = (name: string) => SAMPLE_PEOPLE.find(q => q.name === name)?.avatar;
   const share = async () => {
@@ -217,6 +235,8 @@ function Viewer({ list, at, me, onMove, onClose }: { list: Photo[]; at: number; 
           onClick={() => void toggleHeart(p, me).catch(e => setMsg((e as Error).message))}>
           <span aria-hidden="true">{hearted ? '♥' : '♡'}</span> {hearts.length || ''}
         </button>
+        <button className={'pact' + (starred ? ' on' : '')} aria-pressed={starred} aria-label={starred ? 'Take off your favourites' : 'Add to your favourites'}
+          onClick={() => toggleFavPhoto(p.id)}><span aria-hidden="true">{starred ? '★' : '☆'}</span></button>
         <button className={'pact' + (talking ? ' on' : '')} aria-expanded={talking} onClick={() => setTalking(!talking)}>
           <span aria-hidden="true">💬</span> {comments.length ? `${comments.length} comment${comments.length > 1 ? 's' : ''}` : 'Comment'}
         </button>

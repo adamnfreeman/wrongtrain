@@ -7,7 +7,6 @@ import { loadClips, play, translateLink, type SayState } from '../phrases/speak'
 import { fold } from '../model/search';
 import { Empty, Ext } from './bits';
 import { useApp } from './ctx';
-import { Languages } from './languages';
 
 export function Phrases() {
   const { ix, ui, set } = useApp();
@@ -62,7 +61,6 @@ export function Phrases() {
           <section key={g.cat} className="blk"><h3>{g.cat}</h3>{g.cat === FAV && <p className="note" style={{ marginTop: -4 }}>Starred on this phone. Tap ★ again to take one off.</p>}<ul className="sheet">{g.items.map(it => <PhraseItem key={it.en + it.ja} pack={pack} it={it} />)}</ul></section>
         ))}
       </div>
-    <Languages />
     </>
   );
 }

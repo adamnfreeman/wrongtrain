@@ -29,6 +29,8 @@ import { useWalletSeg } from './ui/wallet';
 import { canFile } from './sync/filing';
 import { useSync } from './sync/engine';
 import { usePullToRefresh } from './ui/pull';
+import { PlanItemEditor } from './ui/planItem';
+import { MyNotes } from './ui/mynotes';
 import { PhotosPage } from './ui/photos';
 import { offCentre, useDock } from './ui/dock';
 import { useRef } from 'react';
@@ -158,6 +160,7 @@ const ICONS: Record<string, { label: string; icon: React.ReactNode }> = {
   days: { label: 'Days', icon: <><rect x="3.5" y="5" width="17" height="15.5" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></> },
   map: { label: 'Map', icon: <><path d="M12 21s7-6.2 7-11.5a7 7 0 0 0-14 0C5 14.8 12 21 12 21z" /><circle cx="12" cy="9.5" r="2.4" /></> },
   photos: { label: 'Photos', icon: <><rect x="3" y="6" width="18" height="14" rx="3" /><circle cx="12" cy="13" r="3.6" /><path d="M8.5 6l1.4-2.2h4.2L15.5 6" /></> },
+  notes: { label: 'Notes', icon: <><path d="M6 3.5h9l3.5 3.5v13.5H6z" /><path d="M9 11h6M9 14.5h6M9 18h3.5" /></> },
   places: { label: 'Places', icon: <path d="M12 3.6l2.6 5.2 5.8.9-4.2 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.2-4.1 5.8-.9z" /> },
   transit: { label: 'Transit', icon: <><rect x="5" y="3" width="14" height="14" rx="3.5" /><path d="M5 10.5h14M9 20.5l1.5-3.5M15 20.5L13.5 17M9 13.8h.01M15 13.8h.01" /></> },
   phrases: { label: 'Phrases', icon: <><path d="M4 5h16v11H10l-4.5 3.5V16H4z" /><path d="M8.5 9.5h7M8.5 12.5h4.5" /></> },
@@ -239,7 +242,7 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
 
   const q = ui.q.trim(), searching = q.length > 1;
   const waiting = useWaitingForMe(trip.id);
-  const PAGES = { today: Today, days: Days, photos: PhotosPage, transit: Transit, places: Places, map: MapView, phrases: Phrases, wallet: Wallet, trip: TripHub, prep: Prep };
+  const PAGES = { today: Today, days: Days, photos: PhotosPage, notes: MyNotes, transit: Transit, places: Places, map: MapView, phrases: Phrases, wallet: Wallet, trip: TripHub, prep: Prep };
   /* ---------- one long sheet: every page side by side, sliding with your finger ----------
      The pager scrolls sideways (the phone's own scrolling, so it tracks the finger and coasts);
      each page scrolls up and down by itself. The bottom bar and the pager move together: drag
@@ -299,9 +302,18 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
     /* bar dragged: the pager follows it */
     const barStart = () => { barDragging.current = true; tapping.current = false; clearTimeout(barRest); };
     const barEnd = () => { clearTimeout(barRest); barRest = window.setTimeout(() => { barDragging.current = false; tapping.current = false; }, 400); };
+    /* Moving by the bar sweeps the pages past quickly, which felt harsh: blur them in proportion
+       to how fast they go, and clear it as they settle. A finger swipe gets none (it tracks the finger). */
+    let lastX = pg.scrollLeft, blurOff = 0;
+    const blur = (px: number) => { pg.style.setProperty('--mb', px.toFixed(1) + 'px'); pg.classList.toggle('blurring', px > 0.3); };
     const onBar = () => {
       if (!barDragging.current) return;
       pg.scrollLeft = (row.scrollLeft / TAB_W) * width();
+      if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        blur(Math.min(7, Math.abs(pg.scrollLeft - lastX) / 14));
+        clearTimeout(blurOff); blurOff = window.setTimeout(() => blur(0), 90);
+      }
+      lastX = pg.scrollLeft;
       clearTimeout(barRest); barRest = window.setTimeout(() => { barDragging.current = false; tapping.current = false; }, 400);
     };
     pg.addEventListener('scroll', onPager, { passive: true });
@@ -312,7 +324,7 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
     return () => {
       pg.removeEventListener('scroll', onPager); row.removeEventListener('touchstart', barStart);
       row.removeEventListener('touchend', barEnd); row.removeEventListener('wheel', barStart); row.removeEventListener('scroll', onBar);
-      cancelAnimationFrame(frame); clearTimeout(rest); clearTimeout(barRest); clearTimeout(peekOff);
+      cancelAnimationFrame(frame); clearTimeout(rest); clearTimeout(barRest); clearTimeout(peekOff); clearTimeout(blurOff);
     };
   }, [order]);
   /* A tapped tab works like a day on the Days slider: the bar slides it to the middle and the
@@ -367,6 +379,7 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
       <div className="sheets">
         {JAPAN && editing && <SheetOnly close={close} toNotes={() => go('prep')} />}
         {!JAPAN && editing?.kind === 'trip' && <TripSettings trip={trip} close={close} />}
+        {!JAPAN && editing?.kind === 'plan' && <PlanItemEditor trip={trip} dayId={editing.dayId} id={editing.id} close={close} />}
         {!JAPAN && editing?.kind === 'day' && <DayEditor trip={trip} id={editing.id} close={close} onDayChange={id => go('days', id)} />}
         {!JAPAN && editing?.kind === 'leg' && <LegEditor trip={trip} id={editing.id} dayId={editing.dayId} close={close} />}
         {!JAPAN && editing?.kind === 'place' && <PlaceEditor trip={trip} id={editing.id} as={editing.as} dayId={editing.dayId} destinationId={editing.destinationId} close={close} />}

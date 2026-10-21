@@ -134,7 +134,7 @@ declare k text; free text[]; r text;
 begin
   if member_role in ('owner', 'organizer', 'editor') then return false; end if;
   r := case when member_role = 'contributor' then 'approve' else 'all' end;
-  free := case when r = 'all' then array['notes'] else array['notes', 'todos', 'todoGroups', 'places', 'docs', 'expenses', 'settlements', 'venmo'] end;
+  free := case when r = 'all' then array['notes', 'going'] else array['notes', 'todos', 'todoGroups', 'places', 'docs', 'expenses', 'settlements', 'venmo', 'going'] end;
   -- anything outside the free parts changed
   for k in select jsonb_object_keys(old_data) union select jsonb_object_keys(new_data) loop
     if k = 'updatedAt' or k = any(free) then continue; end if;
@@ -627,6 +627,27 @@ create policy "who wrote it, or an organizer, removes a comment" on public.photo
 revoke update on public.photo_comments from anon, authenticated;
 drop trigger if exists comment_author on public.photo_comments;
 create trigger comment_author before insert on public.photo_comments for each row execute function public.photo_author();
+
+-- ---------- comments about the app, from testers to Adam ----------
+--
+-- From the Notes tab: what's broken, ideas, what to change. Anyone signed in sends; each sees only
+-- their own; Adam reads them all in the Table Editor (or with the service key, never in the app).
+create table if not exists public.app_feedback (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  name        text not null default '' check (char_length(name) <= 80),
+  kind        text not null default 'idea' check (kind in ('broken', 'idea', 'change')),
+  text        text not null check (char_length(text) between 1 and 2000),
+  build       text not null default '' check (char_length(build) <= 40),
+  device      text not null default '' check (char_length(device) <= 200),
+  created_at  timestamptz not null default now()
+);
+alter table public.app_feedback enable row level security;
+drop policy if exists "send feedback" on public.app_feedback;
+create policy "send feedback" on public.app_feedback for insert to authenticated with check (user_id = auth.uid());
+drop policy if exists "see your own feedback" on public.app_feedback;
+create policy "see your own feedback" on public.app_feedback for select to authenticated using (user_id = auth.uid());
+revoke update, delete on public.app_feedback from anon, authenticated;
 
 -- ---------- where everyone is (friend finder) ----------
 --

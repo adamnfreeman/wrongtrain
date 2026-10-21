@@ -230,6 +230,18 @@ select pg_temp.ok((select count(*) from trip_photos) = 0 and (select count(*) fr
 reset role;
 select pg_temp.ok(exists (select 1 from storage.buckets where id = 'trip-files' and not public), 'the files bucket is private');
 
+-- comments about the app: anyone signed in sends; each sees only their own
+select pg_temp.act('ana');
+insert into app_feedback (kind, text, build) values ('broken', 'The map is blank', '137');
+select pg_temp.ok((select count(*) from app_feedback) = 1, 'someone signed in sends a comment about the app and sees it');
+select pg_temp.ok(pg_temp.fails($$insert into app_feedback (kind, text) values ('rant', 'x')$$), '... of a known kind only');
+select pg_temp.ok(pg_temp.fails($$update app_feedback set text = 'changed'$$), '... and cannot rewrite it');
+select pg_temp.act('cat');
+select pg_temp.ok((select count(*) from app_feedback) = 0, 'nobody else sees it in the app');
+select pg_temp.act('');
+select pg_temp.ok(pg_temp.fails($$insert into app_feedback (kind, text) values ('idea', 'x')$$), 'signed out, nothing can be sent');
+reset role;
+
 -- plans: 5 a month per person, steps only on your own plan
 select pg_temp.act('ana');
 select pg_temp.ok(pg_temp.fails($$select public.claim_plan(auth.uid())$$), 'the app cannot start a plan itself (only the function can)');

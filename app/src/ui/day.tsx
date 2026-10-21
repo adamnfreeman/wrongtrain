@@ -1,5 +1,7 @@
 /* A day: its station board, plan, getting around, and where to eat. Plus the route list and the
    list items other screens reuse (legs, food, to-dos). */
+import { WhoGoing } from './planItem';
+import { JAPAN } from '../edition';
 import { useEffect, useRef } from 'react';
 import { centre, offCentre, useDock } from './dock';
 import type { Bullet, Day, Leg, Place, Todo } from '../model/types';
@@ -9,7 +11,7 @@ import { dayOfMonth, fmtHM, fmtT, longDate } from '../model/time';
 import { anchorsFor } from '../model/next';
 import { toggleTodo } from '../model/store';
 import { TODO_TAGS } from '../model/todos';
-import { Ext, Pill, Rich, SecH, Txt, line } from './bits';
+import { Ext, Pill, Rich, SecH, Txt, line, Fold } from './bits';
 import { useApp } from './ctx';
 
 /** The day's heading: which day, the city, tonight's stay. compact on Today, where the time to leave leads. */
@@ -70,12 +72,13 @@ export function DayBody({ d }: { d: Day }) {
             {d.plan.map(p => {
               const place = p.placeId ? ix.place.get(p.placeId) : undefined;
               return (
-                <li key={p.id}>
+                <li key={p.id} className="planitem" onClick={e => { if (!(e.target as HTMLElement).closest('a, button')) edit({ kind: 'plan', dayId: d.id, id: p.id }); }}>
                   {p.time && <div className="kick">{fmtHM(p.time)}{p.end ? '–' + fmtHM(p.end) : ''}{p.fixed && (p.timeKind === 'by' ? ' · at the latest' : ' · booked')}</div>}
                   <Txt text={p.text} />
                   {p.sub?.length ? <ul className="sub">{p.sub.map((s, j) => <li key={j}><Txt text={s} /></li>)}</ul> : null}
                   {place && place.kind !== 'stay' && <div className="meta"><Ext href={mapsLink(ix, place)}>{place.name} in Maps</Ext></div>}
                   <DocLinks kind="plan" id={p.id} />
+                  {!JAPAN && <WhoGoing trip={ix.trip} item={p} />}
                 </li>
               );
             })}
@@ -100,7 +103,8 @@ export function DayBody({ d }: { d: Day }) {
         <section className="sec">
           <SecH title="Getting around"><span><button className="linkbtn" onClick={() => edit({ kind: 'leg', dayId: d.id })}>+ Leg</button> · <button className="linkbtn" onClick={() => go('transit')}>All legs</button></span></SecH>
           {legs.length > 0 && <ul className="sheet">{legs.map(l => <LegItem key={l.id} l={l} />)}</ul>}
-          {d.around.length > 0 && <div className="blk"><Bullets items={d.around} /></div>}
+          {/* the sheet's own getting-around notes often say what the legs already do: fold them then */}
+          {d.around.length > 0 && (legs.length ? <Fold title="More on getting around" count={d.around.length}><div className="blk"><Bullets items={d.around} /></div></Fold> : <div className="blk"><Bullets items={d.around} /></div>)}
         </section>
       )}
       {d.tips.length > 0 && <section className="sec"><SecH title="Good to know" /><Bullets items={d.tips} /></section>}

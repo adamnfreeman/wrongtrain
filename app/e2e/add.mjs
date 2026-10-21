@@ -47,6 +47,30 @@ await ph.locator('.pstar').first().click();
 check(await ph.locator('.catstrip button:has-text("Favourites")').count() === 1, 'starring a phrase adds a Favourites category');
 check(await ph.locator('#phraselist h3').first().textContent() === '★ Favourites', '... shown first');
 
+/* Days: tap a plan item to edit it, move it to a better day, and say you're out (as Alex) */
+await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('wrongtrain')); s.me = 'Alex'; localStorage.setItem('wrongtrain', JSON.stringify(s)); });
+await page.reload(); await page.waitForSelector('.tabs');
+await page.tap('.tabs-in .tab[data-tab="days"]'); await wait(900);
+const dpane = page.locator('.pane[data-tab="days"]');
+const where = () => page.evaluate(() => Object.fromEntries(JSON.parse(localStorage.getItem('wrongtrain')).trips.find(t => t.sample).days.flatMap((d, i) => d.plan.map(p => [p.id, i]))));
+const before = await where();
+await dpane.locator('.plan .planitem').first().click();
+const ed = page.locator('.sheet-wrap[aria-label="Plan item"]');
+await ed.waitFor();
+check(await ed.locator('.bestdays .chipbtn').count() > 0, 'tapping a plan item opens its editor, with the days it fits best');
+await ed.locator('.bestdays .chipbtn').first().click();
+await ed.getByRole('button', { name: 'Save' }).click();
+const after = await where();
+check(Object.keys(before).filter(id => after[id] !== before[id]).length === 1, 'saving moves it to the day picked');
+await dpane.locator('.gobtn-s').first().click();
+check(await page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('wrongtrain')).trips.find(t => t.sample).going || {}).length === 1), "I'm out marks you out of that item only");
+
+/* Notes: the last tab, kept on this phone */
+await page.tap('.tabs-in .tab[data-tab="notes"]'); await wait(900);
+await page.locator('.pane[data-tab="notes"] textarea').fill('Buy omiyage for the office');
+await wait(500);
+check(await page.evaluate(() => Object.keys(localStorage).some(k => k.startsWith('wt-pref-mynotes-') && localStorage.getItem(k).includes('omiyage'))), 'Notes are saved on the phone as you type');
+
 check(errors.length === 0, 'no script errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
 await browser.close();
 srv.kill();

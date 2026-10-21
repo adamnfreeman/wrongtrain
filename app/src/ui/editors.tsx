@@ -24,7 +24,8 @@ export type Edit =
   | { kind: 'place'; id?: string; as?: PlaceKind; dayId?: string; destinationId?: string }
   | { kind: 'todo'; id?: string; group?: string }
   | { kind: 'doc'; id?: string; for?: { kind: 'plan' | 'leg'; id: string } }
-  | { kind: 'expense'; id?: string };
+  | { kind: 'expense'; id?: string }
+  | { kind: 'plan'; dayId: string; id: string };
 
 interface Props { trip: Trip; close: () => void; onDayChange?: (id: string) => void }
 

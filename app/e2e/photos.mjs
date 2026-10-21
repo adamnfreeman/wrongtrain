@@ -41,7 +41,7 @@ check(await count() === before + 1 && await heart.getAttribute('aria-pressed') =
 check(/You/.test(await v.locator('.pview-liked').textContent()), '... and says you hearted it');
 await heart.click();
 check(await count() === before, 'tapping again takes the heart back');
-await v.locator('.pact').nth(1).click();
+await v.locator('.pact[aria-expanded]').click();
 await v.locator('input[aria-label="Your comment"]').fill('Worth the climb');
 await v.locator('text=Post').click();
 check(await v.locator('.pcomment:has-text("Worth the climb")').count() === 1, 'a comment shows under the photo');

@@ -24,6 +24,9 @@ export interface Trip {
   todoGroups: string[];
   todos: Todo[];
   notes: Note[];
+  /** Who's going to each plan item, by plan item id: names from travelers. No entry means
+      everyone. Kept apart from the days so saying "I'm out" is free for anyone on the trip. */
+  going?: Record<ID, string[]>;
   guides: Guide[];
   /** Phrase pack to show on the Phrases tab, by language code ("ja"). */
   phrasePack?: string;

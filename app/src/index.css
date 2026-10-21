@@ -622,3 +622,22 @@ details.fold > .linkbtn { display: inline-block; margin: 8px 14px 12px }
 .pshare svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round }
 .pstar { appearance: none; border: 0; background: none; margin-left: auto; padding: 0 2px; font-size: 24px; line-height: 1; color: var(--muted); cursor: pointer }
 .pstar.on { color: var(--accent) }
+
+/* a plan item: tap to edit it (ui/planItem.tsx); who's going under it */
+.plan .planitem { cursor: pointer }
+.going { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px }
+.goface { display: inline-flex; align-items: center; gap: 2px }
+.goface .avatar + .avatar { margin-left: -6px; box-shadow: 0 0 0 2px var(--card) }
+.goface small { margin-left: 6px; font-size: 12.5px; color: var(--muted) }
+.gobtn-s { appearance: none; border: 1px solid var(--rule); background: none; color: var(--muted); border-radius: 999px; padding: 4px 10px; font: 600 12.5px/1 var(--f-body); cursor: pointer }
+.gobtn-s.in { color: var(--ink); border-color: var(--ink) }
+.row2e { display: grid; grid-template-columns: 1fr 1fr; gap: 10px }
+.bestdays .chipbtn small { color: var(--muted); font-weight: 500 }
+.whopick { display: flex; flex-wrap: wrap; gap: 12px }
+.whopick .face { appearance: none; border: 0; background: none; color: var(--ink); cursor: pointer; padding: 0; width: 64px }
+.pact[aria-label*="favourites"][aria-pressed="true"] span { color: #f2b84b }
+.mynotes { width: 100%; min-height: 60vh; border: 1px solid var(--rule); border-radius: 12px; background: var(--card); color: var(--ink); padding: 14px; font: 17px/1.5 var(--f-body); resize: vertical }
+
+/* motion blur while the bar sweeps the pages (App.tsx, onBar) */
+.pager > .pane > .wrap { transition: filter .12s ease-out }
+.pager.blurring > .pane > .wrap { filter: blur(var(--mb, 0px)) }
