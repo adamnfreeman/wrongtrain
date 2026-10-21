@@ -169,6 +169,19 @@ function Style({ a, up }: Q) {
             }}>{dollars(n)}</button>
         ))}</div>
         <p className="fhint">{['Shoestring: hostels and street food', 'Careful: simple hotels, cheap eats', 'Comfortable: good hotels, a few nice meals', 'Treat yourselves: nice hotels and restaurants', 'The best: luxury hotels, top restaurants'][a.budget - 1]}</p>
+        {/* advanced: a different level for each kind of spending, e.g. cheap flights, nice hotels */}
+        <details className="fold budgetby" open={!!a.budgetBy && Object.keys(a.budgetBy).length > 0}>
+          <summary>Different for flights, hotels, food, sights?</summary>
+          {(['flights', 'hotels', 'food', 'sights'] as const).map(k => (
+            <div key={k} className="budrow">
+              <span>{k[0].toUpperCase() + k.slice(1)}</span>
+              <div className="chips" style={{ marginTop: 0 }}>{[1, 2, 3, 4, 5].map(n => (
+                <button key={n} type="button" className="chipbtn plain" aria-pressed={(a.budgetBy?.[k] ?? a.budget) === n}
+                  onClick={() => up({ budgetBy: { ...(a.budgetBy || {}), [k]: n } })}>{dollars(n)}</button>
+              ))}</div>
+            </div>
+          ))}
+        </details>
       </div>
       <div className="field">
         <span className="flabel">The vibe</span>

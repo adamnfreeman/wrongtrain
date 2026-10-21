@@ -86,3 +86,11 @@ describe('planToTrip', () => {
     expect(realZone('Europe/Rome', 'Florence')).toBe('Europe/Rome');
   });
 });
+
+describe('budget per kind', () => {
+  it('tells the planner each kind of spending when they differ', async () => {
+    const { budgetWords } = await import('../../supabase/functions/_shared/planner.ts');
+    expect(budgetWords({ budget: 3, budgetBy: { flights: 1, hotels: 4 } })).toBe('$$$ overall; by kind: flights $, hotels $$$$');
+    expect(budgetWords({ budget: 2 })).toBe('$$');
+  });
+});

@@ -278,6 +278,9 @@ function Notes() {
         {filings[n.id] ? <Filed tripId={t.id} noteId={n.id} f={filings[n.id]} />
           : <>
             {n.filed && <p className="filed">{n.filed}</p>}
+            {/* under Dealt with: what it became, so a ticked note says where its contents went */}
+            {n.done && n.made?.length ? <ul className="madelist">{n.made.map((m, i) => <li key={i}>{m}</li>)}</ul>
+              : n.done && !n.filed ? <p className="filed">Ticked off by hand.</p> : null}
             {((claude && !n.done) || mine(n)) && <div className="meta">
               {claude && !n.done && <button className="linkbtn" onClick={() => void fileNote(t.id, n.id)}>{n.filed ? 'File it again' : 'File it into the trip'}</button>}
               {mine(n) && <button className="linkbtn" onClick={() => setFixing({ id: n.id, text: n.text })}>Edit</button>}

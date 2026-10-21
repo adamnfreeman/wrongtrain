@@ -182,6 +182,8 @@ export interface Note {
   done: boolean;
   /** What Claude did with the note, or why it left it for the owner. Shown under the note. */
   filed?: string;
+  /** What filing it made: "Added Ichiran to places in Kyoto" and the like. Shown under Dealt with. */
+  made?: string[];
   /** When its writer last changed it. */
   edited?: string;
 }

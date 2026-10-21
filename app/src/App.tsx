@@ -9,6 +9,7 @@ import { liveCtx } from './model/next';
 import { RightNow } from './ui/rightnow';
 import { indexTrip, whereNow } from './model/trip';
 import type { Trip } from './model/types';
+import { Fold } from './ui/bits';
 import { shortDate } from './model/time';
 import { AppCtx, MAIN_TABS, TABS, type Tab, type UI } from './ui/ctx';
 import { useGeo } from './ui/geo';
@@ -30,6 +31,7 @@ import { canFile } from './sync/filing';
 import { useSync } from './sync/engine';
 import { usePullToRefresh } from './ui/pull';
 import { PlanItemEditor } from './ui/planItem';
+import { Shop } from './ui/shop';
 import { MyNotes } from './ui/mynotes';
 import { PhotosPage } from './ui/photos';
 import { offCentre, useDock } from './ui/dock';
@@ -51,6 +53,32 @@ function glide(pg: HTMLElement, row: HTMLElement | null, to: number) {
     else { pg.style.scrollSnapType = ''; if (row) row.style.scrollSnapType = ''; }
   };
   gliding = requestAnimationFrame(step);
+}
+
+/* Your trips, with past ones archived out of the way: archiving is per phone (it hides the trip
+   here, nothing changes for anyone else) and can be undone. Trips already over get the button. */
+function TripList({ trips }: { trips: Trip[] }) {
+  const [archived, setArchived] = useState<string[]>(() => pref<string[]>('archived', []));
+  const save = (ids: string[]) => { setArchived(ids); setPref('archived', ids); };
+  const today = new Date().toISOString().slice(0, 10);
+  const row = (t: Trip, isArchived: boolean) => (
+    <li key={t.id}>
+      <button className="linkbtn item-n" onClick={() => selectTrip(t.id)}>{t.name}</button>
+      <div className="meta">
+        {t.days.length > 0 && <span>{shortDate(t.days[0].date)} – {shortDate(t.days[t.days.length - 1].date)}</span>}{t.sample && <span>Sample</span>}
+        {isArchived ? <button className="linkbtn" onClick={() => save(archived.filter(x => x !== t.id))}>Bring back</button>
+          : <button className="linkbtn" onClick={() => save([...archived, t.id])}>{(t.days[t.days.length - 1]?.date || '9') < today ? 'Archive (trip is over)' : 'Archive'}</button>}
+      </div>
+    </li>
+  );
+  const shown = trips.filter(t => !archived.includes(t.id)), hidden = trips.filter(t => archived.includes(t.id));
+  return (
+    <section className="sec">
+      <div className="sec-h"><h2>Your trips</h2></div>
+      {shown.length > 0 && <ul className="sheet">{shown.map(t => row(t, false))}</ul>}
+      {hidden.length > 0 && <Fold title="Archived" count={hidden.length} note="Hidden on this phone only. Everything in them is kept."><ul className="sheet">{hidden.map(t => row(t, true))}</ul></Fold>}
+    </section>
+  );
 }
 
 export default function App() {
@@ -111,19 +139,7 @@ function Welcome({ trips }: { trips: Trip[] }) {
         {sheet === 'new' && <NewTripSheet close={() => setSheet(null)} />}
         {sheet === 'join' && <JoinSheet close={() => setSheet(null)} />}
         {sheet === 'copy' && <CopySampleSheet src={sample} close={() => setSheet(null)} />}
-        {trips.length > 0 && (
-          <section className="sec">
-            <div className="sec-h"><h2>Your trips</h2></div>
-            <ul className="sheet">
-              {trips.map(t => (
-                <li key={t.id}>
-                  <button className="linkbtn item-n" onClick={() => selectTrip(t.id)}>{t.name}</button>
-                  {t.days.length > 0 && <div className="meta"><span>{shortDate(t.days[0].date)} – {shortDate(t.days[t.days.length - 1].date)}</span>{t.sample && <span>Sample</span>}</div>}
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
+        {trips.length > 0 && <TripList trips={trips} />}
       </div>
     </div>
   );
@@ -160,6 +176,7 @@ const ICONS: Record<string, { label: string; icon: React.ReactNode }> = {
   days: { label: 'Days', icon: <><rect x="3.5" y="5" width="17" height="15.5" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></> },
   map: { label: 'Map', icon: <><path d="M12 21s7-6.2 7-11.5a7 7 0 0 0-14 0C5 14.8 12 21 12 21z" /><circle cx="12" cy="9.5" r="2.4" /></> },
   photos: { label: 'Photos', icon: <><rect x="3" y="6" width="18" height="14" rx="3" /><circle cx="12" cy="13" r="3.6" /><path d="M8.5 6l1.4-2.2h4.2L15.5 6" /></> },
+  shop: { label: 'Shopping', icon: <><path d="M5 8h14l-1.2 12.5H6.2z" /><path d="M9 8V6.5a3 3 0 0 1 6 0V8" /></> },
   notes: { label: 'Notes', icon: <><path d="M6 3.5h9l3.5 3.5v13.5H6z" /><path d="M9 11h6M9 14.5h6M9 18h3.5" /></> },
   places: { label: 'Places', icon: <path d="M12 3.6l2.6 5.2 5.8.9-4.2 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.2-4.1 5.8-.9z" /> },
   transit: { label: 'Transit', icon: <><rect x="5" y="3" width="14" height="14" rx="3.5" /><path d="M5 10.5h14M9 20.5l1.5-3.5M15 20.5L13.5 17M9 13.8h.01M15 13.8h.01" /></> },
@@ -242,7 +259,7 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
 
   const q = ui.q.trim(), searching = q.length > 1;
   const waiting = useWaitingForMe(trip.id);
-  const PAGES = { today: Today, days: Days, photos: PhotosPage, notes: MyNotes, transit: Transit, places: Places, map: MapView, phrases: Phrases, wallet: Wallet, trip: TripHub, prep: Prep };
+  const PAGES = { today: Today, days: Days, photos: PhotosPage, notes: MyNotes, shop: Shop, transit: Transit, places: Places, map: MapView, phrases: Phrases, wallet: Wallet, trip: TripHub, prep: Prep };
   /* ---------- one long sheet: every page side by side, sliding with your finger ----------
      The pager scrolls sideways (the phone's own scrolling, so it tracks the finger and coasts);
      each page scrolls up and down by itself. The bottom bar and the pager move together: drag

@@ -1,7 +1,13 @@
 /* The Trip tab: the trip as a whole, as opposed to a day or a place. Who's going (faces), the
    whole route, Before you go, what they speak there, and the trip's settings. Switching trips is
    in Account & settings. */
-import { useStore } from '../model/store';
+import { PictureView } from './picture';
+import { getState, patchTrip, pref, setPref, useStore } from '../model/store';
+import { useState } from 'react';
+import type { Trip } from '../model/types';
+import { updateFromSheet } from '../model/sheetSync';
+import { Sheet, Text } from './form';
+import { TRIP_ID } from '../sheet/sheetTrip.js';
 import { shortDate } from '../model/time';
 import { useApp, type Tab } from './ctx';
 import { Avatar, useMyAvatar, useTripPeople } from './avatar';
@@ -11,13 +17,14 @@ import { SecH } from './bits';
 import { JAPAN } from '../edition';
 import { Languages } from './languages';
 import { saveTripCopy } from '../sync/files';
-import { SHEET_URL } from '../sheet/live';
+import { SHEET_URL, loadTrip, savedCreds, saveCreds, type Creds } from '../sheet/live';
 
 /** Sections that open from Trip rather than the bottom bar (none now: every section has a tab). */
 export const UNDER_TRIP: Tab[] = [];
 
 export function TripHub() {
   const { ix, ui, set, go, edit } = useApp();
+  const [fromSheet, setFromSheet] = useState(false);
   const t = ix.trip, shared = !!useStore().sync[t.id];
   const days = t.days;
   return (
@@ -39,10 +46,45 @@ export function TripHub() {
           <li><a href={SHEET_URL} target="_blank" rel="noopener"><b>Open the Google Sheet</b><span>Where the plan is changed</span></a></li>
         </ul> : <ul className="hubrows">
           <li><button onClick={() => edit({ kind: 'trip' })}><b>Trip settings</b><span>Name, dates, destinations, {shared ? 'who can change the plan' : 'sharing'}</span></button></li>
+          {t.id === TRIP_ID && <li><button onClick={() => setFromSheet(true)}><b>Update from the Google Sheet</b><span>Bring in what friends added to the Japan sheet; what was added here stays</span></button></li>}
           <li><button onClick={() => void saveTripCopy(t)}><b>Saved on this phone</b><span>{shared ? 'Changes reach everyone when there\'s signal; the trip, tickets and documents' : 'The trip, tickets and documents'} work with no signal. Tap to save a copy as a file too.</span></button></li>
         </ul>}
       </>}
+      {fromSheet && <FromSheet trip={t} close={() => setFromSheet(false)} />}
     </>
+  );
+}
+
+/** "Update from the Google Sheet": signs in to the Japan sheet with its own name and passcode,
+    reads it, and merges it into this trip (model/sheetSync.ts). */
+function FromSheet({ trip, close }: { trip: Trip; close: () => void }) {
+  const saved = savedCreds();
+  const [name, setName] = useState(saved?.name || '');
+  const [pass, setPass] = useState(saved?.code || '');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ text: string; bad: boolean } | null>(null);
+  const go = async () => {
+    setBusy(true); setMsg(null);
+    try {
+      const creds: Creds = { name: name.trim(), code: pass.trim() };
+      const sheet = await loadTrip(creds);
+      saveCreds(creds);
+      const before = getState().trips.find(x => x.id === trip.id)!;
+      const items = (x: Trip) => x.places.length + x.days.reduce((n, d) => n + d.plan.length, 0) + x.legs.length + x.todos.length;
+      patchTrip(trip.id, x => updateFromSheet(x, sheet, pref<Trip | null>('sheet-base-' + trip.id, null)));
+      setPref('sheet-base-' + trip.id, sheet);
+      const added = items(getState().trips.find(x => x.id === trip.id)!) - items(before);
+      setMsg({ text: added > 0 ? `Updated: ${added} new ${added === 1 ? 'thing' : 'things'} from the sheet.` : 'Up to date with the sheet.', bad: false });
+    } catch (e) { setMsg({ text: (e as Error).message, bad: true }); }
+    setBusy(false);
+  };
+  return (
+    <Sheet title="Update from the Google Sheet" onCancel={close} cancelLabel="Done" onSave={() => void go()} saveLabel={busy ? 'Reading…' : 'Update'} canSave={!busy && !!name.trim() && !!pass.trim()}>
+      <p className="fhint" style={{ marginTop: 0 }}>Uses your Japan page name and passcode. New days, plans, places, travel and to-dos from the sheet come in; what was added in the app stays.</p>
+      <Text label="Your name on the Japan page" value={name} onChange={setName} />
+      <Text label="Passcode" value={pass} onChange={setPass} />
+      {msg && <p className={'geomsg' + (msg.bad ? ' bad' : '')} role="status">{msg.text}</p>}
+    </Sheet>
   );
 }
 
@@ -57,17 +99,20 @@ function WhosGoing() {
   const listed = t.travelers.filter(n => !names.has(n.trim().toLowerCase()))
     .map(n => ({ key: 'n:' + n, name: n, src: n === me ? mine : null, waiting: shared }));
   const all = [...joined, ...listed];
+  const [big, setBig] = useState<{ src: string; name: string } | null>(null);
   if (!all.length && JAPAN) return null;
   return (
     <section className="sec">
       <SecH title="Who's going"><span className="kicker">{all.length || ''}</span></SecH>
       <div className="faces">
         {all.map(p => (
-          <div key={p.key} className={'face' + (p.waiting ? ' waiting' : '')}>
+          /* tap a picture to see it big */
+          <button key={p.key} type="button" className={'face tapface' + (p.waiting ? ' waiting' : '')} disabled={!p.src}
+            aria-label={p.src ? `See ${p.name}'s picture` : p.name} onClick={() => p.src && setBig({ src: p.src, name: p.name })}>
             <Avatar name={p.name} src={p.src} size={56} />
             <span>{p.name}</span>
             {p.waiting && <small>not joined yet</small>}
-          </div>
+          </button>
         ))}
         {!JAPAN && !t.sample && (
           <button className="face add" onClick={() => edit({ kind: 'trip' })} aria-label={shared ? 'Invite someone' : 'Share the trip'}>
@@ -75,6 +120,7 @@ function WhosGoing() {
           </button>
         )}
       </div>
+      {big && <PictureView src={big.src} title={big.name} close={() => setBig(null)} />}
     </section>
   );
 }

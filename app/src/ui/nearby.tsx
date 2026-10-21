@@ -19,6 +19,9 @@ const KIND: Record<Mood, PlaceKind> = {
 
 /** Something nearby. Nothing is looked up until a mood is picked. inline: under "Where to next?"
     on Today, without its own heading. */
+/* an icon for each mood, so the chips read at a glance */
+const MOOD_ICON: Record<string, string> = { food: '🍜', coffee: '☕', drinks: '🍸', sights: '📸', culture: '🏛️', offbeat: '🦄', music: '🎸', adventure: '🧗', chill: '🌳', spa: '💆', film: '🎬', shopping: '🛍️' };
+
 export function Nearby({ inline = false }: { inline?: boolean }) {
   const { ix, now, geo } = useApp();
   const [mood, setMood] = useState<Mood | null>(null);
@@ -64,7 +67,7 @@ export function Nearby({ inline = false }: { inline?: boolean }) {
       <p className="lede2">What are you in the mood for?</p>
       <div className="chips" role="group" aria-label="Mood">
         {MOODS.map(m => (
-          <button key={m.key} type="button" className="chipbtn plain" aria-pressed={mood === m.key} disabled={busy} onClick={() => void look(m.key)}>{m.label}</button>
+          <button key={m.key} type="button" className="chipbtn plain" aria-pressed={mood === m.key} disabled={busy} onClick={() => void look(m.key)}><span aria-hidden="true">{MOOD_ICON[m.key]} </span>{m.label}</button>
         ))}
       </div>
       {mood && !geo.pos && (

@@ -166,7 +166,7 @@ export function addPart(trip: Trip, x: Filed): Trip {
     places: [...trip.places, ...x.places.filter(p => !trip.places.some(o => o.id === p.id))],
     todoGroups: [...trip.todoGroups, ...x.groups.filter(g => !trip.todoGroups.includes(g))],
     todos: [...trip.todos, ...x.todos.filter(t => !trip.todos.some(o => o.id === t.id))],
-    notes: trip.notes.map(n => (n.id === x.noteId ? { ...n, done: n.done || x.done, filed: x.reply || undefined } : n)),
+    notes: trip.notes.map(n => (n.id === x.noteId ? { ...n, done: n.done || x.done, filed: x.reply || undefined, made: [...x.added, ...x.planned].length ? [...x.added, ...x.planned] : undefined } : n)),
   };
 }
 
@@ -229,6 +229,6 @@ export function undoFiling(trip: Trip, x: Filed): Trip {
     legs: t.legs.filter(l => !newLegs.has(l.id)).map(l => oldLeg.get(l.id) || l),
     todos: left,
     todoGroups: t.todoGroups.filter(g => !x.groups.includes(g) || left.some(o => o.group === g)),
-    notes: t.notes.map(n => (n.id === x.noteId ? { ...n, done: false, filed: undefined } : n)),
+    notes: t.notes.map(n => (n.id === x.noteId ? { ...n, done: false, filed: undefined, made: undefined } : n)),
   };
 }

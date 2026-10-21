@@ -628,6 +628,29 @@ revoke update on public.photo_comments from anon, authenticated;
 drop trigger if exists comment_author on public.photo_comments;
 create trigger comment_author before insert on public.photo_comments for each row execute function public.photo_author();
 
+-- ---------- what the AI has cost (Adam only) ----------
+--
+-- Uses and tokens by kind (filing notes, nearby picks, trip plans), today, the last 30 days and all
+-- time. Only Adam's account gets an answer; everyone else gets an error.
+create or replace function public.ai_costs()
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+begin
+  if coalesce(auth.jwt() ->> 'email', '') <> 'adam@thefreemans.io' then raise exception 'not allowed'; end if;
+  return jsonb_build_object(
+    'uses', (select coalesce(jsonb_agg(r), '[]') from (
+      select kind, count(*) as n, coalesce(sum(input_tokens), 0) as input, coalesce(sum(output_tokens), 0) as output,
+        count(*) filter (where created_at > now() - interval '30 days') as n30,
+        coalesce(sum(input_tokens) filter (where created_at > now() - interval '30 days'), 0) as input30,
+        coalesce(sum(output_tokens) filter (where created_at > now() - interval '30 days'), 0) as output30
+      from ai_uses group by kind) r),
+    'plans', (select jsonb_build_object('n', count(*), 'input', coalesce(sum(input_tokens), 0), 'output', coalesce(sum(output_tokens), 0),
+        'n30', count(*) filter (where created_at > now() - interval '30 days'),
+        'input30', coalesce(sum(input_tokens) filter (where created_at > now() - interval '30 days'), 0),
+        'output30', coalesce(sum(output_tokens) filter (where created_at > now() - interval '30 days'), 0)) from ai_plans));
+end $$;
+revoke all on function public.ai_costs() from public, anon;
+grant execute on function public.ai_costs() to authenticated;
+
 -- ---------- comments about the app, from testers to Adam ----------
 --
 -- From the Notes tab: what's broken, ideas, what to change. Anyone signed in sends; each sees only

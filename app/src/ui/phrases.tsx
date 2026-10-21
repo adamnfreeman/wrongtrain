@@ -44,6 +44,7 @@ export function Phrases() {
           value={ui.pq} onChange={e => set({ pq: e.target.value })} onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} />
         {ui.pq && <button className="sclear" onClick={() => set({ pq: '' })}>Clear</button>}
       </div></div>
+      <Translator pack={pack} />
       <div className="catstrip" role="group" aria-label="Category">
         {cats.map(c => <button key={c} className="chipbtn plain" aria-pressed={pcat === c && !q} onClick={() => set({ pcat: c, pq: '' })}>{c}</button>)}
       </div>
@@ -99,5 +100,24 @@ function PhraseItem({ pack, it }: { pack: PhrasePack; it: Phrase }) {
       {state.s === 'failed' && <p className="geomsg bad">No sound came out. Check the volume and that the phone is not on silent, or <Ext href={translateLink(it.tts || it.ja, pack.lang, 'en')}>hear it in Google Translate</Ext>.</p>}
       {it.when && <p className="item-d">{it.when}</p>}
     </li>
+  );
+}
+
+/** Translate anything not in the list: type it, and Google Translate opens with it, either way.
+    Free, and works with the phone's Google Translate app when it's installed. */
+function Translator({ pack }: { pack: PhrasePack }) {
+  const [text, setText] = useState('');
+  const lang = pack.name.replace(/ phrases?$/i, '');
+  return (
+    <details className="fold translator">
+      <summary>Translate something</summary>
+      <div style={{ padding: '0 14px 12px' }}>
+        <textarea className="search notebox" rows={3} value={text} onChange={e => setText(e.target.value)} placeholder="Type or paste anything" aria-label="Text to translate" />
+        <div className="chips">
+          <a className={'chipbtn go' + (text.trim() ? '' : ' off')} target="_blank" rel="noopener noreferrer" href={translateLink(text, 'en', pack.lang)}>English → {lang}</a>
+          <a className={'chipbtn' + (text.trim() ? '' : ' off')} target="_blank" rel="noopener noreferrer" href={translateLink(text, pack.lang, 'en')}>{lang} → English</a>
+        </div>
+      </div>
+    </details>
   );
 }

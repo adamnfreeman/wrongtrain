@@ -116,6 +116,15 @@ on a Mac.
   build, phone; each person sees only their own; Adam reads them in Supabase's Table Editor).
 - Photos: ☆ in the viewer keeps a photo in your favourites (on this phone); "★ Favourites" on the
   Photos page. Moving pages by the bottom bar blurs them by speed (`--mb`, `onBar` in App.tsx).
+- Added Oct 20 (night): Dealt with notes list what they became (`note.made`); archiving trips (per
+  phone, All trips list, `TripList` in App.tsx); budget per kind in the planner (`budgetBy`); mood
+  icons; Translate something on Phrases (opens Google Translate); a Shopping tab (`src/model/shop.ts`:
+  products and the Amazon tag, empty for now); What the AI has cost in Account & settings, for Adam
+  only (`ai_costs` in schema.sql, `src/ui/costs.tsx`); tap a face on Trip to see the picture big.
+- Update from the Google Sheet (Trip page, Japan 2026 trip only; `src/model/sheetSync.ts`): reads the
+  Japan sheet with the page's name and passcode and three-way merges it in (base: what the sheet said
+  last time, kept on the phone as pref `sheet-base-<trip id>`; the first time, the app's own trip kept
+  to the items the sheet also has), so friends' additions come in and app-only things stay.
 - Pull down to refresh (`src/ui/pull.ts`), on every page: fetches the trip, photos, hearts and comments
   (the Japan edition re-reads the sheet, event `wt-refresh`).
 - Add anything (`src/ui/addAnything.tsx`): the round Add button above the bottom bar on every page
@@ -246,7 +255,6 @@ Next:
    affiliate income (VISION.md). Decide which features are paid. Also: how many AI trip plans
    come free (today the cap is 5 a month per person, in `claim_plan`); one free plan, then paid?
 
-24. **"Something nearby" moods**: an icon for each mood ("Coffee & cake" became "Coffee" Oct 17).
 32. **Adding things, next steps** (first version built Oct 17: the round **Add** button on every
    page but Right now, `src/ui/addAnything.tsx`; what you type is filed like a group note and kept
    on the To do tab). For Andrea: its look and place. Ideas: voice input, a photo of a booking
@@ -268,20 +276,12 @@ Next:
    corner of each page (`.acctbtn` in `src/index.css`, `AccountButton` in `src/ui/account.tsx`),
    over whatever header that page has, and is missing on Days. Give it one fixed home that every
    page leaves room for (or a place in the bottom bar), with Andrea.
-40. **A translator** (asked for Oct 16): type or paste text in one language and get it in
-   another (Spanish to English and so on), next to Phrases. Options: Claude (good, but it costs
-   per use and needs the AI limits in 21), the phone's own translation (free, works offline on
-   iOS with downloaded languages, needs the iOS app), or a translation API. Camera text
-   (menus, signs) would be the next step.
 43. **Better words for the levels of say** (Adam: neither the phrases nor their descriptions are
    right yet). `LEVELS` in `src/model/rules.ts`; with Andrea.
 45. **Planner header covers the emojis**: on Plan a trip for me, the top bar cuts off the emojis on
    the first questions (`src/ui/planner.tsx`, `.sheet-bar`).
 47. **The last referral id**: the Booking.com aid (then a Booking.com link for stays, see 50). Airalo
    declined (Oct 20): its eSIM link goes out plain, with no referral.
-48. **What each AI job costs**: a tracker for each trip plan and each note filed or change made
-   (tokens and dollars). `ai_plans` already counts tokens per plan; add the same for filings
-   and nearby picks, and a view of it (for Adam).
 50. **A Stay page**: each night's hotel with photos, check-in and check-out times, amenities, tips,
    address and directions, and a booking link for the recommended ones (a referral where one
    exists, see 34).
@@ -299,10 +299,6 @@ Next:
    top of Today), and show ratings. Google ratings come from the Places API (paid per request;
    its terms require Google's attribution, and Google data shown on a map must be on a Google
    map, so in a list is fine). Alternatives: Foursquare or Yelp ratings.
-57. **Archive trips** as well as delete: an archived trip leaves the list (and, shared, everyone's
-   Today) but can be brought back, with its photos, money and notes kept, e.g. past trips.
-58. **Budget per kind, in the planner** ("advanced"): set a level for each, e.g. flights cheap,
-   hotels expensive, food cheap, sightseeing medium; it feeds the plan (see 44, the range).
 63. **Real-time flight alerts** (Adam, Oct 20): delays, gate and terminal changes and
    cancellations for the trip's booked flights, as they happen (needs a flight status service and,
    with the app closed, push notifications; see Right now, 16).

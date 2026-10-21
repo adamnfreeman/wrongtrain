@@ -30,8 +30,11 @@ export const DAY_STYLES = [
 export const DIETS = ['Vegetarian', 'Vegan', 'Pescatarian', 'Gluten-free', 'Halal', 'Kosher', 'No pork', 'Nut allergy'] as const;
 
 /** "$$" or, for a range, "$$ to $$$$". */
-export const budgetWords = (a: { budget: number; budgetTop?: number }) =>
-  a.budgetTop && a.budgetTop > a.budget ? `${dollars(a.budget)} to ${dollars(a.budgetTop)}` : dollars(a.budget);
+export const budgetWords = (a: { budget: number; budgetTop?: number; budgetBy?: Partial<Record<string, number>> }) => {
+  const base = a.budgetTop && a.budgetTop > a.budget ? `${dollars(a.budget)} to ${dollars(a.budgetTop)}` : dollars(a.budget);
+  const by = Object.entries(a.budgetBy || {}).filter(([, n]) => typeof n === 'number' && n >= 1 && n <= 5);
+  return by.length ? `${base} overall; by kind: ${by.map(([k, n]) => `${k} ${dollars(n!)}`).join(', ')}` : base;
+};
 
 export interface Answers {
   /** "Japan", "Italy and Greece", "somewhere warm in March" */
@@ -48,6 +51,8 @@ export interface Answers {
   budget: number;
   /** the top of a budget range ("a cheap hotel is fine, a nicer one if it's there"); unset for one level */
   budgetTop?: number;
+  /** "advanced": a level per kind of spending (flights cheap, hotels nice...), 1 to 5; unset kinds follow budget */
+  budgetBy?: Partial<Record<'flights' | 'hotels' | 'food' | 'sights', number>>;
   styles: string[];
   vibes: string[];
   pace: (typeof PACES)[number]['value'];

@@ -230,6 +230,11 @@ select pg_temp.ok((select count(*) from trip_photos) = 0 and (select count(*) fr
 reset role;
 select pg_temp.ok(exists (select 1 from storage.buckets where id = 'trip-files' and not public), 'the files bucket is private');
 
+-- AI costs: only Adam's account sees them
+select pg_temp.act('ana');
+select pg_temp.ok(pg_temp.fails($$select public.ai_costs()$$), 'someone else asking for the AI costs is refused');
+reset role;
+
 -- comments about the app: anyone signed in sends; each sees only their own
 select pg_temp.act('ana');
 insert into app_feedback (kind, text, build) values ('broken', 'The map is blank', '137');

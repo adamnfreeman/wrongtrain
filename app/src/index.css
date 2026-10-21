@@ -641,3 +641,15 @@ details.fold > .linkbtn { display: inline-block; margin: 8px 14px 12px }
 /* motion blur while the bar sweeps the pages (App.tsx, onBar) */
 .pager > .pane > .wrap { transition: filter .12s ease-out }
 .pager.blurring > .pane > .wrap { filter: blur(var(--mb, 0px)) }
+
+/* spacing (#65): a delete button clear of the field above it; kind buttons clear of the box under them */
+.dangerbtn { margin-top: 22px }
+.chips + .notebox { margin-top: 12px }
+.madelist { margin: 4px 0 0; padding-left: 18px; font-size: 13.5px; color: var(--muted) }
+.budgetby { margin-top: 10px }
+.budgetby .budrow { display: grid; gap: 6px; padding: 8px 14px }
+.budgetby .budrow > span { font: 600 13.5px var(--f-body); color: var(--muted) }
+.translator { margin: 10px 0 }
+.chipbtn.off { opacity: .45; pointer-events: none }
+.face.tapface { appearance: none; border: 0; background: none; color: var(--ink); padding: 0; cursor: pointer; font: inherit }
+.face.tapface:disabled { cursor: default; opacity: 1 }
