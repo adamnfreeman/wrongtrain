@@ -1,5 +1,5 @@
 import { startTransition, useCallback, useEffect, useMemo, useState } from 'react';
-import { importTrip, openSample, pref, resetSample, selectTrip, setPref, useStore } from './model/store';
+import { getState, importTrip, openSample, pref, resetSample, selectTrip, setPref, useStore } from './model/store';
 import { readTripFile } from './model/tripFile';
 import { JAPAN } from './edition';
 import { JapanApp, SheetOnly } from './ui/japan';
@@ -23,7 +23,10 @@ import { AccountButton, JoinSheet, SyncLine, joinCodeFromLink } from './ui/accou
 import { Toast, useWaitingForMe } from './ui/requests';
 import { PlannerSheet } from './ui/planner';
 import { TripHub } from './ui/trip';
-import { AddAnything, AddButton } from './ui/addAnything';
+import { AddAnything, AddButton, addOn, type AddKind } from './ui/addAnything';
+import { addPhotos } from './sync/photos';
+import { canFile } from './sync/filing';
+import { useSync } from './sync/engine';
 import { usePullToRefresh } from './ui/pull';
 import { PhotosPage } from './ui/photos';
 import { offCentre, useDock } from './ui/dock';
@@ -175,7 +178,8 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
   const ids = useMemo(() => new Set(trip.days.map(d => d.id)), [trip.days]);
   const [ui, setUi] = useState<UI>(() => ({
     tab: 'today', day: (now.cur || trip.days[0])?.id || '', seg: 'food',
-    dest: now.cur?.destinationId && !now.cur.travel ? now.cur.destinationId : 'all',
+    /* one city at a time: the one you're in, else the first (lists of every city were too much) */
+    dest: (now.cur?.destinationId && !now.cur.travel ? now.cur.destinationId : (now.cur || trip.days[0])?.destinationId) || trip.destinations[0]?.id || 'all',
     veg: pref('veg', false), hide: {}, sim: { day: '', min: 840 }, pcat: 'All', pq: '', q: '',
     ...fromHash(ids),
   }));
@@ -190,6 +194,8 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
   }, []);
   const [editing, edit] = useState<Edit | null>(null);
   const [adding, setAdding] = useState(false);
+  const photoPick = useRef<HTMLInputElement>(null);
+  const signedIn = useSync().session;
   const close = useCallback(() => edit(null), []);
   /* Today needs it during the trip, and for "Something nearby" at any time */
   /* while you share where you are with the group, location stays on as you move between pages */
@@ -366,8 +372,23 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
         {!JAPAN && editing?.kind === 'expense' && <ExpenseEditor trip={trip} id={editing.id} close={close} />}
       </div>
       {/* the main way in: on every page but Right now, out of the way of any open editor */}
-      {!JAPAN && !editing && !adding && ui.tab !== 'now' && <AddButton onOpen={() => setAdding(true)} />}
-      {adding && <AddAnything close={() => setAdding(false)} />}
+      {/* Add fits the page: photos on Photos, an expense on Wallet, otherwise the box, worded for the page */}
+      {!JAPAN && !editing && !adding && addOn(ui.tab) && <AddButton kind={addOn(ui.tab)!} onOpen={() => {
+        const k = addOn(ui.tab);
+        if (k === 'expense') edit({ kind: 'expense' });
+        else if (k === 'photos') {
+          if (!getState().sync[trip.id] || trip.sample) { if (!trip.sample) edit({ kind: 'trip' }); return; }
+          photoPick.current?.click();
+        } else if (!canFile(trip.id, !!signedIn) && (k === 'place' || k === 'travel' || k === 'todo')) {
+          /* nothing to file it with here (not shared, or signed out): the page's own form instead of a note */
+          edit(k === 'place' ? { kind: 'place', as: 'food', ...(ui.dest !== 'all' ? { destinationId: ui.dest } : {}) } : k === 'travel' ? { kind: 'leg' } : { kind: 'todo', group: trip.todoGroups[0] });
+        } else setAdding(true);
+      }} />}
+      <input ref={photoPick} type="file" accept="image/*" multiple hidden onChange={e => {
+        const f = [...(e.target.files || [])]; e.target.value = '';
+        if (f.length) void addPhotos(trip, f, now.cur?.id);
+      }} />
+      {adding && <AddAnything kind={(addOn(ui.tab) as AddKind) || 'any'} close={() => setAdding(false)} />}
       <div className="statusbg" aria-hidden="true" />
       <div className="ptr" ref={pullLabel} role="status" aria-live="polite" />
       <div className="tabpeek" ref={peek} aria-hidden="true" />

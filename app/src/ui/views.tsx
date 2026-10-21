@@ -14,8 +14,6 @@ import { canFile, dismissFiling, fileNote, undoFile, useFilings, type NoteFiling
 import { Empty, Fold, Pill, SecH, Txt, line } from './bits';
 import { Board, DayBody, DaySlider, EatItem, LegItem, TodoItem, VegToggle, vegOk } from './day';
 import { NextCard } from './next';
-import { Nearby } from './nearby';
-import { DayPhotos } from './photos';
 import { useApp } from './ctx';
 
 /* ---------- Today ---------- */
@@ -30,7 +28,6 @@ export function Today() {
         <Board d={now.cur} compact />
         <NextCard />
         <DayBody d={now.cur} />
-        <Nearby />
       </>
     );
   }
@@ -60,7 +57,6 @@ export function Today() {
         </section>
       )}
       {now.phase === 'before' && <NextCard />}
-      <Nearby />
     </>
   );
 }
@@ -76,7 +72,6 @@ export function Days() {
       <DaySlider cur={d} />
       <Board d={d} />
       <DayBody d={d} />
-      <DayPhotos d={d} />
     </div>
   );
 }
@@ -84,7 +79,7 @@ export function Days() {
 /* ---------- Transit ---------- */
 
 export function Transit() {
-  const { ix, go, edit } = useApp();
+  const { ix, go, edit, now } = useApp();
   const legs = ix.trip.legs;
   const booked = legs.filter(l => l.status === 'booked').length, open = legs.filter(l => l.status === 'todo').length;
   const before = legs.filter(l => !l.dayId);
@@ -93,16 +88,29 @@ export function Transit() {
       <h1 className="page-h">Getting around</h1>
       <p className="lede">{legs.length ? `${legs.length} legs. ${booked} booked, ${open} still need something.` : 'Flights, trains, transfers: everything that gets you from place to place.'}</p>
       <div className="chips" style={{ marginTop: 0 }}><button className="chipbtn go" onClick={() => edit({ kind: 'leg' })}>+ Add a leg</button></div>
-      {before.length > 0 && <section className="blk"><SecH title="Before the trip" /><ul className="sheet">{before.map(l => <LegItem key={l.id} l={l} />)}</ul></section>}
-      {ix.trip.days.map(d => {
-        const ls = legs.filter(l => l.dayId === d.id); if (!ls.length) return null;
-        return (
-          <section key={d.id} className="blk" style={line(lineOf(ix, d))}>
-            <SecH title={`${longDate(d.date)} · ${cityOf(ix, d)}`}><button className="linkbtn" onClick={() => go('days', d.id)}>Day plan</button></SecH>
-            <ul className="sheet">{ls.map(l => <LegItem key={l.id} l={l} />)}</ul>
-          </section>
-        );
-      })}
+      {/* each day's travel folded, with only the next day that has any open: the whole trip's
+          legs at once were too much to take in */}
+      {(() => {
+        const withLegs = ix.trip.days.filter(d => legs.some(l => l.dayId === d.id));
+        const todayIso = now.cur?.date || (now.phase === 'after' ? '9999' : '');
+        const past = withLegs.filter(d => todayIso && d.date < todayIso), coming = withLegs.filter(d => !(todayIso && d.date < todayIso));
+        const day = (d: (typeof withLegs)[number], open: boolean) => {
+          const ls = legs.filter(l => l.dayId === d.id), todo = ls.filter(l => l.status === 'todo').length;
+          return (
+            <div key={d.id} className="legday" style={line(lineOf(ix, d))}>
+              <Fold title={`${longDate(d.date)} · ${cityOf(ix, d)}`} count={todo ? `${ls.length} · ${todo} to sort` : ls.length} open={open}>
+                <ul className="sheet">{ls.map(l => <LegItem key={l.id} l={l} />)}</ul>
+                <button className="linkbtn" onClick={() => go('days', d.id)}>Day plan</button>
+              </Fold>
+            </div>
+          );
+        };
+        return <>
+          {before.length > 0 && <Fold title="Before the trip" count={before.length} open={now.phase === 'before' && !coming.length}><ul className="sheet">{before.map(l => <LegItem key={l.id} l={l} />)}</ul></Fold>}
+          {coming.map((d, i) => day(d, i === 0))}
+          {past.length > 0 && <Fold title="Already travelled" count={past.length}>{past.map(d => day(d, false))}</Fold>}
+        </>;
+      })()}
       {!legs.length && <Empty>No legs yet.</Empty>}
     </>
   );
@@ -123,49 +131,48 @@ export function DestChips() {
   );
 }
 
-const IDEA = new Set(['sight', 'area', 'shop', 'other']);
+/* Places by category, for one city at a time: a tile per kind with how many there are, and the
+   list for the tile you pick. (One long list of every place in every city was too much.) */
+const CATS: { key: string; label: string; icon: string; has: (p: Place) => boolean }[] = [
+  { key: 'food', label: 'Food', icon: '🍜', has: p => p.kind === 'food' && !p.wishlist },
+  { key: 'coffee', label: 'Coffee', icon: '☕', has: p => p.kind === 'coffee' && !p.wishlist },
+  { key: 'sight', label: 'Sights', icon: '⛩️', has: p => (p.kind === 'sight' || p.kind === 'other') && !p.wishlist },
+  { key: 'area', label: 'Areas', icon: '🏮', has: p => p.kind === 'area' && !p.wishlist },
+  { key: 'shop', label: 'Shops', icon: '🛍️', has: p => p.kind === 'shop' && !p.wishlist },
+  { key: 'stay', label: 'Stays', icon: '🛏️', has: p => p.kind === 'stay' },
+  { key: 'event', label: 'Booked', icon: '🎟️', has: p => p.kind === 'event' && !p.wishlist },
+  { key: 'wish', label: 'Wishlist', icon: '⭐', has: p => !!p.wishlist },
+];
 
 export function Places() {
   const { ix, ui, set, edit } = useApp();
-  const hasDiet = ix.trip.places.some(p => p.diet);
-  const groups = ix.trip.destinations.filter(d => ui.dest === 'all' || d.id === ui.dest);
-  /* which day, if any, each place is planned for */
+  const inCity = ix.trip.places.filter(p => (ui.dest === 'all' || p.destinationId === ui.dest) && p.kind !== 'transit');
+  const counts = CATS.map(c => ({ ...c, n: inCity.filter(c.has).length }));
+  const cat = counts.find(c => c.key === ui.seg && c.n) || counts.find(c => c.n);
   const dayOf = (p: Place) => ix.trip.days.find(d => onToday(p, d));
-  let body: React.ReactNode[] = [];
-  if (ui.seg === 'food') {
-    groups.forEach(dest => {
-      (['food', 'coffee'] as const).forEach(kind => {
-        const list = ix.trip.places.filter(p => p.destinationId === dest.id && p.kind === kind && vegOk(p, ui.veg));
-        if (!list.length) return;
-        body.push(
-          <section key={dest.id + kind} className="blk" style={line(dest.color)}>
-            <h3>{dest.name} · {kind === 'food' ? 'Food' : 'Coffee'}</h3>
-            <ul className="sheet">{list.map(p => <EatItem key={p.id} p={p} />)}</ul>
-          </section>,
-        );
-      });
-    });
-  } else {
-    groups.forEach(dest => {
-      const list = ix.trip.places.filter(p => p.destinationId === dest.id && IDEA.has(p.kind) && !p.wishlist);
-      if (list.length) body.push(<h3 key={dest.id + 'h'} className="group-h">{dest.name}</h3>, <Fold key={dest.id} title="Things to see and do" count={list.length} open>
-        <ul className="sheet">{list.map(p => <IdeaItem key={p.id} p={p} day={dayOf(p)?.date} />)}</ul></Fold>);
-      const wish = ix.trip.places.filter(p => p.destinationId === dest.id && p.wishlist);
-      if (wish.length) body.push(<Fold key={dest.id + 'w'} title="Wishlist" count={wish.length} note="Not planned yet. Add one to a day when it fits.">
-        <ul className="sheet">{wish.map(p => <IdeaItem key={p.id} p={p} />)}</ul></Fold>);
-    });
-  }
-  if (!body.length) body = [<Empty key="e">{ix.trip.places.length ? 'Nothing here for that filter.' : 'No places yet. Add somewhere to eat, a sight, or a shop.'}</Empty>];
+  const list = cat ? inCity.filter(cat.has).filter(p => !(cat.key === 'food' || cat.key === 'coffee') || vegOk(p, ui.veg)) : [];
+  const food = cat?.key === 'food' || cat?.key === 'coffee';
   return (
     <>
       <h1 className="page-h">Places</h1>
-      <div className="seg" role="group" aria-label="List">
-        <button aria-pressed={ui.seg === 'food'} onClick={() => set({ seg: 'food' })}>Food</button>
-        <button aria-pressed={ui.seg === 'ideas'} onClick={() => set({ seg: 'ideas' })}>Things to do</button>
-      </div>
-      <div className="chips"><DestChips />{ui.seg === 'food' && hasDiet && <VegToggle />}</div>
-      <div className="chips"><button className="chipbtn go" onClick={() => edit({ kind: 'place', as: ui.seg === 'food' ? 'food' : 'sight', ...(ui.dest !== 'all' ? { destinationId: ui.dest } : {}) })}>+ Add a place</button></div>
-      <div id="results">{body}</div>
+      <div className="chips"><DestChips /></div>
+      {counts.some(c => c.n) ? (
+        <div className="cattiles" role="group" aria-label="Kind of place">
+          {counts.filter(c => c.n).map(c => (
+            <button key={c.key} className="cattile" aria-pressed={cat?.key === c.key} onClick={() => set({ seg: c.key })}>
+              <span aria-hidden="true">{c.icon}</span><b>{c.label}</b><small>{c.n}</small>
+            </button>
+          ))}
+        </div>
+      ) : <Empty>{ix.trip.places.length ? 'No places in this city yet.' : 'No places yet. Use Add to put in somewhere to eat, a sight or a shop.'}</Empty>}
+      <div className="chips"><button className="linkbtn" onClick={() => edit({ kind: 'place', as: cat?.key === 'food' || cat?.key === 'coffee' ? 'food' : 'sight', ...(ui.dest !== 'all' ? { destinationId: ui.dest } : {}) })}>+ Add a place</button></div>
+      {cat && (
+        <div id="results">
+          {food && ix.trip.places.some(p => p.diet) && <div className="chips"><VegToggle /></div>}
+          {list.length ? <ul className="sheet">{list.map(p => food ? <EatItem key={p.id} p={p} /> : <IdeaItem key={p.id} p={p} day={dayOf(p)?.date} />)}</ul>
+            : <Empty>Nothing here for that filter.</Empty>}
+        </div>
+      )}
     </>
   );
 }
@@ -288,7 +295,14 @@ function Notes() {
         placeholder={claude ? 'For example: add the ramen place near the hotel to Nov 3' : 'For example: can we fit in a sentō one evening?'} aria-label="Your note" />
       <div className="chips"><button className="chipbtn go" onClick={add}>Add note</button></div>
       {msg && <p className={'geomsg' + (msg.bad ? ' bad' : '')} role="status">{msg.text}</p>}
-      {open.length > 0 && <ul className="sheet" style={{ marginTop: 12 }}>{open.map(item)}</ul>}
+      {/* a note being filed right now stays in view; notes left open fold away instead of sitting on top */}
+      {open.filter(n => filings[n.id]).length > 0 && <ul className="sheet" style={{ marginTop: 12 }}>{open.filter(n => filings[n.id]).map(item)}</ul>}
+      {open.filter(n => !filings[n.id]).length > 0 && (
+        <Fold title="Open notes" count={open.filter(n => !filings[n.id]).length}
+          note={claude ? 'Not filed into the trip yet. File one, or tick it once it’s dealt with.' : 'Tick a note once it’s dealt with.'}>
+          <ul className="sheet">{open.filter(n => !filings[n.id]).map(item)}</ul>
+        </Fold>
+      )}
       {done.length > 0 && <Fold title="Dealt with" count={done.length}><ul className="sheet">{done.map(item)}</ul></Fold>}
     </section>
   );

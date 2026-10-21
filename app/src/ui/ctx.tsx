@@ -15,7 +15,8 @@ export type Tab = (typeof TABS)[number];
 export interface UI {
   tab: Tab;
   day: string;
-  seg: 'food' | 'ideas';
+  /** the kind of place shown on Places (CATS in views.tsx) */
+  seg: string;
   /** Destination filter on Places and Map; "all" for every destination. */
   dest: string;
   veg: boolean;

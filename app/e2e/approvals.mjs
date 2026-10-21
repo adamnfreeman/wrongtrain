@@ -90,6 +90,7 @@ await page.click('.tab:has-text("Trip")').then(() => page.click('.tile:has-text(
 await page.fill('#gnote', 'Can we go to Sintra?');
 await page.click('text=Add note');
 check((await stored()).trips[0].notes.some(n => n.text === 'Can we go to Sintra?'), 'a viewer can still leave a note');
+await page.click('#gnotes summary:has-text("Open notes")');
 await page.click('#gnotes li:has-text("Sintra") >> text=Edit');
 await page.fill('#gnotes textarea[aria-label="Change your note"]', 'Can we go to Sintra and Cascais?');
 await page.click('#gnotes >> text=Save');

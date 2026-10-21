@@ -10,23 +10,40 @@ import { Sheet } from './form';
 import { useApp } from './ctx';
 import { Filed } from './views';
 
-const EXAMPLES = [
-  'muji, donqui and uniqlo',
-  'our flight home is JL 4 at 7:45 PM on the last day',
-  'dinner at Ichiran on day 3 at 8',
-  'buy a Suica card before we go',
-];
+/* What Add means on each page: the box's title, a line saying what fits here, and examples. It all
+   goes through the same filing, so something added on one page still lands everywhere it belongs
+   (a dinner added on Places also goes on its day). */
+export type AddKind = 'plan' | 'place' | 'travel' | 'todo' | 'any';
+const KINDS: Record<AddKind, { title: string; hint: string; examples: string[] }> = {
+  plan: { title: 'Add to the plan', hint: 'Something to do, a booking or a time. Say which day if you know it.',
+    examples: ['dinner at Ichiran on day 3 at 8', 'teamLab Planets, tickets booked for 5 PM on Nov 2', 'free afternoon on day 4'] },
+  place: { title: 'Add a place', hint: 'Somewhere to eat, see, shop or stay. Add a day if it has one.',
+    examples: ['muji, donqui and uniqlo', 'the ramen place near the hotel', 'Fushimi Inari early on day 2'] },
+  travel: { title: 'Add travel', hint: 'A flight, train, bus or transfer, with times and numbers if you have them.',
+    examples: ['our flight home is JL 4 at 7:45 PM on the last day', 'shinkansen Kyoto to Tokyo on Nov 3, 10:12, car 7', 'airport bus to the hotel, 40 minutes'] },
+  todo: { title: 'Add a to-do', hint: 'Something to book, buy or sort out, before or during the trip.',
+    examples: ['buy a Suica card before we go', 'book the ryokan dinner', 'everyone: download the offline map'] },
+  any: { title: 'Add anything', hint: 'A place, a booking, a time, a to-do, a change of plan.',
+    examples: ['muji, donqui and uniqlo', 'our flight home is JL 4 at 7:45 PM on the last day', 'buy a Suica card before we go'] },
+};
+/** What the Add button does on each page; null where it has nothing to add (Phrases, Right now). */
+export function addOn(tab: string): AddKind | 'photos' | 'expense' | null {
+  return ({ today: 'plan', days: 'plan', map: 'place', places: 'place', transit: 'travel', prep: 'todo', trip: 'any', photos: 'photos', wallet: 'expense' } as const)[tab as 'today'] ?? null;
+}
 
-export function AddButton({ onOpen }: { onOpen: () => void }) {
+const LABEL: Record<string, string> = { photos: 'Add photos', expense: 'Add expense', plan: 'Add', place: 'Add place', travel: 'Add travel', todo: 'Add to-do', any: 'Add' };
+
+export function AddButton({ kind, onOpen }: { kind: string; onOpen: () => void }) {
   return (
-    <button className="addfab" onClick={onOpen} aria-label="Add anything to the trip">
+    <button className="addfab" onClick={onOpen} aria-label={LABEL[kind] || 'Add'}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
-      <span>Add</span>
+      <span>{LABEL[kind] || 'Add'}</span>
     </button>
   );
 }
 
-export function AddAnything({ close }: { close: () => void }) {
+export function AddAnything({ close, kind = 'any' }: { close: () => void; kind?: AddKind }) {
+  const K = KINDS[kind];
   const { ix, go } = useApp();
   const t = ix.trip;
   const { session } = useSync();
@@ -48,19 +65,19 @@ export function AddAnything({ close }: { close: () => void }) {
   };
   const notes = sent.map(id => t.notes.find(n => n.id === id)).filter(Boolean) as typeof t.notes;
   return (
-    <Sheet title="Add anything" onCancel={close} cancelLabel="Done">
+    <Sheet title={K.title} onCancel={close} cancelLabel="Done">
       <p className="fhint" style={{ marginTop: 0, marginBottom: 12 }}>
-        A place, a booking, a time, a to-do, a change of plan. Say it however it comes out and WrongTrain puts it where it belongs, for everyone on the trip.
+        {K.hint} Say it however it comes out and WrongTrain puts it where it belongs, for everyone on the trip.
       </p>
       <textarea className="search notebox addbox" rows={4} maxLength={600} value={draft} autoFocus
         onChange={e => setDraft(e.target.value)} aria-label="What to add"
-        placeholder={`For example: ${EXAMPLES[1]}`} />
+        placeholder={`For example: ${K.examples[0]}`} />
       <div className="chips">
         <button type="button" className="chipbtn go" onClick={add} disabled={!draft.trim()}>{claude ? 'Add it to the trip' : 'Add it'}</button>
       </div>
       {!draft && !sent.length && (
         <div className="chips addeg" role="group" aria-label="Examples">
-          {EXAMPLES.map(e => <button key={e} type="button" className="chipbtn" onClick={() => setDraft(e)}>{e}</button>)}
+          {K.examples.map(e => <button key={e} type="button" className="chipbtn" onClick={() => setDraft(e)}>{e}</button>)}
         </div>
       )}
       {msg && <p className="geomsg bad" role="alert">{msg}</p>}

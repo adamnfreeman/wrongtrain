@@ -6,7 +6,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { Place } from '../model/types';
 import { ALL_PIN_GROUPS, KIND_LABEL, fmtDist, mapsLink, metres, pinGroup } from '../model/trip';
-import { Empty, Ext, Pill, Txt, pinColor } from './bits';
+import { Empty, Ext, Fold, Pill, Txt, pinColor } from './bits';
 import { DestChips } from './views';
 import { useApp } from './ctx';
 import { Avatar, useTripPeople } from './avatar';
@@ -111,11 +111,16 @@ export function MapView() {
       {near.length > 0 && (near[0].d > FAR
         ? <p className="geomsg">You are about {fmtDist(near[0].d)} from the nearest pin, so the map has stayed on the trip.</p>
         : <section className="blk"><h3>Nearest to you</h3><ul className="sheet">{near.slice(0, 6).map(n => <PinItem key={n.p.id} p={n.p} away={n.d} />)}</ul></section>)}
-      {ix.trip.destinations.filter(d => ui.dest === 'all' || d.id === ui.dest).map(d => {
-        const list = pins.filter(p => p.destinationId === d.id);
-        return list.length ? <section key={d.id} className="blk"><h3>{d.name}</h3><ul className="sheet">{list.map(p => <PinItem key={p.id} p={p} />)}</ul></section> : null;
-      })}
-      {(() => { const list = pins.filter(p => !p.destinationId); return list.length ? <section className="blk"><h3>Elsewhere</h3><ul className="sheet">{list.map(p => <PinItem key={p.id} p={p} />)}</ul></section> : null; })()}
+      {/* each city's pins folded by kind, so the page isn't one long list; open the kind you want */}
+      {[...ix.trip.destinations.filter(d => ui.dest === 'all' || d.id === ui.dest).map(d => ({ key: d.id, name: d.name, list: pins.filter(p => p.destinationId === d.id) })),
+        ...(ui.dest === 'all' ? [{ key: 'else', name: 'Elsewhere', list: pins.filter(p => !p.destinationId) }] : [])]
+        .filter(c => c.list.length).map(c => (
+          <section key={c.key} className="blk">
+            <h3>{c.name}</h3>
+            {ALL_PIN_GROUPS.map(g => { const l = c.list.filter(p => pinGroup(p).key === g.key); return l.length
+              ? <Fold key={g.key} title={g.label} count={l.length}><ul className="sheet">{l.map(p => <PinItem key={p.id} p={p} />)}</ul></Fold> : null; })}
+          </section>
+        ))}
       {!pins.length && <Empty>No pins for that filter.</Empty>}
     </>
   );

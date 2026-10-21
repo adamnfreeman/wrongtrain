@@ -7,6 +7,7 @@ import { dirLink, fmtDist, mapsLink, metres, pinGroup, travel, KIND_LABEL } from
 import { fmtDur, fmtT, longDate } from '../model/time';
 import { Ext, Pill, SecH, Txt, pinColor } from './bits';
 import { useApp } from './ctx';
+import { Nearby } from './nearby';
 
 const about = (tr: { min: number; how: string }) => `about ${fmtDur(tr.min)} ${tr.how}`;
 
@@ -88,11 +89,13 @@ export function NextCard() {
         <>
           {c.pos && <p className="lede2">Go to <b>{stops[0].p.name}</b>, {fmtDist(stops[0].dist!)} away ({about(stops[0].tr!)}).
             {stops[0].leaveBy != null && next ? <> Leave there by <b>{fmtT(stops[0].leaveBy)}</b> to be at {next.place?.name || next.name} by {fmtT(need!)}.</> : ' Nothing after it has a fixed time today.'}</p>}
-          <ul className="sheet">{stops.map(x => <StopItem key={x.p.id} x={x} />)}</ul>
+          {!c.pos && <ul className="sheet">{stops.map(x => <StopItem key={x.p.id} x={x} />)}</ul>}
         </>
       ) : (
         <p className="lede2">{next && c.pos ? <>No time for a detour. Head for <b>{next.place?.name || next.name}</b>.</> : c.pos ? 'Nothing on the map is close by and open right now.' : 'Nothing on the map is on today\'s list.'}</p>
       )}
+      {/* places nearby only once a mood is picked, rather than a list nobody asked for */}
+      <Nearby inline />
       {(up.length > 0 || allDay.length > 0 || tfirst) && (
         <>
           <h3 className="sub-h">Coming up</h3>

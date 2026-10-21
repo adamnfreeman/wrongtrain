@@ -69,7 +69,7 @@ export function PhotosPage() {
   const add = async (files: File[]) => {
     if (!files.length) return;
     setBusy(`Adding 0 of ${files.length}…`);
-    try { await addPhotos(t, files, undefined, n => setBusy(`Adding ${n} of ${files.length}…`)); setBusy(''); }
+    try { await addPhotos(t, files, ix.trip.days.find(d => d.date === new Date().toISOString().slice(0, 10))?.id, n => setBusy(`Adding ${n} of ${files.length}…`)); setBusy(''); }
     catch { setBusy('Some photos could not be added.'); }
   };
   const groups = useMemo(() => {

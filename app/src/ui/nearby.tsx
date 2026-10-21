@@ -17,7 +17,9 @@ const KIND: Record<Mood, PlaceKind> = {
   adventure: 'sight', chill: 'area', spa: 'other', film: 'event', shopping: 'shop',
 };
 
-export function Nearby() {
+/** Something nearby. Nothing is looked up until a mood is picked. inline: under "Where to next?"
+    on Today, without its own heading. */
+export function Nearby({ inline = false }: { inline?: boolean }) {
   const { ix, now, geo } = useApp();
   const [mood, setMood] = useState<Mood | null>(null);
   const [busy, setBusy] = useState(false);
@@ -57,9 +59,9 @@ export function Nearby() {
   };
 
   return (
-    <section className="sec" id="nearby">
-      <SecH title="Something nearby" />
-      <p className="lede2">What are you in the mood for?</p>
+    <section className={inline ? 'nearby-in' : 'sec'} id="nearby">
+      {!inline && <SecH title="Something nearby" />}
+      <p className="lede2">{inline ? 'Or find something nearby. What are you in the mood for?' : 'What are you in the mood for?'}</p>
       <div className="chips" role="group" aria-label="Mood">
         {MOODS.map(m => (
           <button key={m.key} type="button" className="chipbtn plain" aria-pressed={mood === m.key} disabled={busy} onClick={() => void look(m.key)}>{m.label}</button>

@@ -39,7 +39,7 @@ for (const scheme of ['light', 'dark']) {
   check(!!big, `${scheme}: "How much time do I have?" says "${big}"`);
   if (scheme === 'light') await page.screenshot({ path: `${OUT}/1-today.png`, fullPage: true });
 
-  for (const [tab, sel, name] of [['Days', '.dslider', '2-days'], ['Wallet', '.seg', '2b-wallet'], ['Trip', '.hub', '2c-trip'], ['Transit', '.page-h', '3-transit'], ['Places', '.seg', '4-places'], ['Map', '.map', '5-map'], ['Phrases', '.phrase', '6-phrases'], ['To do', '#gnotes', '7-todo']]) {
+  for (const [tab, sel, name] of [['Days', '.dslider', '2-days'], ['Wallet', '.seg', '2b-wallet'], ['Trip', '.hub', '2c-trip'], ['Transit', '.page-h', '3-transit'], ['Places', '.cattiles', '4-places'], ['Map', '.map', '5-map'], ['Phrases', '.phrase', '6-phrases'], ['To do', '#gnotes', '7-todo']]) {
     await open(tab);
     await page.waitForSelector(sel, { timeout: 5000 });
     await wait(300);
@@ -103,8 +103,8 @@ for (const scheme of ['light', 'dark']) {
     await page.click('#view >> text=Veg-friendly only');
     const nonVeg = await page.locator('#results .pill:has-text("Not veg")').count();
     check(nonVeg === 0, 'veg filter hides non-veg places');
-    await page.click('#view >> text=Things to do');
-    check(await page.locator('#results details').count() > 0, 'Things to do lists places by destination');
+    await page.click('#view .cattile:has-text("Sights")');
+    check(await page.locator('#results li').count() > 0, 'a category tile lists that kind of place');
   }
   check(errors.length === 0, `${scheme}: no script errors` + (errors.length ? ': ' + errors.join(' | ') : ''));
   await ctx.close();

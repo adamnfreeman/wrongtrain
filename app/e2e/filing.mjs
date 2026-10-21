@@ -114,6 +114,7 @@ check(await page.locator('#gnotes >> text=File it into the trip').count() === 1,
 
 /* the free allowance is used up */
 answer = { status: 402, body: { error: 'allowance', message: 'This trip has used its free filings. The note stays open for the owner.' } };
+await page.locator('#gnotes summary:has-text("Open notes")').click();
 await page.locator('#gnotes >> text=File it into the trip').click();
 await page.waitForSelector('#gnotes .filed.bad', { timeout: 5000 }).catch(() => {});
 check(/used its free filings/.test(await page.locator('#gnotes .filed.bad').textContent().catch(() => '')), 'when the allowance is used up, it says so');
@@ -134,7 +135,7 @@ check(await page.locator('#gnotes >> text=File it into the trip').count() === 0,
 calls = []; answer = fileAnswer;
 await signInAs('owner');
 await page.locator('.addfab').click();
-const box = page.locator('.sheet-wrap[aria-label="Add anything"]');
+const box = page.locator('.sheet-wrap').last();
 await box.locator('textarea').fill('Lunch at Time Out Market on day 2, and we need Viva Viagem cards');
 await box.getByRole('button', { name: 'Add it to the trip' }).click();
 await box.locator('text=Undo').waitFor({ timeout: 5000 }).catch(() => {});

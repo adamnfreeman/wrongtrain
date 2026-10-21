@@ -74,8 +74,8 @@ check((await sheet.textContent('.sheet-body')).includes('Pin at 41.90090, 12.483
 await sheet.getByLabel(/^Day 1,/).click();
 await shot('4-place-editor');
 await sheet.getByText('Save', { exact: true }).click();
-await page.click('text=Things to do');
-check((await view()).includes('Trevi Fountain'), 'place listed under Things to do');
+await page.click('#view .cattile:has-text("Sights")');
+check((await view()).includes('Trevi Fountain'), 'place listed under Sights');
 await page.click('.tab:has-text("Map")');
 check(await page.locator('.leaflet-interactive').count() >= 1, 'place has a pin on the map');
 
@@ -128,7 +128,7 @@ check(/Rome and Florence/.test(await page.textContent('#view .board .kicker')), 
 await page.click('.tab:has-text("Trip")').then(() => page.click('.tile:has-text("Transit")'));
 v = await view();
 check(v.includes('Rome → Florence'), 'leg kept after reload');
-const legDay = await page.locator('.blk .sec-h h2').allTextContents();
+const legDay = await page.locator('#view .legday summary').allTextContents();
 check(legDay.some(t => /May 3 · (Rome → )?Florence/.test(t)), 'leg moved with its day to May 3: ' + legDay.join(' | '));
 await page.click('.tab:has-text("Days")');
 await page.locator('.dbox').first().click(); await wait(900);
