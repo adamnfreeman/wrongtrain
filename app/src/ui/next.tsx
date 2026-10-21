@@ -84,17 +84,13 @@ export function NextCard() {
           <p className={'geomsg' + (geo.bad ? ' bad' : '')}>{geo.bad ? geo.msg : 'Turn on location to see when to leave and what is nearby.'}</p>
         </>
       )}
-      <h3 className="sub-h">{c.pos ? 'Where to next?' : 'On today\'s list'}</h3>
-      {stops.length ? (
-        <>
-          {c.pos && <p className="lede2">Go to <b>{stops[0].p.name}</b>, {fmtDist(stops[0].dist!)} away ({about(stops[0].tr!)}).
-            {stops[0].leaveBy != null && next ? <> Leave there by <b>{fmtT(stops[0].leaveBy)}</b> to be at {next.place?.name || next.name} by {fmtT(need!)}.</> : ' Nothing after it has a fixed time today.'}</p>}
-          {!c.pos && <ul className="sheet">{stops.map(x => <StopItem key={x.p.id} x={x} />)}</ul>}
-        </>
-      ) : (
-        <p className="lede2">{next && c.pos ? <>No time for a detour. Head for <b>{next.place?.name || next.name}</b>.</> : c.pos ? 'Nothing on the map is close by and open right now.' : 'Nothing on the map is on today\'s list.'}</p>
-      )}
-      {/* places nearby only once a mood is picked, rather than a list nobody asked for */}
+      {/* with location on: what's nearby, once a mood is picked (a suggestion from the trip's own
+          list here was confusing); without: what's on today's list */}
+      {!c.pos && <>
+        <h3 className="sub-h">On today's list</h3>
+        {stops.length ? <ul className="sheet">{stops.map(x => <StopItem key={x.p.id} x={x} />)}</ul> : <p className="lede2">Nothing on the map is on today's list.</p>}
+      </>}
+      <h3 className="sub-h">What's nearby?</h3>
       <Nearby inline />
       {(up.length > 0 || allDay.length > 0 || tfirst) && (
         <>

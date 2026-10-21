@@ -6,7 +6,8 @@ import { spawn } from 'node:child_process';
 const DIST = process.argv[2], OUT = process.argv[3];
 const wait = ms => new Promise(r => setTimeout(r, ms));
 const srv = spawn('python3', ['-m', 'http.server', '8096', '--bind', '127.0.0.1'], { cwd: DIST, stdio: 'ignore' });
-await wait(1000);
+/* wait until the server answers (a fixed second wasn't always enough) */
+for (let i = 0; i < 100; i++) { try { await fetch('http://127.0.0.1:8096/'); break; } catch { await wait(100); } }
 const browser = await chromium.launch({ args: ['--no-proxy-server'] });
 let failures = 0;
 const errors = [];

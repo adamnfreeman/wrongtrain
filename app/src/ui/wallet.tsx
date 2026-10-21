@@ -3,7 +3,7 @@
    Documents for the group are part of the trip; private ones (IDs, passports) stay on this phone
    (model/privateDocs.ts). A document can be for a plan item or a travel leg, and then shows there
    on the timeline (DocLinks). Files are kept on the phone for use with no signal (sync/files.ts). */
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import type { Doc, DocKind, Expense, FileRef, Trip } from '../model/types';
 import { getState, patchTrip, pref, setPref, useStore } from '../model/store';
 import { deletePrivateDoc, privateDocs, savePrivateDoc, usePrivateDocs } from '../model/privateDocs';
@@ -31,9 +31,15 @@ function useMe(trip: Trip): string {
   return trip.travelers.find(t => t.toLowerCase() === me.trim().toLowerCase()) || '';
 }
 
+/* which half of Wallet is showing, shared with the Add button (App.tsx), which adds a document
+   or an expense to match */
+let walletSeg: 'docs' | 'money' = pref('wallet', 'docs');
+const segListeners = new Set<() => void>();
+export const useWalletSeg = () => useSyncExternalStore(f => { segListeners.add(f); return () => segListeners.delete(f); }, () => walletSeg);
+
 export function Wallet() {
-  const [seg, setSeg] = useState<'docs' | 'money'>(() => pref('wallet', 'docs'));
-  const pick = (s: 'docs' | 'money') => { setSeg(s); setPref('wallet', s); };
+  const seg = useWalletSeg();
+  const pick = (s: 'docs' | 'money') => { walletSeg = s; setPref('wallet', s); segListeners.forEach(f => f()); };
   return (
     <>
       <h1 className="page-h">Wallet</h1>

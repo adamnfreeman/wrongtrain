@@ -61,7 +61,7 @@ export function Nearby({ inline = false }: { inline?: boolean }) {
   return (
     <section className={inline ? 'nearby-in' : 'sec'} id="nearby">
       {!inline && <SecH title="Something nearby" />}
-      <p className="lede2">{inline ? 'Or find something nearby. What are you in the mood for?' : 'What are you in the mood for?'}</p>
+      <p className="lede2">What are you in the mood for?</p>
       <div className="chips" role="group" aria-label="Mood">
         {MOODS.map(m => (
           <button key={m.key} type="button" className="chipbtn plain" aria-pressed={mood === m.key} disabled={busy} onClick={() => void look(m.key)}>{m.label}</button>

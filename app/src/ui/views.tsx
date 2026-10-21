@@ -132,15 +132,16 @@ export function DestChips() {
 }
 
 /* Places by category, for one city at a time: a tile per kind with how many there are, and the
-   list for the tile you pick. (One long list of every place in every city was too much.) */
+   list for the tile you pick. (One long list of every place in every city was too much.) A
+   wishlist place shows under its own kind too, marked; the Wishlist tile gathers them all. */
 const CATS: { key: string; label: string; icon: string; has: (p: Place) => boolean }[] = [
-  { key: 'food', label: 'Food', icon: '🍜', has: p => p.kind === 'food' && !p.wishlist },
-  { key: 'coffee', label: 'Coffee', icon: '☕', has: p => p.kind === 'coffee' && !p.wishlist },
-  { key: 'sight', label: 'Sights', icon: '⛩️', has: p => (p.kind === 'sight' || p.kind === 'other') && !p.wishlist },
-  { key: 'area', label: 'Areas', icon: '🏮', has: p => p.kind === 'area' && !p.wishlist },
-  { key: 'shop', label: 'Shops', icon: '🛍️', has: p => p.kind === 'shop' && !p.wishlist },
+  { key: 'food', label: 'Food', icon: '🍜', has: p => p.kind === 'food' },
+  { key: 'coffee', label: 'Coffee', icon: '☕', has: p => p.kind === 'coffee' },
+  { key: 'sight', label: 'Sights', icon: '⛩️', has: p => p.kind === 'sight' || p.kind === 'other' },
+  { key: 'area', label: 'Areas', icon: '🏮', has: p => p.kind === 'area' },
+  { key: 'shop', label: 'Shops', icon: '🛍️', has: p => p.kind === 'shop' },
   { key: 'stay', label: 'Stays', icon: '🛏️', has: p => p.kind === 'stay' },
-  { key: 'event', label: 'Booked', icon: '🎟️', has: p => p.kind === 'event' && !p.wishlist },
+  { key: 'event', label: 'Booked', icon: '🎟️', has: p => p.kind === 'event' },
   { key: 'wish', label: 'Wishlist', icon: '⭐', has: p => !!p.wishlist },
 ];
 
@@ -181,7 +182,7 @@ function IdeaItem({ p, day }: { p: Place; day?: string }) {
   const { ix, edit } = useApp();
   return (
     <li>
-      <div className="item-h"><span className="item-n">{p.name}</span>{day && <Pill kind="ok">On {shortDate(day)}</Pill>}</div>
+      <div className="item-h"><span className="item-n">{p.name}</span>{day && <Pill kind="ok">On {shortDate(day)}</Pill>}{p.wishlist && <Pill>Wishlist</Pill>}</div>
       <Txt text={p.notes} className="item-d" />
       <div className="meta">{p.area && <span>{p.area}</span>}<a href={mapsLink(ix, p)} target="_blank" rel="noopener noreferrer">Find in Maps</a><button className="linkbtn" onClick={() => edit({ kind: 'place', id: p.id })}>Edit</button></div>
     </li>

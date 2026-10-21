@@ -25,6 +25,7 @@ import { PlannerSheet } from './ui/planner';
 import { TripHub } from './ui/trip';
 import { AddAnything, AddButton, addOn, type AddKind } from './ui/addAnything';
 import { addPhotos } from './sync/photos';
+import { useWalletSeg } from './ui/wallet';
 import { canFile } from './sync/filing';
 import { useSync } from './sync/engine';
 import { usePullToRefresh } from './ui/pull';
@@ -195,6 +196,8 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
   const [editing, edit] = useState<Edit | null>(null);
   const [adding, setAdding] = useState(false);
   const photoPick = useRef<HTMLInputElement>(null);
+  const walletSeg = useWalletSeg();
+  const addKind = ui.tab === 'wallet' ? (walletSeg === 'docs' ? 'doc' : 'expense') : addOn(ui.tab);
   const signedIn = useSync().session;
   const close = useCallback(() => edit(null), []);
   /* Today needs it during the trip, and for "Something nearby" at any time */
@@ -373,9 +376,10 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
       </div>
       {/* the main way in: on every page but Right now, out of the way of any open editor */}
       {/* Add fits the page: photos on Photos, an expense on Wallet, otherwise the box, worded for the page */}
-      {!JAPAN && !editing && !adding && addOn(ui.tab) && <AddButton kind={addOn(ui.tab)!} onOpen={() => {
-        const k = addOn(ui.tab);
+      {!JAPAN && !editing && !adding && addKind && <AddButton kind={addKind} onOpen={() => {
+        const k = addKind;
         if (k === 'expense') edit({ kind: 'expense' });
+        else if (k === 'doc') edit({ kind: 'doc' });
         else if (k === 'photos') {
           if (!getState().sync[trip.id] || trip.sample) { if (!trip.sample) edit({ kind: 'trip' }); return; }
           photoPick.current?.click();
@@ -384,7 +388,7 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
           edit(k === 'place' ? { kind: 'place', as: 'food', ...(ui.dest !== 'all' ? { destinationId: ui.dest } : {}) } : k === 'travel' ? { kind: 'leg' } : { kind: 'todo', group: trip.todoGroups[0] });
         } else setAdding(true);
       }} />}
-      <input ref={photoPick} type="file" accept="image/*" multiple hidden onChange={e => {
+      <input ref={photoPick} className="photopick" type="file" accept="image/*" multiple hidden onChange={e => {
         const f = [...(e.target.files || [])]; e.target.value = '';
         if (f.length) void addPhotos(trip, f, now.cur?.id);
       }} />

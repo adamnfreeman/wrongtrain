@@ -27,11 +27,11 @@ const KINDS: Record<AddKind, { title: string; hint: string; examples: string[] }
     examples: ['muji, donqui and uniqlo', 'our flight home is JL 4 at 7:45 PM on the last day', 'buy a Suica card before we go'] },
 };
 /** What the Add button does on each page; null where it has nothing to add (Phrases, Right now). */
-export function addOn(tab: string): AddKind | 'photos' | 'expense' | null {
+export function addOn(tab: string): AddKind | 'photos' | 'expense' | 'doc' | null {
   return ({ today: 'plan', days: 'plan', map: 'place', places: 'place', transit: 'travel', prep: 'todo', trip: 'any', photos: 'photos', wallet: 'expense' } as const)[tab as 'today'] ?? null;
 }
 
-const LABEL: Record<string, string> = { photos: 'Add photos', expense: 'Add expense', plan: 'Add', place: 'Add place', travel: 'Add travel', todo: 'Add to-do', any: 'Add' };
+const LABEL: Record<string, string> = { photos: 'Add photos', expense: 'Add expense', doc: 'Add document', plan: 'Add', place: 'Add place', travel: 'Add travel', todo: 'Add to-do', any: 'Add' };
 
 export function AddButton({ kind, onOpen }: { kind: string; onOpen: () => void }) {
   return (

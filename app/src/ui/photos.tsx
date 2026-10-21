@@ -59,19 +59,12 @@ export function PhotosPage() {
   const talk = useTalk(t.id);
   const [by, setBy] = useState<'day' | 'person'>('day');
   const [open, setOpen] = useState<{ list: Photo[]; at: number } | null>(null);
-  const [busy, setBusy] = useState('');
   /* keep it fresh while the page is open */
   useEffect(() => {
     if (sample || !shared) return;
     const tick = window.setInterval(() => { if (!document.hidden) void refresh(t.id); }, 30_000);
     return () => clearInterval(tick);
   }, [t.id, shared, sample]);
-  const add = async (files: File[]) => {
-    if (!files.length) return;
-    setBusy(`Adding 0 of ${files.length}…`);
-    try { await addPhotos(t, files, ix.trip.days.find(d => d.date === new Date().toISOString().slice(0, 10))?.id, n => setBusy(`Adding ${n} of ${files.length}…`)); setBusy(''); }
-    catch { setBusy('Some photos could not be added.'); }
-  };
   const groups = useMemo(() => {
     if (by === 'person') {
       const m = new Map<string, Photo[]>();
@@ -95,13 +88,6 @@ export function PhotosPage() {
         <p className="note">Share this trip and everyone on it can add photos here and see each other's.{' '}
           <button className="linkbtn" onClick={() => edit({ kind: 'trip' })}>{shared ? 'Sign in' : 'Share it'}</button></p>
       )}
-      {canAdd && (
-        <label className="chipbtn go filepick">
-          + Add photos
-          <input type="file" accept="image/*" multiple hidden onChange={e => { const f = [...(e.target.files || [])]; e.target.value = ''; void add(f); }} />
-        </label>
-      )}
-      {busy && <p className="geomsg" role="status">{busy}</p>}
       {list.length > 0 && (
         <div className="chips" role="group" aria-label="Show photos" style={{ marginTop: 12 }}>
           <button className={'chipbtn' + (by === 'day' ? ' on' : '')} aria-pressed={by === 'day'} onClick={() => setBy('day')}>By day</button>
@@ -114,7 +100,7 @@ export function PhotosPage() {
           <div className="pgrid">{g.ps.map((p, i) => <Thumb key={p.id} p={p} hearts={hearts(p)} onOpen={() => setOpen({ list: g.ps, at: i })} />)}</div>
         </section>
       ))}
-      {!list.length && canAdd && !busy && <p className="note">No photos yet. Add some, and everyone on the trip sees them here and under each day.</p>}
+      {!list.length && canAdd && <p className="note">No photos yet. Tap Add photos, and everyone on the trip sees them here and under each day.</p>}
       {sample && <p className="note">In the sample, the photos are drawings and the hearts and comments stay on this phone.</p>}
       {open && open.list[open.at] && <Viewer list={open.list} at={open.at} me={me} onMove={i => setOpen({ ...open, at: i })} onClose={() => setOpen(null)} />}
     </>
@@ -212,7 +198,9 @@ function Viewer({ list, at, me, onMove, onClose }: { list: Photo[]; at: number; 
       <div className="pview-bar">
         <button className="linkbtn" onClick={onClose}>Close</button>
         <span>{at + 1} of {list.length}</span>
-        <button className="linkbtn" onClick={() => void share()}>Share</button>
+        <button className="linkbtn pshare" onClick={() => void share()} aria-label="Share">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7.5 7.5 12 3l4.5 4.5M8 10H6.5A1.5 1.5 0 0 0 5 11.5v8A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5v-8a1.5 1.5 0 0 0-1.5-1.5H16" /></svg>
+        </button>
       </div>
       <div className="pview-img"
         onTouchStart={e => { (e.currentTarget as HTMLElement).dataset.x = String(e.touches[0].clientX); }}

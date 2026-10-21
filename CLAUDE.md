@@ -98,6 +98,11 @@ on a Mac.
   as a round picture with their name (joined people, then names on Who's going not joined yet,
   and a + to invite); the whole route; Before you go (the guides, `Guides` in `views.tsx`); what
   they speak there; Trip settings and Saved on this phone. All trips is in Account & settings.
+- Oct 20, later: Right now's title and time in the accent yellow; Today says "What's nearby?"
+  (the trip's own suggestion there was confusing); the line over the open tab is fixed over the
+  middle of the bar (`.tabs::before`; on the tab it was cut off once the tab grew); one Add photos
+  button (the round one); the viewer's Share is the share icon; wishlist places show under their
+  own kind too; Wallet's button says Add document or Add expense to match (`useWalletSeg`).
 - Pull down to refresh (`src/ui/pull.ts`), on every page: fetches the trip, photos, hearts and comments
   (the Japan edition re-reads the sheet, event `wt-refresh`).
 - Add anything (`src/ui/addAnything.tsx`): the round Add button above the bottom bar on every page
@@ -277,9 +282,6 @@ Next:
    OpenStreetMap / MapTiler), so check that first. Alternatives: open routing on GTFS data
    (Transitous / MOTIS), HERE Public Transit, and in Japan NAVITIME or Ekispert, which also know
    platform numbers.
-55. **Right now, bolder** (Adam likes the sizes): the "Kyoto → Uji" title in a colour (yellow-ish,
-   but "Leave now" already uses the warning yellow, so pick a distinct accent), and an overall
-   bolder feel. With Andrea (see 16).
 56. **Something nearby, more prominent, with ratings**: give it a bigger place (its own tab or the
    top of Today), and show ratings. Google ratings come from the Places API (paid per request;
    its terms require Google's attribution, and Google data shown on a map must be on a Google

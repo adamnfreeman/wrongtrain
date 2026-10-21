@@ -13,7 +13,8 @@ const FILE = join(dir, 'japan.json');
 execFileSync('node', ['../legacy/to-app.mjs', '--raw', 'e2e/fixtures/japan-sheet.json', '--out', FILE]);
 
 const srv = spawn('python3', ['-m', 'http.server', '8097', '--bind', '127.0.0.1'], { cwd: DIST, stdio: 'ignore' });
-await wait(1000);
+/* wait until the server answers (a fixed second wasn't always enough) */
+for (let i = 0; i < 100; i++) { try { await fetch('http://127.0.0.1:8097/'); break; } catch { await wait(100); } }
 const browser = await chromium.launch({ args: ['--no-proxy-server'] });
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, timezoneId: 'Asia/Tokyo' });
 await ctx.route(/supabase\.co/, r => r.abort('internetdisconnected'));

@@ -7,7 +7,8 @@ import { spawn } from 'node:child_process';
 const DIST = process.argv[2], OUT = process.argv[3];
 const wait = ms => new Promise(r => setTimeout(r, ms));
 const srv = spawn('python3', ['-m', 'http.server', '8095', '--bind', '127.0.0.1'], { cwd: DIST, stdio: 'ignore' });
-await wait(1000);
+/* wait until the server answers (a fixed second wasn't always enough) */
+for (let i = 0; i < 100; i++) { try { await fetch('http://127.0.0.1:8095/'); break; } catch { await wait(100); } }
 const browser = await chromium.launch({ args: ['--no-proxy-server'] });
 let failures = 0;
 const errors = [];
@@ -121,8 +122,8 @@ check(await page.locator('.paidlist li.paid:has-text("You →") .stamp').count()
   await p2.reload();
   await p2.click('.tab:has-text("Photos")');
   const ph = '.pane[data-tab="photos"]';
-  await p2.waitForSelector(ph + ' .filepick');
-  await p2.locator(ph + ' input[type=file]').setInputFiles([{ name: 'a.png', mimeType: 'image/png', buffer: PNG }, { name: 'b.png', mimeType: 'image/png', buffer: PNG }]);
+  await p2.waitForSelector('.addfab:has-text("Add photos")');
+  await p2.locator('input.photopick').setInputFiles([{ name: 'a.png', mimeType: 'image/png', buffer: PNG }, { name: 'b.png', mimeType: 'image/png', buffer: PNG }]);
   await p2.waitForFunction(() => document.querySelectorAll('.pane[data-tab="photos"] .pthumb img').length === 2, null, { timeout: 10000 }).catch(() => {});
   check(await p2.locator(ph + ' .pthumb').count() === 2, 'two photos show on the Photos page');
   await p2.waitForFunction(() => !document.querySelector('.pwait'), null, { timeout: 10000 }).catch(() => {});
