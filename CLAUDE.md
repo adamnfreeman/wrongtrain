@@ -43,7 +43,10 @@ on a Mac.
   `supabase/test/rules.sql` (runs on a local Postgres, or on PGlite in Node).
 - The ideas box files everything: places, to-dos, plan items and changes to them, travel and
   stays (`supabase/functions/_shared/filing.ts`, applied in `src/model/filing.ts`). It only leaves
-  a note open when it can't tell what or where.
+  a note open when it can't tell what or where. A note asking for a kind of place without naming
+  one ("get botox and a facial") gets a web search (`search` in the answer, `SEARCH_SYSTEM`) for a
+  real one near where the group will be; the best is added as a place and fitted into the day it
+  suits, with Undo. Places it adds get map pins straight away (`findPins` after filing).
 - Supabase project: `https://wklwpihkpiuniazhidjz.supabase.co`. The publishable key in
   `src/sync/config.ts` is public by design. Never put the secret/service_role key anywhere.
 - Ideas box: a group note on a shared trip goes to the `file-note` Edge Function
@@ -215,8 +218,8 @@ Next:
    adds you to a friend's item, and each night's stay can differ per pair; in-the-moment help
    (more moods done; "who's playing tonight" needs event listings); leave-now notifications and
    real transit directions; step-by-step station guidance; "get me home" options; affiliate links.
-9. **Phrases extras** (asked for Oct 16; the currency converter is done): more phrase languages
-   (packs in `src/phrases`); starring phrases so favourites sit at the top, and reordering them.
+9. **Phrases extras** (stars and a Favourites section done Oct 20): more phrase languages
+   (packs in `src/phrases`); reordering favourites.
 10. **The Days slider under the notch** (asked for Oct 16): it still doesn't sit right at the top on
     the phone; check in the Simulator, which has the notch (`.dslider` in `src/index.css`).
 11. Later: Sign in with Apple (needs the developer account), universal links so invite links

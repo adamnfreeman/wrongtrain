@@ -11,7 +11,7 @@
    the secret: see supabase/functions/README.md. */
 import Anthropic from 'npm:@anthropic-ai/sdk@0.132.1';
 import { createClient } from 'npm:@supabase/supabase-js@2.118.0';
-import { FILING_SCHEMA, SYSTEM_PROMPT, buildNotePrompt, emptyToNull, isFiling, unalias, type Filing } from '../_shared/filing.ts';
+import { FILING_SCHEMA, SEARCH_SYSTEM, SYSTEM_PROMPT, buildNotePrompt, emptyToNull, isFiling, unalias, type Filing } from '../_shared/filing.ts';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -65,23 +65,53 @@ Deno.serve(async req => {
     /* a trip stuffed far beyond any real one isn't sent: it would only cost money */
     const built = buildNotePrompt(row.data, { text, author }, owner, today);
     if (built.prompt.length > 120_000) { await admin.rpc('refund_ai_use', { use_id: useId }); return reply(413, { error: 'size', message: 'This trip is too big to file notes into.' }); }
-    const { prompt, back } = built;
-    const msg = await anthropic.beta.messages.create({
-      /* Haiku: filing a note is routine; far cheaper than Opus, which cost 8¢ a note (Oct 17) */
-      model: 'claude-haiku-5-5',
-      max_tokens: 4000,
-      /* a routine job: keep it quick and cheap */
-      output_config: { effort: 'low', format: { type: 'json_schema', schema: FILING_SCHEMA } },
-      system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: prompt }],
-    });
-    if (msg.stop_reason === 'refusal') throw new Error('Claude declined to file this note.');
-    if (msg.stop_reason === 'max_tokens') throw new Error('The answer was cut off.');
-    const out = msg.content.find(b => b.type === 'text');
-    const filing = out && out.type === 'text' ? (JSON.parse(out.text) as unknown) : null;
-    if (!isFiling(filing)) throw new Error('The answer was not in the expected form.');
-    await admin.from('ai_uses').update({ input_tokens: msg.usage.input_tokens, output_tokens: msg.usage.output_tokens }).eq('id', useId);
-    return reply(200, { ...unalias(emptyToNull(filing as Filing), back), left });
+    const used = { input_tokens: 0, output_tokens: 0 };
+    const add = (u: { input_tokens: number; output_tokens: number }) => { used.input_tokens += u.input_tokens; used.output_tokens += u.output_tokens; };
+    const ask = async (prompt: string): Promise<Filing> => {
+      const msg = await anthropic.beta.messages.create({
+        /* Haiku: filing a note is routine; far cheaper than Opus, which cost 8¢ a note (Oct 17) */
+        model: 'claude-haiku-5-5',
+        max_tokens: 4000,
+        output_config: { effort: 'low', format: { type: 'json_schema', schema: FILING_SCHEMA } },
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: prompt }],
+      });
+      add(msg.usage);
+      if (msg.stop_reason === 'refusal') throw new Error('Claude declined to file this note.');
+      if (msg.stop_reason === 'max_tokens') throw new Error('The answer was cut off.');
+      const out = msg.content.find(b => b.type === 'text');
+      const f = out && out.type === 'text' ? (JSON.parse(out.text) as unknown) : null;
+      if (!isFiling(f)) throw new Error('The answer was not in the expected form.');
+      return f;
+    };
+    let { back } = built;
+    let filing = await ask(built.prompt);
+    /* a note asking for a kind of place ("get botox and a facial"): search the web for real ones
+       near where the group will be, then file with what was found. Only these notes pay for it. */
+    const search = String(filing.search || '').trim().slice(0, 200);
+    if (search) try {
+      const res = await anthropic.beta.messages.create({
+        model: 'claude-haiku-5-5', max_tokens: 2000,
+        tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }],
+        system: SEARCH_SYSTEM,
+        messages: [{ role: 'user', content: search }],
+      });
+      add(res.usage);
+      const found = res.content.flatMap(b => (b.type === 'text' ? [b.text] : [])).join('\n').trim();
+      if (found) {
+        const again = buildNotePrompt(row.data, { text, author }, owner, today, found);
+        back = again.back;
+        filing = await ask(again.prompt);
+      }
+    } catch (e) {
+      /* the search failing shouldn't lose the note: it stays open, with the reason logged */
+      const detail = e instanceof Anthropic.APIError ? `${e.status} ${JSON.stringify(e.error)}` : String((e as Error)?.message || e);
+      await admin.from('function_errors').insert({ fn: 'file-note search', message: detail.slice(0, 4000) }).then(() => {}, () => {});
+      filing = { ...filing, changes: [], done: false, reply: filing.reply || "Couldn't look that up just now; the note is left open." };
+    }
+    filing = { ...filing, search: null };
+    await admin.from('ai_uses').update(used).eq('id', useId);
+    return reply(200, { ...unalias(emptyToNull(filing), back), left });
   } catch (e) {
     /* a failed call does not count against the trip */
     await admin.rpc('refund_ai_use', { use_id: useId });

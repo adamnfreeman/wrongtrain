@@ -7,6 +7,7 @@ import { useSyncExternalStore } from 'react';
 import { getState, patchTrip } from '../model/store';
 import { addPart, hasPlanPart, planIsIn, planPart, prepareFiling, undoFiling, type Filed, type Filing } from '../model/filing';
 import { supabase } from './engine';
+import { findPins } from './maptiler';
 
 export type NoteFiling =
   | { state: 'busy' }
@@ -48,6 +49,8 @@ export async function fileNote(tripId: string, noteId: string): Promise<void> {
   if (hasPlanPart(x)) patchTrip(tripId, t => planPart(t, x));
   const now = getState().trips.find(t => t.id === tripId);
   set(noteId, { state: 'filed', filed: x, added: x.added, planned: x.planned, waiting: hasPlanPart(x) && !!now && !planIsIn(now, x), left: data.left });
+  /* a place it added goes on the map now, not only when the Map page next opens */
+  if (now && x.places.length) void findPins(now);
 }
 
 /** Takes back what Claude filed for a note and reopens it. */

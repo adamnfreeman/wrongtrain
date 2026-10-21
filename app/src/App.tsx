@@ -181,7 +181,7 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
     tab: 'today', day: (now.cur || trip.days[0])?.id || '', seg: 'food',
     /* one city at a time: the one you're in, else the first (lists of every city were too much) */
     dest: (now.cur?.destinationId && !now.cur.travel ? now.cur.destinationId : (now.cur || trip.days[0])?.destinationId) || trip.destinations[0]?.id || 'all',
-    veg: pref('veg', false), hide: {}, sim: { day: '', min: 840 }, pcat: 'All', pq: '', q: '',
+    veg: pref('veg', false), hide: {}, sim: { day: '', min: 840 }, pcat: pref<string[]>('fav-phrases', []).length ? '★ Favourites' : 'All', pq: '', q: '',
     ...fromHash(ids),
   }));
   const set = useCallback((p: Partial<UI>) => {

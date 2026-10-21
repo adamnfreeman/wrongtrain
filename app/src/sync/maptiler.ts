@@ -74,7 +74,11 @@ export async function findPins(trip: Trip) {
       const centre = await cityOf(p.destinationId);
       tried.add(p.id);
       if (!centre) continue;
-      const hit = await geocode([p.name, d?.name].filter(Boolean).join(', '), { near: centre, country: d?.country, poi: true });
+      let hit = await geocode([p.name, d?.name].filter(Boolean).join(', '), { near: centre, country: d?.country, poi: true });
+      /* not found by name: the named spot in its area ("Near Nishiki Market"), if it has one. A
+         city-wide guess would put the pin somewhere misleading, so there is no looser search. */
+      const area = (p.area || '').replace(/^(near|by|around|off)\s+/i, '').trim();
+      if (!hit && area.length > 3) hit = await geocode([area, d?.name].filter(Boolean).join(', '), { near: centre, country: d?.country, poi: true });
       if (hit && metres(hit.lat, hit.lng, centre.lat, centre.lng) < 50_000) found[p.id] = hit;
     }
     setPref(TRIED, [...tried].slice(-2000));

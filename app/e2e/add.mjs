@@ -40,6 +40,13 @@ check(await sheet.locator('textarea').inputValue() === '', '... which is ready f
 await sheet.getByRole('button', { name: 'Done' }).click();
 check(await page.locator('.addfab').isVisible(), 'Done closes the box');
 
+/* Phrases: star one and it heads a Favourites section */
+await page.tap('.tabs-in .tab[data-tab="phrases"]'); await wait(900);
+const ph = page.locator('.pane[data-tab="phrases"]');
+await ph.locator('.pstar').first().click();
+check(await ph.locator('.catstrip button:has-text("Favourites")').count() === 1, 'starring a phrase adds a Favourites category');
+check(await ph.locator('#phraselist h3').first().textContent() === '★ Favourites', '... shown first');
+
 check(errors.length === 0, 'no script errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
 await browser.close();
 srv.kill();
