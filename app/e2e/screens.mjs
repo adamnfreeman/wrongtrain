@@ -24,8 +24,7 @@ for (const scheme of ['light', 'dark']) {
   await page.waitForSelector('text=Explore a sample trip');
   /* the bottom bar has Today, Days, Map, Wallet and Trip; the rest open from Trip */
   const open = async name => {
-    if (['Today', 'Days', 'Map', 'Wallet', 'Trip'].includes(name)) return page.click(`.tab:has-text("${name}")`);
-    await page.click('.tab:has-text("Trip")'); await page.click(`.tile:has-text("${name}")`);
+    return page.click(`.tab:has-text("${name}")`);
   };
   if (scheme === 'light') await page.screenshot({ path: `${OUT}/0-welcome.png` });
   await page.click('text=Explore a sample trip');
@@ -39,7 +38,7 @@ for (const scheme of ['light', 'dark']) {
   check(!!big, `${scheme}: "How much time do I have?" says "${big}"`);
   if (scheme === 'light') await page.screenshot({ path: `${OUT}/1-today.png`, fullPage: true });
 
-  for (const [tab, sel, name] of [['Days', '.dslider', '2-days'], ['Wallet', '.seg', '2b-wallet'], ['Trip', '.hub', '2c-trip'], ['Transit', '.page-h', '3-transit'], ['Places', '.cattiles', '4-places'], ['Map', '.map', '5-map'], ['Phrases', '.phrase', '6-phrases'], ['To do', '#gnotes', '7-todo']]) {
+  for (const [tab, sel, name] of [['Days', '.dslider', '2-days'], ['Wallet', '.seg', '2b-wallet'], ['Trip', '.hub-h', '2c-trip'], ['Transit', '.page-h', '3-transit'], ['Places', '.cattiles', '4-places'], ['Map', '.map', '5-map'], ['Phrases', '.phrase', '6-phrases'], ['To do', '#gnotes', '7-todo']]) {
     await open(tab);
     await page.waitForSelector(sel, { timeout: 5000 });
     await wait(300);

@@ -59,7 +59,7 @@ const signInAs = async who => {
   }, [trip, session, who]);
   await page.reload();
   await page.waitForSelector('.tabs');
-  await page.click('.tab:has-text("Trip")').then(() => page.click('.tile:has-text("To do")'));
+  await page.click('.tab:has-text(\"To do\")');
 };
 const fileAnswer = {
   changes: [

@@ -94,6 +94,10 @@ on a Mac.
   shared or signed out) it opens the page's form; Map and Places show one city at a time
   (the one you're in), Map folded by kind, Places as category tiles; Transit folds each day, with
   only the next one open; open group notes fold away under "Open notes".
+- Trip page (`TripHub` in `src/ui/trip.tsx`): the trip as a whole. Search; Who's going, everyone
+  as a round picture with their name (joined people, then names on Who's going not joined yet,
+  and a + to invite); the whole route; Before you go (the guides, `Guides` in `views.tsx`); what
+  they speak there; Trip settings and Saved on this phone. All trips is in Account & settings.
 - Pull down to refresh (`src/ui/pull.ts`), on every page: fetches the trip, photos, hearts and comments
   (the Japan edition re-reads the sheet, event `wt-refresh`).
 - Add anything (`src/ui/addAnything.tsx`): the round Add button above the bottom bar on every page
@@ -223,8 +227,6 @@ Next:
    affiliate income (VISION.md). Decide which features are paid. Also: how many AI trip plans
    come free (today the cap is 5 a month per person, in `claim_plan`); one free plan, then paid?
 
-22. **Rethink the Trip page** (Adam, Oct 16: "makes no sense"). Move "All trips" into Account &
-   settings. Decide what Trip is for once Places, Photos, Notes and settings have homes of their own.
 24. **"Something nearby" moods**: an icon for each mood ("Coffee & cake" became "Coffee" Oct 17).
 32. **Adding things, next steps** (first version built Oct 17: the round **Add** button on every
    page but Right now, `src/ui/addAnything.tsx`; what you type is filed like a group note and kept
@@ -286,8 +288,6 @@ Next:
    Today) but can be brought back, with its photos, money and notes kept, e.g. past trips.
 58. **Budget per kind, in the planner** ("advanced"): set a level for each, e.g. flights cheap,
    hotels expensive, food cheap, sightseeing medium; it feeds the plan (see 44, the range).
-60. **"Before you go" has a better home** (Adam, Oct 17): on the To do tab, the Before you go
-   summary is folded and feels out of place. Maybe a before-the-trip page of its own.
 62. **Feedback from testers** (Adam, Oct 20): once it's on TestFlight, a place in the app where
    friends tell Adam what doesn't work, what they'd like to see and what should change (with the
    build number and phone sent along), and where Adam reads and answers them.

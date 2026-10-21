@@ -1,7 +1,7 @@
 /* Sign-in, Account & settings, sharing a trip with the group, joining one with a code, and the save status line. */
 import { useEffect, useRef, useState } from 'react';
 import type { Trip } from '../model/types';
-import { getState, setMe, useStore } from '../model/store';
+import { getState, setMe, useStore, selectTrip } from '../model/store';
 import { cancelInvite, changeEmail, createInvite, listInvites, deleteAccount, verifyEmailChange, errText, joinTrip, leaveTrip, members, removeMember, setMyName, shareTrip, signOut, sendCode, useSync, verifyCode, type Member, isSignedIn } from '../sync/engine';
 import { Check, DeleteButton, Sheet, Text } from './form';
 import { shareBase } from '../native';
@@ -278,6 +278,10 @@ function AccountSheet({ trip, close }: { trip?: Trip; close: () => void }) {
         <Text label="Your name, for notes and ticks" value={name} onChange={setName}
           placeholder={trip?.travelers[0] ? `e.g. ${trip.travelers[0]}` : 'Your name'} />
       </section>
+      {!JAPAN && <section className="sec">
+        <div className="sec-h"><h2>Your trips</h2></div>
+        <ul className="hubrows"><li><button onClick={() => { saveName(); close(); selectTrip(null); }}><b>All trips</b><span>Switch trip, or plan a new one</span></button></li></ul>
+      </section>}
       <section className="sec">
         <div className="sec-h"><h2>Settings</h2></div>
         <ThemeSwitch />

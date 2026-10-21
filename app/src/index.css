@@ -600,3 +600,12 @@ select.input { background-image: linear-gradient(45deg, transparent 50%, var(--m
 .cattile b { font: 600 12.5px/1.1 var(--f-body) }
 .cattile small { font-size: 11.5px; color: var(--muted) }
 .cattile[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--card)) }
+
+/* Who's going on the Trip page (WhosGoing in ui/trip.tsx) */
+.faces { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 14px 8px; margin-top: 6px }
+.face { display: grid; justify-items: center; gap: 5px; text-align: center; min-width: 0 }
+.face span { font: 600 13px/1.2 var(--f-body); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.face small { font-size: 11px; color: var(--muted); margin-top: -3px }
+.face.waiting .avatar { opacity: .55 }
+.face.add { appearance: none; border: 0; background: none; color: var(--ink); cursor: pointer; padding: 0 }
+.face.add i { width: 56px; height: 56px; border-radius: 999px; border: 2px dashed var(--rule); display: grid; place-items: center; font: 400 28px/1 var(--f-body); font-style: normal; color: var(--muted) }

@@ -57,7 +57,7 @@ await wait(300);
 await page.screenshot({ path: `${OUT}/a-1-sent.png` });
 
 /* it shows on the To do tab, and can be withdrawn */
-await page.click('.tab:has-text("Trip")').then(() => page.click('.tile:has-text("To do")'));
+await page.click('.tab:has-text(\"To do\")');
 check(await page.locator('#requests >> text=Waiting for approval').count() === 1, 'To do lists it under Waiting for approval');
 check(await page.locator('#requests >> text=waiting for signal').count() === 1, '... marked as waiting for signal');
 check(await page.locator('.tabn').count() === 0, 'no badge for someone who cannot approve');
@@ -86,7 +86,7 @@ await page.waitForSelector('.toast.bad');
 check(/leave notes/.test(await page.textContent('.toast')), 'a viewer’s change is refused, with a reason');
 check((await stored()).trips[0].name === 'Lisbon', '... and nothing changes');
 check((await page.evaluate(() => localStorage.getItem('wt-outbox') || '[]')) === '[]', '... and no request is made');
-await page.click('.tab:has-text("Trip")').then(() => page.click('.tile:has-text("To do")'));
+await page.click('.tab:has-text(\"To do\")');
 await page.fill('#gnote', 'Can we go to Sintra?');
 await page.click('text=Add note');
 check((await stored()).trips[0].notes.some(n => n.text === 'Can we go to Sintra?'), 'a viewer can still leave a note');
@@ -126,7 +126,7 @@ await op.evaluate(([t, s]) => {
 await op.reload();
 await op.waitForSelector('.tabn', { timeout: 10000 }).catch(() => {});
 check(await op.locator('.tabn').textContent().catch(() => '') === '1', 'the owner sees a badge on To do');
-await op.click('.tab:has-text("Trip")').then(() => op.click('.tile:has-text("To do")'));
+await op.click('.tab:has-text(\"To do\")');
 check(await op.locator('#requests >> text=Waiting for your OK').count() === 1, '... and the request, waiting for her OK');
 check(await op.locator('#requests >> text=Rename the trip to “Lisboa”').count() === 1, '... in words');
 await op.locator('#requests').screenshot({ path: `${OUT}/a-3-owner.png` });

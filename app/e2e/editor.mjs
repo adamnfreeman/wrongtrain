@@ -64,7 +64,7 @@ check((await page.textContent('#view .board-sub')).includes('Hotel near Termini'
 await shot('3-day');
 
 /* a place with a pasted pin, on day 1 */
-await page.click('.tab:has-text("Trip")').then(() => page.click('.tile:has-text("Places")'));
+await page.click('.tab:has-text(\"Places\")');
 await page.click('text=+ Add a place');
 await sheet.waitFor();
 await sheet.getByLabel('Name', { exact: true }).fill('Trevi Fountain');
@@ -80,7 +80,7 @@ await page.click('.tab:has-text("Map")');
 check(await page.locator('.leaflet-interactive').count() >= 1, 'place has a pin on the map');
 
 /* a booked leg on the Florence day */
-await page.click('.tab:has-text("Trip")').then(() => page.click('.tile:has-text("Transit")'));
+await page.click('.tab:has-text(\"Transit\")');
 await page.click('text=+ Add a leg');
 await sheet.waitFor();
 const opts = await sheet.getByLabel('When').locator('option').allTextContents();
@@ -95,7 +95,7 @@ check(v.includes('Rome → Florence') && v.includes('1 booked'), 'leg listed and
 check(/Florence/.test(v), 'leg filed under the Florence day');
 
 /* a to-do, ticked */
-await page.click('.tab:has-text("Trip")').then(() => page.click('.tile:has-text("To do")'));
+await page.click('.tab:has-text(\"To do\")');
 await page.locator('text=+ Add a to-do').first().click();
 await sheet.waitFor();
 await sheet.getByLabel('To do', { exact: true }).fill('Book Colosseum tickets');
@@ -125,7 +125,7 @@ await page.reload();
 await page.waitForSelector('.tab');
 await page.click('.tab:has-text("Today")');
 check(/Rome and Florence/.test(await page.textContent('#view .board .kicker')), 'new name kept after reload');
-await page.click('.tab:has-text("Trip")').then(() => page.click('.tile:has-text("Transit")'));
+await page.click('.tab:has-text(\"Transit\")');
 v = await view();
 check(v.includes('Rome → Florence'), 'leg kept after reload');
 const legDay = await page.locator('#view .legday summary').allTextContents();
@@ -135,7 +135,7 @@ await page.locator('.dbox').first().click(); await wait(900);
 check((await view()).includes('Colosseum, timed entry'), 'day 1 plan kept after reload');
 
 /* start from the sample */
-await page.click('.tab:has-text("Trip")').then(() => page.click('.hubrows button:has-text("All trips")'));
+await page.click('.tab:has-text("Trip")'); await page.click('.pane[data-tab="trip"] .acctbtn').then(() => page.click('.hubrows button:has-text(\"All trips\")'));
 await page.click('text=Start from the sample');
 await sheet.waitFor();
 await sheet.getByLabel('First day').fill('2027-10-01');
@@ -144,7 +144,7 @@ await page.waitForSelector('.board h1');
 check(/Our Japan trip/.test(await page.textContent('#view .board .kicker')), 'copy of the sample opens');
 await page.click('.tab:has-text("Days")');
 check((await page.textContent('#view .board .kicker')).includes('Oct 1'), 'copy starts on the chosen date');
-await page.click('.tab:has-text("Trip")').then(() => page.click('.hubrows button:has-text("All trips")'));
+await page.click('.tab:has-text("Trip")'); await page.click('.pane[data-tab="trip"] .acctbtn').then(() => page.click('.hubrows button:has-text(\"All trips\")'));
 check((await page.locator('.gate .sheet li').count()) === 2, 'welcome lists both trips');
 await shot('6-welcome-trips');
 

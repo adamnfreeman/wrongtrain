@@ -210,19 +210,21 @@ export function Prep() {
           </section>
         );
       })}
-      {t.guides.map((g, i) => {
-        const head = g.group !== t.guides[i - 1]?.group ? <h3 className="group-h">{g.group}</h3> : null;
-        return (
-          <div key={g.id}>
-            {head}
-            <Fold title={g.title} count={g.items.length}>
-              <ul className="sheet">{g.items.map((r, i) => <li key={i}><div className="item-h"><span className="item-n">{r.title}</span></div><Txt text={r.body} className="item-d" /></li>)}</ul>
-            </Fold>
-          </div>
-        );
-      })}
     </>
   );
+}
+
+/** The trip's guides ("Before you go" and the like), each folded. On the Trip page (#60). */
+export function Guides() {
+  const t = useApp().ix.trip;
+  return <>{t.guides.map((g, i) => (
+    <div key={g.id}>
+      {g.group !== t.guides[i - 1]?.group && <h3 className="group-h">{g.group}</h3>}
+      <Fold title={g.title} count={g.items.length}>
+        <ul className="sheet">{g.items.map((r, i) => <li key={i}><div className="item-h"><span className="item-n">{r.title}</span></div><Txt text={r.body} className="item-d" /></li>)}</ul>
+      </Fold>
+    </div>
+  ))}</>;
 }
 
 function NoteFace({ tripId, name }: { tripId: string; name: string }) {
