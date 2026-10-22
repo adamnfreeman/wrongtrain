@@ -146,23 +146,30 @@ export function DaySlider({ cur }: { cur: Day }) {
   const { ix, go } = useApp();
   const ref = useRef<HTMLDivElement>(null);
   const days = ix.trip.days;
+  /* the day the slider itself opened, so moving to it doesn't re-centre the slider under the finger */
+  const fromSlider = useRef('');
   /* keep the open day in the middle (instantly when it changes from elsewhere) */
-  useEffect(() => { centre(ref.current, ref.current?.querySelector<HTMLElement>(`[data-day="${cur.id}"]`)); }, [cur.id]);
+  useEffect(() => {
+    if (fromSlider.current === cur.id) return;
+    centre(ref.current, ref.current?.querySelector<HTMLElement>(`[data-day="${cur.id}"]`));
+  }, [cur.id]);
   useDock(ref, '[data-day]', { radius: 120, small: 0.86, big: 1.2, deps: [days.length] });
-  /* when the slider comes to rest, open the day nearest the middle */
+  /* as the slider moves, the day nearest the middle opens straight away, so holding a finger on it
+     and dragging compares days; it used to wait for the slider to stop */
   useEffect(() => {
     const st = ref.current; if (!st) return;
-    let t = 0;
-    const settle = () => {
+    let frame = 0, shown = cur.id;
+    const nearest = () => {
+      frame = 0;
       let best: HTMLElement | null = null, dist = Infinity;
       st.querySelectorAll<HTMLElement>('[data-day]').forEach(el => { const c = Math.abs(offCentre(st, el)); if (c < dist) { dist = c; best = el; } });
       const id = (best as HTMLElement | null)?.dataset.day;
-      if (id && id !== cur.id) go('days', id);
+      if (id && id !== shown) { shown = id; fromSlider.current = id; go('days', id); }
     };
-    const onScroll = () => { clearTimeout(t); t = window.setTimeout(settle, 140); };
+    const onScroll = () => { if (!frame) frame = requestAnimationFrame(nearest); };
     st.addEventListener('scroll', onScroll, { passive: true });
-    return () => { st.removeEventListener('scroll', onScroll); clearTimeout(t); };
-  }, [cur.id, go]);
+    return () => { st.removeEventListener('scroll', onScroll); cancelAnimationFrame(frame); };
+  }, [go]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="dslider" ref={ref} data-noswipe>
       <div className="dslider-in"><div className="dtrack">

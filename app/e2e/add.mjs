@@ -46,6 +46,13 @@ const ph = page.locator('.pane[data-tab="phrases"]');
 await ph.locator('.pstar').first().click();
 check(await ph.locator('.catstrip button:has-text("Favourites")').count() === 1, 'starring a phrase adds a Favourites category');
 check(await ph.locator('#phraselist h3').first().textContent() === '★ Favourites', '... shown first');
+await ph.locator('.catstrip button:has-text("All")').click();
+await ph.locator('#phraselist section').nth(1).locator('.pstar').nth(1).click();
+const favNames = () => ph.locator('#phraselist section').first().locator('.item-n').allTextContents();
+const [a1, b1] = await favNames();
+await ph.locator('#phraselist section').first().locator('[aria-label="Move up"]').nth(1).click();
+const [a2, b2] = await favNames();
+check(a2 === b1 && b2 === a1, 'favourites can be moved up and down');
 
 /* Days: tap a plan item to edit it, move it to a better day, and say you're out (as Alex) */
 await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('wrongtrain')); s.me = 'Alex'; localStorage.setItem('wrongtrain', JSON.stringify(s)); });

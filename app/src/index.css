@@ -653,3 +653,7 @@ details.fold > .linkbtn { display: inline-block; margin: 8px 14px 12px }
 .chipbtn.off { opacity: .45; pointer-events: none }
 .face.tapface { appearance: none; border: 0; background: none; color: var(--ink); padding: 0; cursor: pointer; font: inherit }
 .face.tapface:disabled { cursor: default; opacity: 1 }
+.pmove { margin-left: auto; display: inline-flex; gap: 2px }
+.pmove button { appearance: none; border: 1px solid var(--rule); background: none; color: var(--ink); border-radius: 8px; width: 30px; height: 28px; font-size: 15px; cursor: pointer }
+.pmove button:disabled { opacity: .3 }
+.pmove + .pstar { margin-left: 6px }

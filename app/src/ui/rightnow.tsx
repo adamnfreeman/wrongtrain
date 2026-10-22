@@ -1,12 +1,13 @@
 /* The "Right now" page: only what you need for the thing that's happening, big and obvious. It
    exists only while something is on (model/rightNow.ts); App.tsx adds its tab to the left of Today
    then, and opens it by itself once for each thing. A first version, for Andrea to restyle. */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Moment } from '../model/rightNow';
 import { fmtT, fmtDur } from '../model/time';
 import { dirLink, fmtDist, mapsLink } from '../model/trip';
 import { usePrivateDocs } from '../model/privateDocs';
-import { openFile } from '../sync/files';
+import { openFile, useFileUrl } from '../sync/files';
+import type { Doc } from '../model/types';
 import { useApp } from './ctx';
 import { PictureView } from './picture';
 
@@ -22,10 +23,18 @@ export function RightNow({ moment: m, next }: { moment: Moment | null; next: Mom
   const mine = usePrivateDocs(ix.trip.id);
   const [msg, setMsg] = useState('');
   const [pic, setPic] = useState<{ src: string; title: string } | null>(null);
+  const [fileDoc, setFileDoc] = useState<Doc | null>(null);
   if (!m) return <p className="hint" style={{ marginTop: 40 }}>Nothing coming up right now.</p>;
 
-  const docs = [...(ix.trip.docs || []), ...mine].filter(d => (d.file || d.picture) && d.for &&
-    ((m.leg && d.for.kind === 'leg' && d.for.id === m.leg.id) || (m.item && d.for.kind === 'plan' && d.for.id === m.item.id)));
+  /* tickets for this: attached to it; or, failing that, attached to something else that day, or
+     not attached at all, whose name shares a real word with it ("teamLab tickets" for teamLab) */
+  const all = [...(ix.trip.docs || []), ...mine].filter(d => d.file || d.picture);
+  const words = (s: string) => new Set(s.toLowerCase().split(/[^a-z0-9\u3040-\u9fff]+/).filter(w => w.length > 3 && !STOP.has(w)));
+  const mineWords = words([m.title, m.leg?.how, m.item?.text, m.place?.name].filter(Boolean).join(' '));
+  const sameDay = (d: Doc) => !d.for || (d.for.kind === 'leg' ? ix.trip.legs.find(l => l.id === d.for!.id)?.dayId === m.dayId
+    : ix.trip.days.find(x => x.id === m.dayId)?.plan.some(p => p.id === d.for!.id));
+  const exact = all.filter(d => d.for && ((m.leg && d.for.kind === 'leg' && d.for.id === m.leg.id) || (m.item && d.for.kind === 'plan' && d.for.id === m.item.id)));
+  const docs = exact.length ? exact : all.filter(d => sameDay(d) && [...words(d.title)].some(w => mineWords.has(w)));
   const leaveIn = m.leaveBy - (m.at - m.inMin);
   const pinned = m.place && m.place.lat != null && m.place.lng != null ? m.place : null;
   const facts: { k: string; v: string }[] = [];
@@ -60,7 +69,7 @@ export function RightNow({ moment: m, next }: { moment: Moment | null; next: Mom
 
       <div className="rn-actions">
         {docs.map(d => (
-          <button key={d.id} className="rn-btn primary" onClick={() => d.picture ? setPic({ src: d.picture, title: d.title }) : openFile(d.file!.path, d.file!.name).catch(e => setMsg((e as Error).message))}>
+          <button key={d.id} className="rn-btn primary" onClick={() => d.picture ? setPic({ src: d.picture, title: d.title }) : setFileDoc(d)}>
             Show {d.kind === 'ticket' ? 'ticket' : d.title}
           </button>
         ))}
@@ -70,7 +79,20 @@ export function RightNow({ moment: m, next }: { moment: Moment | null; next: Mom
       {msg && <p className="geomsg bad" role="alert">{msg}</p>}
 
       {pic && <PictureView src={pic.src} title={pic.title} close={() => setPic(null)} />}
+      {fileDoc && <FileTicket d={fileDoc} close={() => setFileDoc(null)} onError={setMsg} />}
       {next && <p className="rn-next">Then: <b>{next.title}</b> at {fmtT(next.at)}</p>}
     </div>
   );
+}
+
+const STOP = new Set(['ticket', 'tickets', 'booking', 'confirmation', 'with', 'from', 'your', 'the', 'and', 'train', 'flight']);
+
+/** A ticket that is a file, opened right here full screen (pictures and PDFs); anything else goes
+    to the phone's own viewer. */
+function FileTicket({ d, close, onError }: { d: Doc; close: () => void; onError: (m: string) => void }) {
+  const kind = d.file!.type.startsWith('image/') ? 'image' : d.file!.type === 'application/pdf' ? 'pdf' : '';
+  const { url, missing } = useFileUrl(kind ? d.file!.path : undefined);
+  const other = !kind || missing;
+  useEffect(() => { if (other) void openFile(d.file!.path, d.file!.name).catch(e => onError((e as Error).message)).finally(close); }, [other]); // eslint-disable-line react-hooks/exhaustive-deps
+  return !other && url ? <PictureView src={url} title={d.title} pdf={kind === 'pdf'} close={close} /> : null;
 }

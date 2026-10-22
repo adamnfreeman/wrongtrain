@@ -125,6 +125,9 @@ on a Mac.
   Japan sheet with the page's name and passcode and three-way merges it in (base: what the sheet said
   last time, kept on the phone as pref `sheet-base-<trip id>`; the first time, the app's own trip kept
   to the items the sheet also has), so friends' additions come in and app-only things stay.
+- Oct 22: the Days slider opens each day as it passes the middle, mid-drag (`DaySlider`); Right
+  now's Show ticket also finds tickets attached elsewhere that day by a shared word in the name, and
+  opens pictures and PDFs full screen in the app (`FileTicket`); favourite phrases move up and down.
 - Pull down to refresh (`src/ui/pull.ts`), on every page: fetches the trip, photos, hearts and comments
   (the Japan edition re-reads the sheet, event `wt-refresh`).
 - Add anything (`src/ui/addAnything.tsx`): the round Add button above the bottom bar on every page
@@ -238,8 +241,7 @@ Next:
    adds you to a friend's item, and each night's stay can differ per pair; in-the-moment help
    (more moods done; "who's playing tonight" needs event listings); leave-now notifications and
    real transit directions; step-by-step station guidance; "get me home" options; affiliate links.
-9. **Phrases extras** (stars and a Favourites section done Oct 20): more phrase languages
-   (packs in `src/phrases`); reordering favourites.
+9. **More phrase languages** (packs in `src/phrases`; stars, Favourites and reordering are done).
 10. **The Days slider under the notch** (asked for Oct 16): it still doesn't sit right at the top on
     the phone; check in the Simulator, which has the notch (`.dslider` in `src/index.css`).
 11. Later: Sign in with Apple (needs the developer account), universal links so invite links
@@ -302,6 +304,9 @@ Next:
 63. **Real-time flight alerts** (Adam, Oct 20): delays, gate and terminal changes and
    cancellations for the trip's booked flights, as they happen (needs a flight status service and,
    with the app closed, push notifications; see Right now, 16).
+68. **Our own icons instead of emojis** (Adam, Oct 20): replace the emojis used as icons everywhere
+   (Places category tiles, Something nearby moods, the planner's choices, stars and hearts) with a
+   custom icon set in WrongTrain's style, like the bottom bar's line icons. With Andrea.
 
 ## Working together
 

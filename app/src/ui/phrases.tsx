@@ -59,7 +59,7 @@ export function Phrases() {
       )}
       <div id="phraselist">
         {groups.map(g => (
-          <section key={g.cat} className="blk"><h3>{g.cat}</h3>{g.cat === FAV && <p className="note" style={{ marginTop: -4 }}>Starred on this phone. Tap ★ again to take one off.</p>}<ul className="sheet">{g.items.map(it => <PhraseItem key={it.en + it.ja} pack={pack} it={it} />)}</ul></section>
+          <section key={g.cat} className="blk"><h3>{g.cat}</h3>{g.cat === FAV && <p className="note" style={{ marginTop: -4 }}>Starred on this phone. Tap ★ again to take one off.</p>}<ul className="sheet">{g.items.map((it, i) => <PhraseItem key={it.en + it.ja} pack={pack} it={it} order={g.cat === FAV ? { first: i === 0, last: i === g.items.length - 1 } : undefined} />)}</ul></section>
         ))}
       </div>
     </>
@@ -73,13 +73,21 @@ let favs: string[] = pref<string[]>(FAVS, []);
 const favListeners = new Set<() => void>();
 const useFavs = () => useSyncExternalStore(f => { favListeners.add(f); return () => favListeners.delete(f); }, () => favs);
 const key = (it: Phrase) => it.en + '|' + it.ja;
+/** Moves a favourite up or down the Favourites list. */
+function moveFav(it: Phrase, by: -1 | 1) {
+  const i = favs.indexOf(key(it)), j = i + by;
+  if (i < 0 || j < 0 || j >= favs.length) return;
+  const next = [...favs]; [next[i], next[j]] = [next[j], next[i]];
+  favs = next; setPref(FAVS, favs); favListeners.forEach(f => f());
+}
+
 function toggleFav(it: Phrase) {
   const k = key(it);
   favs = favs.includes(k) ? favs.filter(x => x !== k) : [...favs, k];
   setPref(FAVS, favs); favListeners.forEach(f => f());
 }
 
-function PhraseItem({ pack, it }: { pack: PhrasePack; it: Phrase }) {
+function PhraseItem({ pack, it, order }: { pack: PhrasePack; it: Phrase; order?: { first: boolean; last: boolean } }) {
   const starred = useFavs().includes(key(it));
   const [state, setState] = useState<{ s: SayState; slow: boolean }>({ s: 'idle', slow: false });
   const [big, setBig] = useState(false);
@@ -88,6 +96,10 @@ function PhraseItem({ pack, it }: { pack: PhrasePack; it: Phrase }) {
   return (
     <li className={'phrase' + (big ? ' big' : '')}>
       <div className="item-h"><span className="item-n">{it.en}</span>
+        {order && <span className="pmove">
+          <button aria-label="Move up" disabled={order.first} onClick={() => moveFav(it, -1)}>↑</button>
+          <button aria-label="Move down" disabled={order.last} onClick={() => moveFav(it, 1)}>↓</button>
+        </span>}
         <button className={'pstar' + (starred ? ' on' : '')} aria-pressed={starred} aria-label={starred ? 'Take off favourites' : 'Add to favourites'} onClick={() => toggleFav(it)}>{starred ? '★' : '☆'}</button>
       </div>
       <p className="ja" lang={pack.lang}>{it.ja}</p>
