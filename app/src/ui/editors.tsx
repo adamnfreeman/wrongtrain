@@ -11,7 +11,7 @@ import { useStore } from '../model/store';
 import { deleteSharedTrip, errText } from '../sync/engine';
 import { KIND_LABEL, cityOf, indexTrip } from '../model/trip';
 import { addDays, daysBetween, longDate, todayIn } from '../model/time';
-import { PACKS } from '../phrases';
+import { PACKS, packForZones } from '../phrases';
 import { Sharing } from './account';
 import { SayPicker } from './requests';
 import { TODO_TAGS } from '../model/todos';
@@ -389,7 +389,7 @@ export function NewTripSheet({ close }: { close: () => void }) {
   const upStop = (k: number, p: Partial<Stop>) => setStops(stops.map((s, j) => (j === k ? { ...s, ...p } : s)));
   const named = stops.filter(s => s.name.trim());
   const nights = named.reduce((n, s) => n + Math.max(1, s.nights), 0);
-  const pack = named.some(s => s.timeZone === 'Asia/Tokyo') ? 'ja' : undefined;
+  const pack = packForZones(named.map(s => s.timeZone || ''));
   const create = () => {
     addTrip({ ...newTrip({ name: name || named.map(s => s.name.trim()).join(', '), start, stops: named, travelers: people.split(',').map(s => s.trim()).filter(Boolean), phrasePack: pack }), say });
     close();

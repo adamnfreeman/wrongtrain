@@ -128,6 +128,10 @@ on a Mac.
 - Oct 22: the Days slider opens each day as it passes the middle, mid-drag (`DaySlider`); Right
   now's Show ticket also finds tickets attached elsewhere that day by a shared word in the name, and
   opens pictures and PDFs full screen in the app (`FileTicket`); favourite phrases move up and down.
+- Phrases come in ten languages (`src/phrases`): Japanese (with recorded clips), Spanish, French,
+  Italian, Portuguese (Portugal), German, Korean, Mandarin, Thai and Greek (the phone's voice), 55
+  phrases each in the same groups. A new trip picks its pack from its stops' time zones
+  (`packForZones`); a trip with none picked uses its first destination's country (`packForTrip`).
 - Pull down to refresh (`src/ui/pull.ts`), on every page: fetches the trip, photos, hearts and comments
   (the Japan edition re-reads the sheet, event `wt-refresh`).
 - Add anything (`src/ui/addAnything.tsx`): the round Add button above the bottom bar on every page
@@ -241,9 +245,6 @@ Next:
    adds you to a friend's item, and each night's stay can differ per pair; in-the-moment help
    (more moods done; "who's playing tonight" needs event listings); leave-now notifications and
    real transit directions; step-by-step station guidance; "get me home" options; affiliate links.
-9. **More phrase languages** (packs in `src/phrases`; stars, Favourites and reordering are done).
-10. **The Days slider under the notch** (asked for Oct 16): it still doesn't sit right at the top on
-    the phone; check in the Simulator, which has the notch (`.dslider` in `src/index.css`).
 11. Later: Sign in with Apple (needs the developer account), universal links so invite links
    open the app, a city list for guessing time zones (Kyoto, Florence and similar don't match
    an IANA zone name), editing the "Before you go" guides.
@@ -280,8 +281,6 @@ Next:
    page leaves room for (or a place in the bottom bar), with Andrea.
 43. **Better words for the levels of say** (Adam: neither the phrases nor their descriptions are
    right yet). `LEVELS` in `src/model/rules.ts`; with Andrea.
-45. **Planner header covers the emojis**: on Plan a trip for me, the top bar cuts off the emojis on
-   the first questions (`src/ui/planner.tsx`, `.sheet-bar`).
 47. **The last referral id**: the Booking.com aid (then a Booking.com link for stays, see 50). Airalo
    declined (Oct 20): its eSIM link goes out plain, with no referral.
 50. **A Stay page**: each night's hotel with photos, check-in and check-out times, amenities, tips,

@@ -1,7 +1,7 @@
 /* Phrases for the trip's language, with recorded audio where there is some. */
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { pref, setPref } from '../model/store';
-import { PACKS } from '../phrases';
+import { PACKS, packForTrip } from '../phrases';
 import type { Phrase, PhrasePack } from '../phrases/types';
 import { loadClips, play, translateLink, type SayState } from '../phrases/speak';
 import { fold } from '../model/search';
@@ -10,12 +10,13 @@ import { useApp } from './ctx';
 
 export function Phrases() {
   const { ix, ui, set } = useApp();
-  const pack = ix.trip.phrasePack ? PACKS[ix.trip.phrasePack] : undefined;
+  /* the trip's pack, or, if none was picked, the language of its first destination we have one for */
+  const pack = ix.trip.phrasePack ? PACKS[ix.trip.phrasePack] : packForTrip(ix.trip);
   useEffect(() => { if (pack) loadClips(pack); }, [pack]);
   if (!pack) return (
     <>
       <h1 className="page-h">Phrases</h1>
-      <Empty>No phrase pack for this trip's language yet. Japanese is the first; more are on the way.</Empty>
+      <Empty>No phrases for this trip's language yet. Pick a language in Trip settings, under Phrases.</Empty>
     </>
   );
   const terms = fold(ui.pq.trim()).split(/\s+/).filter(Boolean);
