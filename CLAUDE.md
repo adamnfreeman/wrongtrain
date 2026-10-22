@@ -232,8 +232,11 @@ the iPhone, owner approvals (trip rule, roles, requests and the approval list), 
 (Claude files group notes; not deployed yet).
 
 Next:
-4. **Apple Developer account**: approved Oct 20, but App Store Connect won't open for the account;
-   waiting on Apple support. Then TestFlight.
+4. **TestFlight**: the developer account (team "Adam Freeman", GXSV7T4V36) and App Store Connect
+   are set up (Oct 22). The app's store name is **WrongTrain.lol** ("WrongTrain" was taken; the name
+   under the icon stays WrongTrain), bundle id `lol.wrongtrain.app`. Next: upload a build (Product →
+   Archive → Distribute App), then internal testers, then an external group for friends (Beta App
+   Review on the first build).
 6. **"Something nearby"** (built Oct 16) on Today: pick a mood, get 5 places from OpenStreetMap
    (Overpass), chosen by Claude on shared trips (`suggest-nearby`), else the nearest. The public
    Overpass server will not do for many users: move to a paid places API or our own server.
