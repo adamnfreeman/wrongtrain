@@ -6,7 +6,8 @@ import { supabase, useSync } from '../sync/engine';
 
 type Row = { kind: string; n: number; input: number; output: number; n30: number; input30: number; output30: number };
 interface Costs { uses: Row[]; plans: Omit<Row, 'kind'> }
-const ADAM = 'adam@thefreemans.io';
+/* Adam signs in with either his address or his alias */
+const ADAM = ['adam@thefreemans.io', 'adam@thefreemans.xyz'];
 /* $ per million tokens, in and out: Haiku for filing and nearby, Sonnet for plans (rough) */
 const RATE: Record<string, [number, number]> = { 'file-note': [1, 5], 'suggest-nearby': [1, 5], plans: [3, 15] };
 const LABEL: Record<string, string> = { 'file-note': 'Notes filed', 'suggest-nearby': 'Nearby picks', plans: 'Trip plans' };
@@ -15,7 +16,7 @@ const dollars = (r: [number, number], i: number, o: number) => `$${((i * r[0] + 
 export function AiCosts() {
   const { session } = useSync();
   const [c, setC] = useState<Costs | null>(null);
-  const isAdam = session?.user.email?.toLowerCase() === ADAM;
+  const isAdam = ADAM.includes(session?.user.email?.toLowerCase() || '');
   useEffect(() => { if (isAdam) void supabase.rpc('ai_costs').then(({ data }) => data && setC(data as Costs)); }, [isAdam]);
   if (!isAdam || !c) return null;
   const rows = [...c.uses, { kind: 'plans', ...c.plans }];
