@@ -1,4 +1,4 @@
-/* What the AI has cost, in Account & settings, for Adam only (ai_costs in schema.sql). Tokens are
+/* What the AI has cost, in Account & settings, for Adam and Andrea only (ai_costs in schema.sql). Tokens are
    exact; dollars are a rough guess at list prices (the planner may run on a dearer model), so the
    Anthropic console stays the real bill. */
 import { useEffect, useState } from 'react';
@@ -6,8 +6,8 @@ import { supabase, useSync } from '../sync/engine';
 
 type Row = { kind: string; n: number; input: number; output: number; n30: number; input30: number; output30: number };
 interface Costs { uses: Row[]; plans: Omit<Row, 'kind'> }
-/* Adam signs in with either his address or his alias */
-const ADAM = ['adam@thefreemans.io', 'adam@thefreemans.xyz'];
+/* Adam and Andrea, each by their address or their alias */
+const ADAM = ['adam@thefreemans.io', 'adam@thefreemans.xyz', 'andrea@thefreemans.io', 'andrea@thefreemans.xyz'];
 /* $ per million tokens, in and out: Haiku for filing and nearby, Sonnet for plans (rough) */
 const RATE: Record<string, [number, number]> = { 'file-note': [1, 5], 'suggest-nearby': [1, 5], plans: [3, 15] };
 const LABEL: Record<string, string> = { 'file-note': 'Notes filed', 'suggest-nearby': 'Nearby picks', plans: 'Trip plans' };
@@ -23,7 +23,7 @@ export function AiCosts() {
   return (
     <section className="sec">
       <div className="sec-h"><h2>What the AI has cost</h2></div>
-      <p className="note" style={{ marginTop: 0 }}>Only you see this. Dollars are a rough guess at list prices; the Anthropic console has the real bill.</p>
+      <p className="note" style={{ marginTop: 0 }}>Only Adam and Andrea see this. Dollars are a rough guess at list prices; the Anthropic console has the real bill.</p>
       <ul className="sheet">{rows.map(r => {
         const rate = RATE[r.kind] || [1, 5];
         return (

@@ -120,7 +120,7 @@ on a Mac.
   phone, All trips list, `TripList` in App.tsx); budget per kind in the planner (`budgetBy`); mood
   icons; Translate something on Phrases (opens Google Translate); a Shopping tab (`src/model/shop.ts`:
   products and the Amazon tag, empty for now); What the AI has cost in Account & settings, for Adam
-  only (`ai_costs` in schema.sql, `src/ui/costs.tsx`); tap a face on Trip to see the picture big.
+  and Andrea only (`ai_costs` in schema.sql, `src/ui/costs.tsx`); tap a face on Trip to see the picture big.
 - Update from the Google Sheet (Trip page, Japan 2026 trip only; `src/model/sheetSync.ts`): reads the
   Japan sheet with the page's name and passcode and three-way merges it in (base: what the sheet said
   last time, kept on the phone as pref `sheet-base-<trip id>`; the first time, the app's own trip kept

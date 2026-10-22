@@ -628,14 +628,14 @@ revoke update on public.photo_comments from anon, authenticated;
 drop trigger if exists comment_author on public.photo_comments;
 create trigger comment_author before insert on public.photo_comments for each row execute function public.photo_author();
 
--- ---------- what the AI has cost (Adam only) ----------
+-- ---------- what the AI has cost (Adam and Andrea only) ----------
 --
 -- Uses and tokens by kind (filing notes, nearby picks, trip plans), today, the last 30 days and all
--- time. Only Adam's accounts (his address and his alias) get an answer; everyone else an error.
+-- time. Only Adam's and Andrea's accounts (their addresses and aliases) get an answer; everyone else an error.
 create or replace function public.ai_costs()
 returns jsonb language plpgsql stable security definer set search_path = public as $$
 begin
-  if lower(coalesce(auth.jwt() ->> 'email', '')) not in ('adam@thefreemans.io', 'adam@thefreemans.xyz') then raise exception 'not allowed'; end if;
+  if lower(coalesce(auth.jwt() ->> 'email', '')) not in ('adam@thefreemans.io', 'adam@thefreemans.xyz', 'andrea@thefreemans.io', 'andrea@thefreemans.xyz') then raise exception 'not allowed'; end if;
   return jsonb_build_object(
     'uses', (select coalesce(jsonb_agg(r), '[]') from (
       select kind, count(*) as n, coalesce(sum(input_tokens), 0) as input, coalesce(sum(output_tokens), 0) as output,
