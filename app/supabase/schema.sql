@@ -630,26 +630,28 @@ create trigger comment_author before insert on public.photo_comments for each ro
 
 -- ---------- what the AI has cost (Adam and Andrea only) ----------
 --
--- Uses and tokens by kind (filing notes, nearby picks, trip plans), today, the last 30 days and all
--- time. Only Adam's and Andrea's accounts (their addresses and aliases) get an answer; everyone else an error.
-create or replace function public.ai_costs()
+-- Uses and tokens by kind (filing notes, nearby picks, trip plans), over the last N days (1, 7, 14
+-- or 30 in the app) and all time. Only Adam's and Andrea's accounts (their addresses and aliases) get an answer; everyone else an error.
+drop function if exists public.ai_costs();
+create or replace function public.ai_costs(days integer default 30)
 returns jsonb language plpgsql stable security definer set search_path = public as $$
+declare since timestamptz := now() - make_interval(days => greatest(1, least(days, 3650)));
 begin
   if lower(coalesce(auth.jwt() ->> 'email', '')) not in ('adam@thefreemans.io', 'adam@thefreemans.xyz', 'andrea@thefreemans.io', 'andrea@thefreemans.xyz') then raise exception 'not allowed'; end if;
   return jsonb_build_object(
     'uses', (select coalesce(jsonb_agg(r), '[]') from (
       select kind, count(*) as n, coalesce(sum(input_tokens), 0) as input, coalesce(sum(output_tokens), 0) as output,
-        count(*) filter (where created_at > now() - interval '30 days') as n30,
-        coalesce(sum(input_tokens) filter (where created_at > now() - interval '30 days'), 0) as input30,
-        coalesce(sum(output_tokens) filter (where created_at > now() - interval '30 days'), 0) as output30
+        count(*) filter (where created_at > since) as np,
+        coalesce(sum(input_tokens) filter (where created_at > since), 0) as inputp,
+        coalesce(sum(output_tokens) filter (where created_at > since), 0) as outputp
       from ai_uses group by kind) r),
     'plans', (select jsonb_build_object('n', count(*), 'input', coalesce(sum(input_tokens), 0), 'output', coalesce(sum(output_tokens), 0),
-        'n30', count(*) filter (where created_at > now() - interval '30 days'),
-        'input30', coalesce(sum(input_tokens) filter (where created_at > now() - interval '30 days'), 0),
-        'output30', coalesce(sum(output_tokens) filter (where created_at > now() - interval '30 days'), 0)) from ai_plans));
+        'np', count(*) filter (where created_at > since),
+        'inputp', coalesce(sum(input_tokens) filter (where created_at > since), 0),
+        'outputp', coalesce(sum(output_tokens) filter (where created_at > since), 0)) from ai_plans));
 end $$;
-revoke all on function public.ai_costs() from public, anon;
-grant execute on function public.ai_costs() to authenticated;
+revoke all on function public.ai_costs(integer) from public, anon;
+grant execute on function public.ai_costs(integer) to authenticated;
 
 -- ---------- comments about the app, from testers to Adam ----------
 --
