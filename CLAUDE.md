@@ -10,15 +10,16 @@ wrongtrain.lol, a single HTML file reading the trip from a Google Sheet.
 ## Branches: be careful with `main`
 
 - **`main` is the live website** (GitHub Pages, custom domain wrongtrain.lol):
-  - `/` is the **Japan edition of the app** (since Oct 16, 2026), in real use for the Japan
-    trip from Oct 26 to Nov 8, 2026: `index.html`, `assets/`, `japan-sw.js` + `sw.js` (the same
-    offline worker; `sw.js` is the old page's worker name, so phones that had it move over),
-    `precache.json`, `phrases/`. It must keep working with no signal; don't change it without asking.
-  - `/classic/` is the **old Japan page** (single HTML file, its own `sw.js`), kept as the
-    backup. To switch back: copy `classic/index.html`, `classic/sw.js` and
-    `classic/phrases-audio.json` to the root.
-  - `/japan/` sends anyone with the test link on to `/`.
-  - `/app/` is a **test copy of the WrongTrain build**, published by hand (see below).
+  - `/` is the **website about WrongTrain** (since Oct 23, 2026): `index.html`, `privacy.html`,
+    `terms.html`, `contact.html`, `styles.css`, `icon.png`, `img/` (screenshots of the sample trip).
+    Its source is `site/` on the `app` branch; to publish, copy `site/` over the root of `main`.
+    `sw.js` and `japan-sw.js` at the root are a clean-up worker: the Japan edition used to live at
+    the root, and phones that kept it offline get it cleared so they load the website.
+  - `/japan/` is the **Japan edition of the app** (moved from the root Oct 23; the group now uses
+    the TestFlight app, and Drew uses `/app/`), with its own offline worker.
+  - `/classic/` is the **old Japan page** (single HTML file, its own `sw.js`), kept as a backup.
+  - `/app/` is a **test copy of the WrongTrain build** in the browser (Drew, on Android, uses it):
+    publish every new phone build here too (see below).
 - **`app` is where WrongTrain is developed.** The app lives in `app/`; the Japan page's
   source is kept in `legacy/` for reference.
 
@@ -204,11 +205,9 @@ the sheet. The plan is changed in the sheet: Edit buttons say so (`SheetOnly` in
 No Wallet tab and no shared-trip sync. Works offline through `public/japan-sw.js`. Tested by
 `e2e/japan.mjs`, which plays the sheet's script.
 
-To publish: build it on `app` (`npm run build:japan`), then on `main` replace the site root's
-`index.html`, `assets/`, `japan-sw.js`, `precache.json`, `favicon.svg` and `phrases/` with those
-from `app/dist-japan/`, and copy `japan-sw.js` over `sw.js` too. Leave `CNAME`, `app/`,
-`classic/` and `japan/` alone. People coming from the old page keep their sign-in and saved trip
-(`oldPageTrip` in `src/sheet/live.ts`).
+To publish: build it on `app` (`npm run build:japan`), then on `main` replace the `japan/` folder
+with `app/dist-japan/`. Touch nothing else. Sign-ins and saved trips carry over (same site;
+`oldPageTrip` in `src/sheet/live.ts`).
 
 The sheet's own script (Code.gs, and Filer.gs, which files each group note within a minute) is
 kept in `legacy/apps-script/`; the running copy lives in the sheet.
@@ -284,8 +283,9 @@ Next:
    page leaves room for (or a place in the bottom bar), with Andrea.
 43. **Better words for the levels of say** (Adam: neither the phrases nor their descriptions are
    right yet). `LEVELS` in `src/model/rules.ts`; with Andrea.
-47. **The last referral id**: the Booking.com aid (then a Booking.com link for stays, see 50). Airalo
-   declined (Oct 20): its eSIM link goes out plain, with no referral.
+47. **The last referral id**: Booking.com turned the application down (Oct 23) for having no website
+   they could look at; wrongtrain.lol is now one, so apply again (then a Booking.com link for stays,
+   see 50). Airalo declined (Oct 20): its eSIM link goes out plain, with no referral.
 50. **A Stay page**: each night's hotel with photos, check-in and check-out times, amenities, tips,
    address and directions, and a booking link for the recommended ones (a referral where one
    exists, see 34).
