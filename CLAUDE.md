@@ -228,6 +228,9 @@ on a Mac.
   `_shared/push.ts`), which sends fixed words through APNs to the others on the trip, not the same
   thing twice within 10 minutes. Needs the APNs key as secrets (APNS_KEY, APNS_KEY_ID): steps in
   `app/supabase/functions/README.md`. While the app is open its own banners say it instead.
+- Tapping the weather line on Today opens the next 7 days for one place: where you are (when the
+  phone knows) or any of the trip's cities, with the next 24 hours in 3-hour steps (`WeekView` in
+  `src/ui/weather.tsx`, Open-Meteo, kept on the phone for 30 minutes).
 
 ## Commands (in `app/`)
 
@@ -371,8 +374,6 @@ Next:
    service (Resend or Postmark: DNS records at Namecheap, the key in Supabase's SMTP settings), which
    also lifts Gmail's ~2,000 a day limit before launch. Or give info@ its own Workspace seat with the icon.
 
-77. **Tap the weather for the week** (Adam, Oct 24): tapping the weather line on Today opens a popup with
-   that day's weather and the rest of the week (`src/ui/weather.tsx`, Open-Meteo).
 
 ## Working together
 
