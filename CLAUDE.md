@@ -397,6 +397,13 @@ Next:
 79. **A more vibrant Right now pulse** (Adam, Oct 24): the yellow badge's pulse on the Right now tab
    (`.tab.tab-now`, `@keyframes nowpulse` in `src/index.css`) should be stronger and easier to notice.
 
+80. **Condense the app; Today as the hub** (Adam, Oct 24): too many tabs and too much to dig for. Today
+   should hold more of what Essentials and Places have, and everything on it should be tappable for
+   details (Coming up boxes can't be tapped today). Fewer tabs overall. Ideas in the Oct 24 chat:
+   Today as the hub (tappable Coming up opening the Essentials details, tonight's hotel, today's
+   plan, nearby, weather), Map and Places as one tab, Essentials folded into Today, Days and Wallet,
+   and the rest under Trip. With Andrea.
+
 ## Working together
 
 Two people work on this at once: Adam (adam@thefreemans.io, the technical side) and Andrea
