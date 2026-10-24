@@ -1,5 +1,5 @@
 // What the iPhone itself can do for WrongTrain, free and with no signal (src/sync/apple.ts):
-// - read text through the camera (menus, signs), with live highlighting, then Translate;
+// - read text through the camera (menus, signs): tap a line and its translation shows over the camera;
 // - translate on the phone (Apple's Translation; a language is downloaded once);
 // - Apple's on-device language model for small jobs: picking places nearby, filing a simple note.
 // Each is checked on each device; the app falls back (Google Translate, Claude) where it's missing.
@@ -65,8 +65,8 @@ public class WrongTrainNativePlugin: CAPPlugin, CAPBridgedPlugin {
         let start = {
             DispatchQueue.main.async {
                 guard DataScannerViewController.isSupported else { return call.reject("This iPhone can't read text with the camera.") }
-                let vc = ScanController(languages: languages) { lines in
-                    if let lines { call.resolve(["lines": lines]) } else { call.resolve(["lines": [], "cancelled": true]) }
+                let vc = ScanController(languages: languages, target: call.getString("target") ?? "en") { pairs in
+                    call.resolve(["pairs": pairs])
                 }
                 vc.modalPresentationStyle = .fullScreen
                 self.bridge?.viewController?.present(vc, animated: true)
@@ -142,20 +142,27 @@ public class WrongTrainNativePlugin: CAPPlugin, CAPBridgedPlugin {
 
 // MARK: - the camera screen
 
+/// Point at a menu or a sign: the text it can read is outlined; tap a line and its translation shows
+/// over the camera, then tap another. Each line's language is detected (menus often mix Japanese and
+/// English). Done returns what was translated, for the Phrases page to list.
 @available(iOS 16.0, *)
 final class ScanController: UIViewController, DataScannerViewControllerDelegate {
     private let scanner: DataScannerViewController
-    private let finish: ([String]?) -> Void
-    private var items: [RecognizedItem] = []
+    private let target: String
+    private let finish: ([[String: String]]) -> Void
+    private var pairs: [[String: String]] = []
     private var done = false
+    private let card = UIView(), toLabel = UILabel(), fromLabel = UILabel()
+    private var worker: UIViewController?
 
-    init(languages: [String], finish: @escaping ([String]?) -> Void) {
+    init(languages: [String], target: String, finish: @escaping ([[String: String]]) -> Void) {
         let supported = DataScannerViewController.supportedTextRecognitionLanguages
         /* "ja" becomes the reader's own "ja-JP"; languages it can't read are left out */
         let langs = languages.compactMap { l in supported.first { $0 == l || $0.hasPrefix(l + "-") } }
         scanner = DataScannerViewController(recognizedDataTypes: [.text(languages: langs)], qualityLevel: .accurate,
                                             recognizesMultipleItems: true, isHighFrameRateTrackingEnabled: false,
                                             isPinchToZoomEnabled: true, isGuidanceEnabled: true, isHighlightingEnabled: true)
+        self.target = target
         self.finish = finish
         super.init(nibName: nil, bundle: nil)
     }
@@ -171,33 +178,46 @@ final class ScanController: UIViewController, DataScannerViewControllerDelegate 
         view.addSubview(scanner.view)
         scanner.didMove(toParent: self)
 
-        var go = UIButton.Configuration.filled()
-        go.title = "Translate"; go.cornerStyle = .capsule
-        go.baseBackgroundColor = UIColor(red: 0.95, green: 0.72, blue: 0.29, alpha: 1); go.baseForegroundColor = .black
-        go.contentInsets = NSDirectionalEdgeInsets(top: 14, leading: 28, bottom: 14, trailing: 28)
-        let translate = UIButton(configuration: go, primaryAction: UIAction { [weak self] _ in self?.close(with: self?.lines()) })
-        var no = UIButton.Configuration.gray()
-        no.title = "Cancel"; no.cornerStyle = .capsule
-        no.contentInsets = NSDirectionalEdgeInsets(top: 14, leading: 22, bottom: 14, trailing: 22)
-        let cancel = UIButton(configuration: no, primaryAction: UIAction { [weak self] _ in self?.close(with: nil) })
-        let row = UIStackView(arrangedSubviews: [cancel, translate])
-        row.spacing = 14; row.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(row)
-
         let hint = UILabel()
-        hint.text = "Point at a menu or a sign. Tap Translate when the text is outlined."
-        hint.textColor = .white; hint.numberOfLines = 0; hint.textAlignment = .center
+        hint.text = "Tap a line to translate it"
+        hint.textColor = .white; hint.textAlignment = .center
         hint.font = .systemFont(ofSize: 15, weight: .semibold)
         hint.backgroundColor = UIColor.black.withAlphaComponent(0.55); hint.layer.cornerRadius = 12; hint.clipsToBounds = true
         hint.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(hint)
 
+        var go = UIButton.Configuration.filled()
+        go.title = "Done"; go.cornerStyle = .capsule
+        go.baseBackgroundColor = UIColor(red: 0.95, green: 0.72, blue: 0.29, alpha: 1); go.baseForegroundColor = .black
+        let doneButton = UIButton(configuration: go, primaryAction: UIAction { [weak self] _ in self?.close() })
+        doneButton.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(doneButton)
+
+        card.backgroundColor = UIColor(red: 0.09, green: 0.11, blue: 0.13, alpha: 0.96)
+        card.layer.cornerRadius = 16
+        card.isHidden = true
+        card.translatesAutoresizingMaskIntoConstraints = false
+        toLabel.textColor = .white; toLabel.numberOfLines = 0; toLabel.font = .systemFont(ofSize: 21, weight: .bold)
+        fromLabel.textColor = UIColor(white: 0.7, alpha: 1); fromLabel.numberOfLines = 0; fromLabel.font = .systemFont(ofSize: 15)
+        let stack = UIStackView(arrangedSubviews: [toLabel, fromLabel])
+        stack.axis = .vertical; stack.spacing = 6; stack.translatesAutoresizingMaskIntoConstraints = false
+        card.addSubview(stack)
+        view.addSubview(card)
+
         NSLayoutConstraint.activate([
-            row.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            row.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
             hint.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 12),
             hint.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            hint.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            hint.trailingAnchor.constraint(equalTo: doneButton.leadingAnchor, constant: -12),
+            hint.heightAnchor.constraint(equalToConstant: 40),
+            doneButton.centerYAnchor.constraint(equalTo: hint.centerYAnchor),
+            doneButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            card.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+            card.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            card.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
+            stack.topAnchor.constraint(equalTo: card.topAnchor, constant: 16),
+            stack.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -16),
+            stack.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 16),
+            stack.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -16),
         ])
     }
 
@@ -206,30 +226,40 @@ final class ScanController: UIViewController, DataScannerViewControllerDelegate 
         try? scanner.startScanning()
     }
 
-    func dataScanner(_ s: DataScannerViewController, didAdd added: [RecognizedItem], allItems: [RecognizedItem]) { items = allItems }
-    func dataScanner(_ s: DataScannerViewController, didUpdate updated: [RecognizedItem], allItems: [RecognizedItem]) { items = allItems }
-    func dataScanner(_ s: DataScannerViewController, didRemove removed: [RecognizedItem], allItems: [RecognizedItem]) { items = allItems }
-    /// Tapping one outlined line translates just that line.
+    /// One tapped line: translated on the phone, shown over the camera.
     func dataScanner(_ s: DataScannerViewController, didTapOn item: RecognizedItem) {
-        if case .text(let t) = item { close(with: [t.transcript]) }
+        guard case .text(let t) = item else { return }
+        let line = t.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+        if line.isEmpty { return }
+        card.isHidden = false
+        toLabel.text = "Translating…"
+        fromLabel.text = line
+        guard #available(iOS 18.0, *) else { toLabel.text = "Translating needs iOS 18."; return }
+        worker?.willMove(toParent: nil); worker?.view.removeFromSuperview(); worker?.removeFromParent()
+        /* no source language: each line's own is detected */
+        let config = TranslationSession.Configuration(source: nil, target: Locale.Language(identifier: target))
+        let h = UIHostingController(rootView: TranslateHost(config: config, texts: [line]) { [weak self] out, err in
+            DispatchQueue.main.async {
+                guard let self, self.fromLabel.text == line else { return }
+                if let to = out?.first, !to.isEmpty {
+                    self.toLabel.text = to
+                    self.pairs.append(["from": line, "to": to])
+                } else {
+                    self.toLabel.text = err.map { "Couldn't translate: \($0)" } ?? "Couldn't translate that line."
+                }
+            }
+        })
+        h.view.frame = CGRect(x: 0, y: 0, width: 1, height: 1)
+        h.view.backgroundColor = .clear
+        addChild(h); view.addSubview(h.view); h.didMove(toParent: self)
+        worker = h
     }
 
-    /// The outlined text, top to bottom, left to right.
-    private func lines() -> [String] {
-        items.compactMap { item -> (CGPoint, String)? in
-            if case .text(let t) = item { return (t.bounds.topLeft, t.transcript) }
-            return nil
-        }
-        .sorted { abs($0.0.y - $1.0.y) > 12 ? $0.0.y < $1.0.y : $0.0.x < $1.0.x }
-        .map { $0.1.trimmingCharacters(in: .whitespacesAndNewlines) }
-        .filter { !$0.isEmpty }
-    }
-
-    private func close(with lines: [String]?) {
+    private func close() {
         if done { return }
         done = true
         scanner.stopScanning()
-        dismiss(animated: true) { self.finish(lines) }
+        dismiss(animated: true) { self.finish(self.pairs) }
     }
 }
 

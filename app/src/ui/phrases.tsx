@@ -140,7 +140,7 @@ function Translator({ pack }: { pack: PhrasePack }) {
     setMsg('');
     try {
       const r = await scanText([pack.lang, 'en']);
-      if (!r.cancelled && r.lines.length) await run(r.lines, pack.lang, 'en');
+      if (r.pairs?.length) setOut(r.pairs);
     } catch (e) { setMsg((e as Error).message || "Couldn't open the camera."); }
   };
   return (
@@ -149,6 +149,9 @@ function Translator({ pack }: { pack: PhrasePack }) {
         <button className="gobtn ghost camtrans" style={{ width: '100%' }} disabled={busy} onClick={() => void camera()}>
           {busy ? 'Translating…' : `Translate a menu or sign (${lang})`}
         </button>
+      )}
+      {caps?.scanner && here && (
+        <p className="fhint" style={{ marginTop: 6 }}>Tap one line at a time. For a whole menu at once, <Ext href={`https://translate.google.com/?sl=${pack.lang}&tl=en&op=images`}>Google Translate's camera</Ext> is better.</p>
       )}
       <details className="fold translator" open={out.length > 0 || undefined}>
         <summary>Translate something</summary>
