@@ -55,7 +55,8 @@ on a Mac.
   `patchTrip` (`src/model/filing.ts`, `src/sync/filing.ts`), so the trip rule applies. The
   Anthropic key is only a Supabase secret (`ANTHROPIC_API_KEY`), never in the app. Uses are
   counted per trip in `ai_uses` (20 free; `trip_passes` is there for the paid pass).
-- Sign-in is an emailed 8-digit code (Supabase's setting; the app says "a code"). Email goes through Gmail SMTP (adam@thefreemans.io for
+- Sign-in is an emailed 8-digit code (Supabase's setting; the app says "a code"). The emails (sign-in, welcome,
+  change email) are branded HTML made by `supabase/emails/emails.py`. Email goes through Gmail SMTP (adam@thefreemans.io for
   now; wrongtrain.lol is being added to Google Workspace). The email templates contain only
   the code, no link.
 
