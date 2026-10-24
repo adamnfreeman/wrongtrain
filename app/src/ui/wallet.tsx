@@ -12,7 +12,7 @@ import { newId } from '../model/trip';
 import { fmtHM, shortDate, todayIn } from '../model/time';
 import { drop, extOf, keep, openFile, readLocal, shrink, useFileUrl } from '../sync/files';
 import { rate } from '../sync/rates';
-import { PictureView } from './picture';
+import { FileTicket, PictureView } from './picture';
 import { Empty, Ext, Pill, SecH } from './bits';
 import { Check, Choice, DeleteButton, Sheet, Text } from './form';
 import { useApp } from './ctx';
@@ -126,6 +126,7 @@ export function DocLinks({ kind, id }: { kind: 'plan' | 'leg'; id: string }) {
   const mine = usePrivateDocs(ix.trip.id);
   const [msg, setMsg] = useState('');
   const [pic, setPic] = useState<Doc | null>(null);
+  const [fileDoc, setFileDoc] = useState<Doc | null>(null);
   const list = [...(ix.trip.docs || []), ...mine].filter(d => d.for?.kind === kind && d.for.id === id);
   if (!list.length) return null;
   return (
@@ -133,9 +134,10 @@ export function DocLinks({ kind, id }: { kind: 'plan' | 'leg'; id: string }) {
       {list.map(d => d.picture
         ? <button key={d.id} className="linkbtn" onClick={() => setPic(d)}>{d.kind === 'ticket' ? 'Ticket' : 'Document'}: {d.title}</button>
         : d.file
-        ? <button key={d.id} className="linkbtn" onClick={() => openFile(d.file!.path, d.file!.name).catch(e => setMsg((e as Error).message))}>{d.kind === 'ticket' ? 'Ticket' : 'Document'}: {d.title}</button>
+        ? <button key={d.id} className="linkbtn" onClick={() => { setMsg(''); setFileDoc(d); }}>{d.kind === 'ticket' ? 'Ticket' : 'Document'}: {d.title}</button>
         : d.link ? <Ext key={d.id} href={d.link}>{d.title}</Ext> : null)}
       {pic && <PictureView src={pic.picture!} title={pic.title} close={() => setPic(null)} />}
+      {fileDoc && <FileTicket d={fileDoc} close={() => setFileDoc(null)} onError={setMsg} />}
       {msg && <span className="bad">{msg}</span>}
     </div>
   );

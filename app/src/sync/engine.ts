@@ -10,7 +10,7 @@
      sent as a request, kept on the phone until there is signal, and appears for everyone once
      the owner or an organizer approves it.
 
-   Sign-in is an emailed six-digit code. Supabase keeps the session on the phone. */
+   Sign-in is an emailed code (8 digits, as set in Supabase). Supabase keeps the session on the phone. */
 import { createClient, type RealtimeChannel, type Session } from '@supabase/supabase-js';
 import { useSyncExternalStore } from 'react';
 import type { Trip } from '../model/types';
@@ -348,7 +348,7 @@ export async function verifyCode(email: string, code: string) {
   if (error) throw error;
 }
 
-/** Moves the account to a new email. Supabase emails a six-digit code to the new address (and,
+/** Moves the account to a new email. Supabase emails a code to the new address (and,
     with "Secure email change" on, to the old one too); the change is made once a code is entered.
     Trips, names and roles stay, because they belong to the account, not the address. */
 export async function changeEmail(email: string) {

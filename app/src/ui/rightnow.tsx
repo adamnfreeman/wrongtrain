@@ -1,15 +1,14 @@
 /* The "Right now" page: only what you need for the thing that's happening, big and obvious. It
    exists only while something is on (model/rightNow.ts); App.tsx adds its tab to the left of Today
    then, and opens it by itself once for each thing. A first version, for Andrea to restyle. */
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { Moment } from '../model/rightNow';
 import { fmtT, fmtDur } from '../model/time';
 import { dirLink, fmtDist, mapsLink } from '../model/trip';
 import { usePrivateDocs } from '../model/privateDocs';
-import { openFile, useFileUrl } from '../sync/files';
 import type { Doc } from '../model/types';
 import { useApp } from './ctx';
-import { PictureView } from './picture';
+import { FileTicket, PictureView } from './picture';
 
 const KIND = { flight: 'Your flight', ride: 'Your ride', event: 'Coming up' } as const;
 
@@ -86,13 +85,3 @@ export function RightNow({ moment: m, next }: { moment: Moment | null; next: Mom
 }
 
 const STOP = new Set(['ticket', 'tickets', 'booking', 'confirmation', 'with', 'from', 'your', 'the', 'and', 'train', 'flight']);
-
-/** A ticket that is a file, opened right here full screen (pictures and PDFs); anything else goes
-    to the phone's own viewer. */
-function FileTicket({ d, close, onError }: { d: Doc; close: () => void; onError: (m: string) => void }) {
-  const kind = d.file!.type.startsWith('image/') ? 'image' : d.file!.type === 'application/pdf' ? 'pdf' : '';
-  const { url, missing } = useFileUrl(kind ? d.file!.path : undefined);
-  const other = !kind || missing;
-  useEffect(() => { if (other) void openFile(d.file!.path, d.file!.name).catch(e => onError((e as Error).message)).finally(close); }, [other]); // eslint-disable-line react-hooks/exhaustive-deps
-  return !other && url ? <PictureView src={url} title={d.title} pdf={kind === 'pdf'} close={close} /> : null;
-}

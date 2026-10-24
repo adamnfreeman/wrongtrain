@@ -46,13 +46,13 @@ export function SignInSheet({ close, then, why }: { close: () => void; then?: ()
       {!sent ? (
         <>
           <Text label="Email" type="text" value={email} onChange={setEmail} placeholder="you@example.com" autoFocus
-            hint="We email you a six-digit code. No password to remember." />
+            hint="We email you a sign-in code. No password to remember." />
           <div className="chips"><button type="button" className="chipbtn go" disabled={!okEmail || busy} onClick={send}>{busy ? 'Sending…' : 'Send code'}</button></div>
         </>
       ) : (
         <>
           <p className="fhint" style={{ marginTop: 10 }}>Sent to <b>{email.trim()}</b>. It can take a minute; check spam too. <button type="button" className="linkbtn" onClick={() => { setSent(false); setCode(''); }}>Use a different email</button></p>
-          <Text label="Code" value={code} onChange={v => setCode(v.replace(/[^\d ]/g, '').slice(0, 8))} placeholder="123456" autoFocus />
+          <Text label="Code" value={code} onChange={v => setCode(v.replace(/[^\d ]/g, '').slice(0, 8))} placeholder="12345678" autoFocus />
           <Text label="Your name" value={name} onChange={setName} placeholder="As the group knows you" hint="Shown on your notes and ticks." />
           <div className="chips"><button type="button" className="chipbtn go" disabled={busy || code.replace(/\D/g, '').length < 6 || !name.trim()} onClick={verify}>{busy ? 'Checking…' : 'Sign in'}</button></div>
         </>
@@ -177,6 +177,7 @@ export function Sharing({ trip, onLeft }: { trip: Trip; onLeft: () => void }) {
           <p className="code" aria-label="Invite code">{code.slice(0, 4)} {code.slice(4)}</p>
           <div className="chips" style={{ justifyContent: 'center' }}>
             <button type="button" className="chipbtn go" onClick={send}>{typeof navigator.share === 'function' ? 'Send…' : 'Copy invite'}</button>
+            <CopyCode code={code} />
             <button type="button" className="chipbtn" onClick={async () => { try { await cancelInvite(code); setCode(''); } catch (e) { setMsg(errText(e)); } }}>Cancel this code</button>
           </div>
         </div>
@@ -210,6 +211,15 @@ export function SyncLine({ trip }: { trip: Trip }) {
   return <p className={'syncline ' + st}>{st === 'signedout' ? 'Shared · signed out, so changes stay on this phone until you sign in.' : LINE[st]}</p>;
 }
 
+/** Copies just the code, to paste into any message. */
+function CopyCode({ code, link }: { code: string; link?: boolean }) {
+  const [done, setDone] = useState(false);
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(code); setDone(true); setTimeout(() => setDone(false), 2000); } catch { /* no clipboard */ }
+  };
+  return <button type="button" className={link ? 'linkbtn' : 'chipbtn'} onClick={copy}>{done ? 'Copied' : 'Copy code'}</button>;
+}
+
 /** Codes still open, for the owner and organizers: cancel one and a forwarded link stops working. */
 function OpenInvites({ tripId, fresh }: { tripId: string; fresh: string }) {
   const { decides } = useAccess(tripId);
@@ -223,6 +233,7 @@ function OpenInvites({ tripId, fresh }: { tripId: string; fresh: string }) {
       <span className="flabel">Other invite codes still open</span>
       <ul className="sheet">{open.map(i => (
         <li key={i.code}><div className="item-h"><span className="item-n mono">{i.code.slice(0, 4)} {i.code.slice(4)}</span><span className="grow" />
+          <CopyCode code={i.code} link />
           <button className="linkbtn" onClick={async () => { try { await cancelInvite(i.code); setList(list.filter(x => x.code !== i.code)); } catch (e) { setMsg(errText(e)); } }}>Cancel</button></div>
           <div className="meta"><span>Works until {new Date(i.expires_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span></div></li>
       ))}</ul>
@@ -405,8 +416,8 @@ function ChangeEmailSheet({ now, close }: { now: string; close: () => void }) {
           <Text label="New email" value={email} onChange={setEmail} placeholder="you@example.com" autoFocus />
           <div className="chips"><button type="button" className="chipbtn go" disabled={!ok || busy} onClick={send}>{busy ? 'Sending…' : 'Send code'}</button></div>
         </> : <>
-          <p className="fhint" style={{ marginTop: 10 }}>We sent a six-digit code to <b>{email.trim()}</b>. If a code also arrives at {now}, that's to confirm it's you; the one to enter here is from the new address.</p>
-          <Text label="Code" value={code} onChange={v => setCode(v.replace(/[^\d ]/g, '').slice(0, 8))} placeholder="123456" autoFocus />
+          <p className="fhint" style={{ marginTop: 10 }}>We sent a code to <b>{email.trim()}</b>. If a code also arrives at {now}, that's to confirm it's you; the one to enter here is from the new address.</p>
+          <Text label="Code" value={code} onChange={v => setCode(v.replace(/[^\d ]/g, '').slice(0, 8))} placeholder="12345678" autoFocus />
           <div className="chips"><button type="button" className="chipbtn go" disabled={busy || code.replace(/\D/g, '').length < 6} onClick={verify}>{busy ? 'Checking…' : 'Change email'}</button></div>
         </>}
       {msg && <p className="geomsg bad" role="alert">{msg}</p>}
