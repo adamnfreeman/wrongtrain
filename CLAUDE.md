@@ -133,6 +133,10 @@ on a Mac.
 - Oct 22: the Days slider opens each day as it passes the middle, mid-drag (`DaySlider`); Right
   now's Show ticket also finds tickets attached elsewhere that day by a shared word in the name, and
   opens pictures and PDFs full screen in the app (`FileTicket`); favourite phrases move up and down.
+- Add to itinerary (Places; `PlaceSheet` in `src/ui/addToPlan.tsx`, `fitPlace` in `src/model/fit.ts`):
+  tap a place (or its Add to itinerary) for the three days it fits best (its city, still to come,
+  open that weekday, not already on it, least full) with a time around what's planned and inside its
+  hours (meals at lunch or dinner); one tap adds it as a plan item, with Undo. Not in the Japan edition.
 - Phrases come in ten languages (`src/phrases`): Japanese (with recorded clips), Spanish, French,
   Italian, Portuguese (Portugal), German, Korean, Mandarin, Thai and Greek (the phone's voice), 55
   phrases each in the same groups. A new trip picks its pack from its stops' time zones
@@ -403,6 +407,13 @@ Next:
    Today as the hub (tappable Coming up opening the Essentials details, tonight's hotel, today's
    plan, nearby, weather), Map and Places as one tab, Essentials folded into Today, Days and Wallet,
    and the rest under Trip. With Andrea.
+81. **Change plans on the fly** (Adam, Oct 24): an easy way, during the trip, to swap what's planned
+   when the group's mood changes, e.g. shopping in one neighbourhood is on the plan but everyone
+   wants something chill near the hotel. Suggest alternatives nearby (Something nearby, the trip's
+   own places) and swap them into today's plan, moving or dropping what was there.
+82. **Share a finished trip** (Adam, Oct 24): after a trip, share it so other people can use it and the
+   ideas in it (places, the plan, tips), e.g. a public read-only link or a copy someone can start
+   their own trip from, without the private things (bookings, wallet, money, notes).
 
 ## Working together
 

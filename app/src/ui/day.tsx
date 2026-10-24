@@ -7,7 +7,7 @@ import { centre, offCentre, useDock } from './dock';
 import type { Bullet, Day, Leg, Place, Todo } from '../model/types';
 import { DocLinks } from './wallet';
 import { cityOf, codeOf, lineOf, mapsLink, stayLine, destOf } from '../model/trip';
-import { dayOfMonth, fmtHM, fmtT, longDate } from '../model/time';
+import { dayOfMonth, fmtHM, fmtT, longDate, shortDate } from '../model/time';
 import { anchorsFor } from '../model/next';
 import { TODO_TAGS, hasTicked, needs, stillToDo } from '../model/todos';
 import { getState, patchTrip, toggleTodo } from '../model/store';
@@ -222,12 +222,13 @@ export function VegPill({ p }: { p: Place }) {
   return null;
 }
 
-export function EatItem({ p }: { p: Place }) {
+/** A place to eat; with `onOpen` (Places), tapping it opens the place and Add to itinerary. */
+export function EatItem({ p, onOpen, day }: { p: Place; onOpen?: () => void; day?: string }) {
   const { ix, edit } = useApp();
   const hours = p.hours === '24h' ? 'Open 24 hours' : p.hours ? `${fmtHM(p.hours.open)}–${fmtHM(p.hours.close)}` : '';
   return (
-    <li className={p.closed ? 'dim' : ''}>
-      <div className="item-h"><span className="item-n">{p.name}</span><VegPill p={p} /></div>
+    <li className={(p.closed ? 'dim' : '') + (onOpen ? ' tapme' : '')} onClick={onOpen && tapped(onOpen)}>
+      <div className="item-h"><span className="item-n">{p.name}</span><VegPill p={p} />{day && <Pill kind="ok">On {shortDate(day)}</Pill>}</div>
       <Txt text={p.notes} className="item-d" />
       <div className="meta">
         {p.area && <span>{p.area}</span>}
@@ -235,10 +236,14 @@ export function EatItem({ p }: { p: Place }) {
         {p.dietNote && <span>{p.dietNote}</span>}
         {!p.closed && <Ext href={mapsLink(ix, p)}>Find in Maps</Ext>}
         <button className="linkbtn" onClick={() => edit({ kind: 'place', id: p.id })}>Edit</button>
+        {onOpen && !p.closed && <button className="linkbtn strong" onClick={onOpen}>Add to itinerary</button>}
       </div>
     </li>
   );
 }
+
+/** A click on a list item that wasn't on one of its own links or buttons. */
+export const tapped = (go: () => void) => (e: { target: EventTarget }) => { if (!(e.target as Element).closest('a, button, input, select')) go(); };
 
 export function VegToggle() {
   const { ui, set } = useApp();

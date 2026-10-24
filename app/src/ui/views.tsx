@@ -17,7 +17,8 @@ import { Requests } from './requests';
 import { useSync } from '../sync/engine';
 import { canFile, dismissFiling, fileNote, undoFile, useFilings, type NoteFiling } from '../sync/filing';
 import { Empty, Fold, Pill, SecH, Txt, line } from './bits';
-import { Board, DayBody, DaySlider, EatItem, TodoItem, VegToggle, vegOk } from './day';
+import { Board, DayBody, DaySlider, EatItem, TodoItem, VegToggle, tapped, vegOk } from './day';
+import { PlaceSheet } from './addToPlan';
 import { NextCard } from './next';
 import { useApp } from './ctx';
 
@@ -114,14 +115,19 @@ const CATS: { key: string; label: string; icon: string; has: (p: Place) => boole
 
 export function Places() {
   const { ix, ui, set, edit } = useApp();
+  const [open, setOpen] = useState<string | null>(null);
   const inCity = ix.trip.places.filter(p => (ui.dest === 'all' || p.destinationId === ui.dest) && p.kind !== 'transit');
   const counts = CATS.map(c => ({ ...c, n: inCity.filter(c.has).length }));
   const cat = counts.find(c => c.key === ui.seg && c.n) || counts.find(c => c.n);
   const dayOf = (p: Place) => ix.trip.days.find(d => onToday(p, d));
   const list = cat ? inCity.filter(cat.has).filter(p => !(cat.key === 'food' || cat.key === 'coffee') || vegOk(p, ui.veg)) : [];
   const food = cat?.key === 'food' || cat?.key === 'coffee';
+  /* the Japan edition's plan is changed in the sheet, so no Add to itinerary there */
+  const tap = (p: Place) => JAPAN ? undefined : () => setOpen(p.id);
+  const opened = open ? ix.trip.places.find(p => p.id === open) : undefined;
   return (
     <>
+      {opened && <PlaceSheet p={opened} close={() => setOpen(null)} />}
       <h1 className="page-h">Places</h1>
       <div className="chips"><DestChips /></div>
       {counts.some(c => c.n) ? (
@@ -137,7 +143,7 @@ export function Places() {
       {cat && (
         <div id="results">
           {food && ix.trip.places.some(p => p.diet) && <div className="chips"><VegToggle /></div>}
-          {list.length ? <ul className="sheet">{list.map(p => food ? <EatItem key={p.id} p={p} /> : <IdeaItem key={p.id} p={p} day={dayOf(p)?.date} />)}</ul>
+          {list.length ? <ul className="sheet">{list.map(p => food ? <EatItem key={p.id} p={p} day={dayOf(p)?.date} onOpen={tap(p)} /> : <IdeaItem key={p.id} p={p} day={dayOf(p)?.date} onOpen={tap(p)} />)}</ul>
             : <Empty>Nothing here for that filter.</Empty>}
         </div>
       )}
@@ -145,13 +151,13 @@ export function Places() {
   );
 }
 
-function IdeaItem({ p, day }: { p: Place; day?: string }) {
+function IdeaItem({ p, day, onOpen }: { p: Place; day?: string; onOpen?: () => void }) {
   const { ix, edit } = useApp();
   return (
-    <li>
+    <li className={onOpen ? 'tapme' : undefined} onClick={onOpen && tapped(onOpen)}>
       <div className="item-h"><span className="item-n">{p.name}</span>{day && <Pill kind="ok">On {shortDate(day)}</Pill>}{p.wishlist && <Pill>Wishlist</Pill>}</div>
       <Txt text={p.notes} className="item-d" />
-      <div className="meta">{p.area && <span>{p.area}</span>}<a href={mapsLink(ix, p)} target="_blank" rel="noopener noreferrer">Find in Maps</a><button className="linkbtn" onClick={() => edit({ kind: 'place', id: p.id })}>Edit</button></div>
+      <div className="meta">{p.area && <span>{p.area}</span>}<a href={mapsLink(ix, p)} target="_blank" rel="noopener noreferrer">Find in Maps</a><button className="linkbtn" onClick={() => edit({ kind: 'place', id: p.id })}>Edit</button>{onOpen && <button className="linkbtn strong" onClick={onOpen}>Add to itinerary</button>}</div>
     </li>
   );
 }

@@ -819,3 +819,15 @@ button.wx { width: 100%; background: none; border: 0; padding: 0; text-align: le
 .eatrow:last-child { border-bottom: 0 }
 .eatrow input { width: 20px; height: 20px; accent-color: var(--accent); flex: none }
 .eatrow small { color: var(--muted) }
+
+/* Places: tap a place for Add to itinerary (ui/addToPlan.tsx) */
+.tapme { cursor: pointer }
+.fits { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 8px }
+.fitbtn { appearance: none; width: 100%; text-align: left; display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: center;
+  background: var(--card); border: 1px solid var(--rule); border-radius: 12px; padding: 12px 14px; color: var(--ink); font: inherit; cursor: pointer }
+.fitbtn b { font: 700 16px/1.25 var(--f-display) }
+.fitbtn span { grid-column: 1; font-size: 13.5px; color: var(--muted) }
+.fitbtn i { grid-column: 2; grid-row: 1 / span 2; font: 700 24px/1 var(--f-body); font-style: normal; color: var(--accent, var(--ink)) }
+.fitbtn:active { background: var(--rule) }
+.fitdone { background: var(--card); border: 1px solid var(--rule); border-radius: 12px; padding: 12px 14px }
+.fitdone p { margin: 0 0 8px }
