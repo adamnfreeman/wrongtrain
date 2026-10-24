@@ -202,15 +202,16 @@ function NoteFace({ tripId, name }: { tripId: string; name: string }) {
   return <Avatar name={name} src={useAvatarFor(tripId, name)} size={20} />;
 }
 
-/** A note's screenshot: a small picture that opens full screen. */
+/** What came with a note: a small picture, or a PDF, that opens full screen. */
 function NoteShot({ f }: { f: FileRef }) {
   const { url } = useFileUrl(f.path);
   const [big, setBig] = useState(false);
+  const pdf = f.type === 'application/pdf';
   if (!url) return null;
   return (
     <>
-      <button className="noteshot" onClick={() => setBig(true)} aria-label="Open the screenshot"><img src={url} alt="" /></button>
-      {big && <PictureView src={url} title="Screenshot" close={() => setBig(false)} />}
+      <button className="noteshot" onClick={() => setBig(true)} aria-label={`Open ${f.name}`}>{pdf ? <span className="docpdf">PDF</span> : <img src={url} alt="" />}</button>
+      {big && <PictureView src={url} title={f.name} pdf={pdf} close={() => setBig(false)} />}
     </>
   );
 }
@@ -233,18 +234,21 @@ function Notes({ dealtWith }: { dealtWith?: boolean }) {
   const open = all.filter(n => !n.done || filings[n.id]), done = all.filter(n => n.done && !filings[n.id]);
   const add = (image?: FileRef, id?: string) => {
     if (!draft.trim() && !image) return setMsg({ text: 'Write the note first.', bad: true });
-    const made = addNote(t.id, draft.trim() || 'Screenshot', image, id); setDraft('');
+    const made = addNote(t.id, draft.trim() || (image?.type === 'application/pdf' ? 'A file' : 'A picture'), image, id); setDraft('');
     if (made && claude) { setMsg(null); void fileNote(t.id, made); } else setMsg({ text: JAPAN ? 'Saved to the Group Notes tab in the sheet.' : shared ? 'Added for everyone on the trip.' : 'Added.', bad: false });
   };
-  /* a screenshot (a booking email, a ticket): kept with the note, and read by Claude when it's filed */
+  /* a photo, a screenshot or a PDF (a booking email, a ticket): kept with the note, and read by
+     Claude when it's filed. On an iPhone the paperclip offers Take Photo, Photo Library or a file. */
   const pick = useRef<HTMLInputElement>(null);
   const addShot = async (f?: File) => {
     if (!f) return;
     try {
-      const id = newId('n'), small = await shrink(f, 1600), path = `${t.id}/notes/${id}.jpg`;
-      await keep(path, small);
-      add({ path, name: f.name || 'screenshot.jpg', type: small.type || 'image/jpeg', size: small.size }, id);
-    } catch { setMsg({ text: "Couldn't read that picture.", bad: true }); }
+      const id = newId('n'), pdf = f.type === 'application/pdf';
+      if (pdf && f.size > 4_000_000) throw new Error('big');
+      const blob = pdf ? f : await shrink(f, 1600), path = `${t.id}/notes/${id}.${pdf ? 'pdf' : 'jpg'}`;
+      await keep(path, blob);
+      add({ path, name: f.name || (pdf ? 'file.pdf' : 'photo.jpg'), type: pdf ? 'application/pdf' : blob.type || 'image/jpeg', size: blob.size }, id);
+    } catch (e) { setMsg({ text: (e as Error).message === 'big' ? 'That file is too big (4 MB at most).' : "Couldn't read that.", bad: true }); }
     finally { if (pick.current) pick.current.value = ''; }
   };
   /* only the writer may change a note: notes carry a name, not an account, so match the name */
@@ -296,14 +300,15 @@ function Notes({ dealtWith }: { dealtWith?: boolean }) {
         : claude
         ? 'Leave a note with something to add: somewhere to eat, a sight, a shop, something to book or pack. WrongTrain files it into the trip for everyone: places, days, travel, to-dos.'
         : 'Ideas, questions and things to add, for everyone on the trip to see.'}{why && <> {why}</>}</p>
-      <textarea className="search notebox" id="gnote" rows={3} maxLength={600} value={draft} onChange={e => setDraft(e.target.value)}
-        placeholder={claude ? 'For example: add the ramen place near the hotel to Nov 3' : 'For example: can we fit in a sentō one evening?'} aria-label="Your note" />
-      <div className="chips">
-        <button className="chipbtn go" onClick={() => add()}>Add note</button>
-        {!JAPAN && <button className="chipbtn" onClick={() => pick.current?.click()}>Add a screenshot</button>}
-        <input ref={pick} type="file" accept="image/*" hidden aria-label="Screenshot" onChange={e => void addShot(e.target.files?.[0])} />
+      <div className="transrow">
+        <textarea className="search notebox" id="gnote" rows={3} maxLength={600} value={draft} onChange={e => setDraft(e.target.value)}
+          placeholder={claude ? 'For example: add the ramen place near the hotel to Nov 3' : 'For example: can we fit in a sentō one evening?'} aria-label="Your note" />
+        {!JAPAN && <button className="cambtn" onClick={() => pick.current?.click()} aria-label="Attach a photo or a file">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.5 7.5 9.4 14.6a1.8 1.8 0 0 0 2.5 2.5l7.4-7.4a3.6 3.6 0 0 0-5.1-5.1l-7.6 7.6a5.4 5.4 0 0 0 7.6 7.6l6.3-6.3" /></svg>
+        </button>}
+        <input ref={pick} type="file" accept="image/*,application/pdf" hidden aria-label="Photo or file" onChange={e => void addShot(e.target.files?.[0])} />
       </div>
-      {!JAPAN && claude && <p className="fhint">A screenshot of a booking email or a ticket works too: WrongTrain reads it and files what's in it. Write a line with it if you like.</p>}
+      <div className="chips"><button className="chipbtn go" onClick={() => add()}>Add note</button></div>
       {msg && <p className={'geomsg' + (msg.bad ? ' bad' : '')} role="status">{msg.text}</p>}
       {/* a note being filed right now stays in view; notes left open fold away instead of sitting on top */}
       {open.filter(n => filings[n.id]).length > 0 && <ul className="sheet" style={{ marginTop: 12 }}>{open.filter(n => filings[n.id]).map(item)}</ul>}
