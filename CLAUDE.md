@@ -394,6 +394,9 @@ Next:
    is a planning aid and isn't responsible for trips that go wrong: missed trains or flights, wrong
    times or details, AI suggestions, bookings. The website's terms (`site/terms.html`) have a start.
 
+79. **A more vibrant Right now pulse** (Adam, Oct 24): the yellow badge's pulse on the Right now tab
+   (`.tab.tab-now`, `@keyframes nowpulse` in `src/index.css`) should be stronger and easier to notice.
+
 ## Working together
 
 Two people work on this at once: Adam (adam@thefreemans.io, the technical side) and Andrea
