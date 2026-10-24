@@ -390,6 +390,10 @@ Next:
    also lifts Gmail's ~2,000 a day limit before launch. Or give info@ its own Workspace seat with the icon.
 
 
+78. **"Not our fault" wording** (Adam, Oct 24): say plainly, in the app (and the terms), that WrongTrain
+   is a planning aid and isn't responsible for trips that go wrong: missed trains or flights, wrong
+   times or details, AI suggestions, bookings. The website's terms (`site/terms.html`) have a start.
+
 ## Working together
 
 Two people work on this at once: Adam (adam@thefreemans.io, the technical side) and Andrea
