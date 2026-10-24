@@ -783,3 +783,6 @@ button.wx { width: 100%; background: none; border: 0; padding: 0; text-align: le
 .wxdays .wxw { color: var(--muted); font-size: 13px }
 .wxdays .wxt { color: var(--muted); white-space: nowrap }
 .wxdays .wxt b { color: var(--ink) }
+.signin-cta { display: grid; gap: 8px; margin-bottom: 6px }
+.signin-cta .gobtn { border-color: var(--accent); color: var(--accent) }
+.hint.signedin { margin: 0 0 4px; text-align: center }

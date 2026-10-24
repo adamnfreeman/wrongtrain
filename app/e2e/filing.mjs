@@ -12,6 +12,7 @@ const srv = spawn('python3', ['-m', 'http.server', '8094', '--bind', '127.0.0.1'
 for (let i = 0; i < 100; i++) { try { await fetch('http://127.0.0.1:8094/'); break; } catch { await wait(100); } }
 const browser = await chromium.launch({ args: ['--no-proxy-server'] });
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+await ctx.addInitScript(() => localStorage.setItem('wt-test-open', '1'));
 const page = await ctx.newPage();
 const errors = [];
 page.on('pageerror', e => errors.push(e.message));

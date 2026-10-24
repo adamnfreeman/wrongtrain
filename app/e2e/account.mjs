@@ -42,6 +42,13 @@ await ctx.route(/supabase\.co/, async r => {
 const page = await ctx.newPage();
 page.on('pageerror', e => errors.push(e.message));
 await page.goto('http://localhost:8089/');
+/* signed out: sign-in is on the welcome screen, and starting a trip needs an account */
+await page.waitForSelector('text=Explore a sample trip');
+check(await page.locator('button:has-text("Sign in or create an account")').count() === 1, 'the welcome screen offers sign-in');
+await page.click('text=Plan it myself');
+check(await page.locator('.sheet-wrap >> text=To start a trip, sign in').count() === 1, 'starting a trip asks you to sign in first');
+check(await page.locator('.sheet-wrap >> text=Not now').count() === 0, '... with no way round it');
+await page.locator('.sheet-wrap').getByText('Cancel', { exact: true }).click();
 await page.evaluate(s => localStorage.setItem('wt-auth', JSON.stringify(s)), session);
 await page.reload();
 await page.waitForSelector('text=Explore a sample trip');

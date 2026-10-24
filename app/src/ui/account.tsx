@@ -16,7 +16,8 @@ import { savedCreds } from '../sheet/live';
 
 /* ---------- sign in ---------- */
 
-export function SignInSheet({ close, then, why }: { close: () => void; then?: () => void; why?: string }) {
+/** Signing in. With onSkip, the cancel button says "Not now" and carries on without an account. */
+export function SignInSheet({ close, then, why, onSkip }: { close: () => void; then?: () => void; why?: string; onSkip?: () => void }) {
   const { me } = useStore();
   const [email, setEmail] = useState('');
   const [name, setName] = useState(me);
@@ -42,7 +43,7 @@ export function SignInSheet({ close, then, why }: { close: () => void; then?: ()
     } catch (e) { setMsg(errText(e)); setBusy(false); }
   };
   return (
-    <Sheet title="Sign in" onCancel={close} onSave={sent ? verify : send} saveLabel={busy ? '…' : sent ? 'Sign in' : 'Send code'}
+    <Sheet title="Sign in" onCancel={onSkip || close} cancelLabel={onSkip ? 'Not now' : 'Cancel'} onSave={sent ? verify : send} saveLabel={busy ? '…' : sent ? 'Sign in' : 'Send code'}
       canSave={!busy && (sent ? code.replace(/\D/g, '').length >= 6 : okEmail)}>
       {why && <p className="fhint" style={{ marginTop: 4 }}>{why}</p>}
       {!sent ? (
@@ -54,7 +55,7 @@ export function SignInSheet({ close, then, why }: { close: () => void; then?: ()
       ) : (
         <>
           <p className="fhint" style={{ marginTop: 10 }}>Sent to <b>{email.trim()}</b>. It can take a minute; check spam too. <button type="button" className="linkbtn" onClick={() => { setSent(false); setCode(''); }}>Use a different email</button></p>
-          <Text label="Code" value={code} onChange={v => setCode(v.replace(/[^\d ]/g, '').slice(0, 8))} placeholder="12345678" autoFocus />
+          <Text label="Code" value={code} onChange={v => setCode(v.replace(/[^\d ]/g, '').slice(0, 8))} placeholder="12345678" autoFocus autoComplete="one-time-code" />
           <Text label="Your name" value={name} onChange={setName} placeholder="As the group knows you"
             hint={me ? 'Shown on your notes and ticks.' : 'Used WrongTrain before? Leave it empty: your name and picture come with your account.'} />
           <div className="chips"><button type="button" className="chipbtn go" disabled={busy || code.replace(/\D/g, '').length < 6} onClick={verify}>{busy ? 'Checking…' : 'Sign in'}</button></div>
@@ -148,7 +149,7 @@ export function Sharing({ trip, onLeft }: { trip: Trip; onLeft: () => void }) {
         </>
       ) : (
         <>
-          <p className="fhint" style={{ marginTop: 0 }}>Shared. Changes anyone makes reach everyone's phone.</p>
+          <p className="fhint" style={{ marginTop: 0 }}>{people && people.length > 1 ? "Shared. Changes anyone makes reach everyone's phone." : 'Saved to your account, on all your devices. Invite people to plan it together.'}</p>
           {people && (
             <ul className="sheet" style={{ marginTop: 10 }}>
               {people.map(p => (
@@ -420,7 +421,7 @@ function ChangeEmailSheet({ now, close }: { now: string; close: () => void }) {
           <div className="chips"><button type="button" className="chipbtn go" disabled={!ok || busy} onClick={send}>{busy ? 'Sending…' : 'Send code'}</button></div>
         </> : <>
           <p className="fhint" style={{ marginTop: 10 }}>We sent a code to <b>{email.trim()}</b>. If a code also arrives at {now}, that's to confirm it's you; the one to enter here is from the new address.</p>
-          <Text label="Code" value={code} onChange={v => setCode(v.replace(/[^\d ]/g, '').slice(0, 8))} placeholder="12345678" autoFocus />
+          <Text label="Code" value={code} onChange={v => setCode(v.replace(/[^\d ]/g, '').slice(0, 8))} placeholder="12345678" autoFocus autoComplete="one-time-code" />
           <div className="chips"><button type="button" className="chipbtn go" disabled={busy || code.replace(/\D/g, '').length < 6} onClick={verify}>{busy ? 'Checking…' : 'Change email'}</button></div>
         </>}
       {msg && <p className="geomsg bad" role="alert">{msg}</p>}

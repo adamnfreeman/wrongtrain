@@ -19,6 +19,8 @@ const jwt = `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ sub: UID, role: 'authe
 const session = { access_token: jwt, token_type: 'bearer', expires_in: 3600, expires_at: 4102444800, refresh_token: 'r', user: { id: UID, email: 'ana@example.com', aud: 'authenticated' } };
 
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, permissions: ['geolocation'], geolocation: { latitude: 38.7139, longitude: -9.1394 } });
+
+await ctx.addInitScript(() => localStorage.setItem('wt-test-open', '1'));
 const page = await ctx.newPage();
 page.on('pageerror', e => errors.push(e.message));
 await ctx.route(/supabase\.co/, r => r.abort('internetdisconnected'));

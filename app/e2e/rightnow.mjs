@@ -15,6 +15,8 @@ const errors = [];
 const check = (c, m) => { if (!c) failures++; console.log((c ? 'PASS ' : 'FAIL ') + m); };
 
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, timezoneId: 'Europe/Lisbon' });
+
+await ctx.addInitScript(() => localStorage.setItem('wt-test-open', '1'));
 await ctx.route(/supabase\.co/, r => r.abort('internetdisconnected'));
 const page = await ctx.newPage();
 page.on('pageerror', e => errors.push(e.message));

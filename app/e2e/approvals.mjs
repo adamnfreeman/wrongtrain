@@ -11,6 +11,7 @@ const srv = spawn('python3', ['-m', 'http.server', '8093', '--bind', '127.0.0.1'
 for (let i = 0; i < 100; i++) { try { await fetch('http://127.0.0.1:8093/'); break; } catch { await wait(100); } }
 const browser = await chromium.launch({ args: ['--no-proxy-server'] });
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+await ctx.addInitScript(() => localStorage.setItem('wt-test-open', '1'));
 await ctx.route(/supabase\.co/, r => r.abort('internetdisconnected'));
 const page = await ctx.newPage();
 const errors = [];
@@ -109,6 +110,7 @@ const req = { id: 'req-1', trip_id: trip.id, author: 'ben-id', author_name: 'Ben
   before: { name: trip.name }, after: { name: 'Lisboa' }, status: 'pending', created_at: new Date().toISOString() };
 let saved = null, decided = null;
 const owner = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+await owner.addInitScript(() => localStorage.setItem('wt-test-open', '1'));
 await owner.route(/supabase\.co/, async r => {
   const u = r.request().url(), json = b => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(b) });
   if (/\/rest\/v1\/trips/.test(u)) return json([{ id: trip.id, data: trip, version: 3, rule: 'approve' }]);

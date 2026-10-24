@@ -16,6 +16,7 @@ const check = (c, m) => { if (!c) failures++; console.log((c ? 'PASS ' : 'FAIL '
 /* a tiny real PNG, as a "scan" */
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+await ctx.addInitScript(() => localStorage.setItem('wt-test-open', '1'));
 await ctx.route(/supabase\.co/, r => r.abort('internetdisconnected'));
 await ctx.route(/frankfurter/, r => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ rates: { USD: 0.0067 } }) }));
 const page = await ctx.newPage();
@@ -102,6 +103,7 @@ check(await page.locator('.paidlist li.paid:has-text("You →") .stamp').count()
   const session = { access_token: jwt, token_type: 'bearer', expires_in: 3600, expires_at: 4102444800, refresh_token: 'r', user: { id: UID, email: 'adam@example.com', aud: 'authenticated' } };
   const uploads = [], photoRows = [];
   const c2 = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+  await c2.addInitScript(() => localStorage.setItem('wt-test-open', '1'));
   await c2.route(/supabase\.co/, async r => {
     const u = r.request().url(), m = r.request().method(), json = (b, s = 200) => r.fulfill({ status: s, contentType: 'application/json', body: JSON.stringify(b) });
     if (/\/storage\/v1\/object\/trip-files\//.test(u) && m === 'POST') { uploads.push(u.split('trip-files/')[1]); return json({ Key: 'x' }); }

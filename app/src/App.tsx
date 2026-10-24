@@ -23,7 +23,7 @@ import { Phrases } from './ui/phrases';
 import { Search } from './ui/search';
 import { CopySampleSheet, DayEditor, LegEditor, NewTripSheet, PlaceEditor, TodoEditor, TripSettings, type Edit } from './ui/editors';
 import { makeSample } from './model/sample';
-import { AccountButton, JoinSheet, SyncLine, joinCodeFromLink } from './ui/account';
+import { SignInSheet, AccountButton, JoinSheet, SyncLine, joinCodeFromLink } from './ui/account';
 import { Toast, useWaitingForMe } from './ui/requests';
 import { PlannerSheet } from './ui/planner';
 import { TripHub } from './ui/trip';
@@ -31,7 +31,7 @@ import { AddAnything, AddButton, addOn, type AddKind } from './ui/addAnything';
 import { addPhotos } from './sync/photos';
 import { useWalletSeg } from './ui/wallet';
 import { canFile } from './sync/filing';
-import { useSync } from './sync/engine';
+import { saveToAccount, useSync } from './sync/engine';
 import { usePullToRefresh } from './ui/pull';
 import { PlanItemEditor } from './ui/planItem';
 import { Essentials } from './ui/essentials';
@@ -95,6 +95,9 @@ function TheApp() {
   /* signed in on this device: your name and picture from the account (or this phone's newer picture to it) */
   const account = useSync().session?.user.id;
   useEffect(() => { if (account) void restoreAccount(); }, [account]);
+  /* a trip made while signed in goes to the account straight away, so it's on all your devices */
+  const ids = trips.map(t => t.id).join();
+  useEffect(() => { if (account) void saveToAccount(); }, [account, ids]);
   const trip = trips.find(t => t.id === activeId);
   /* an invite link (…#join=CODE) opens the join sheet over whatever is showing */
   const [join, setJoin] = useState(joinCodeFromLink);
@@ -118,6 +121,15 @@ function TheApp() {
 
 function Welcome({ trips }: { trips: Trip[] }) {
   const [sheet, setSheet] = useState<'plan' | 'new' | 'copy' | 'join' | null>(null);
+  /* starting your own trip needs an account (planning one with the AI costs real money), so it's
+     saved to it and on all your devices; exploring the sample needs none */
+  const session = useSync().session;
+  const [signIn, setSignIn] = useState<{ then?: () => void; why?: string } | null>(null);
+  const start = (s: 'plan' | 'new' | 'copy') => {
+    /* the browser tests make trips signed out; this only skips asking (the AI still needs an account) */
+    if (session || localStorage.getItem('wt-test-open') === '1') return setSheet(s);
+    setSignIn({ then: () => setSheet(s), why: 'To start a trip, sign in or create an account: your trip is saved to it, shows on all your devices, and can be shared with friends. New here? Just enter your email.' });
+  };
   /* the last trip's tab is in the address; drop it, so the next trip opened starts on Today */
   useEffect(() => {
     if (location.hash && !/join=|access_token|error_description/.test(location.hash)) {
@@ -137,11 +149,17 @@ function Welcome({ trips }: { trips: Trip[] }) {
           </div>
           <div className="stripe">{(['violet', 'amber', 'red', 'green'] as const).map(c => <i key={c} style={{ ['--line' as string]: `var(--l-${c})` }} />)}</div>
         </header>
-        <button className="gobtn" style={{ width: '100%' }} onClick={() => setSheet('plan')}>Plan a trip for me</button>
+        {session
+          ? <p className="hint signedin">Signed in as <b>{session.user.email}</b>. Your trips are on all your devices.</p>
+          : <div className="signin-cta">
+              <button className="gobtn ghost" style={{ width: '100%' }} onClick={() => setSignIn({ why: 'Your trips, name and picture come with your account, on every device. New here? Just enter your email.' })}>Sign in or create an account</button>
+              <p className="hint" style={{ marginTop: 0 }}>Already use WrongTrain on another phone or iPad? Sign in and your trips come too.</p>
+            </div>}
+        <button className="gobtn" style={{ width: '100%' }} onClick={() => start('plan')}>Plan a trip for me</button>
         <p className="hint" style={{ marginTop: 0 }}>Answer a few questions and WrongTrain suggests where to go, for how long, where to stay, what to eat and see. Then change anything.</p>
-        <button className="gobtn ghost" style={{ width: '100%' }} onClick={() => setSheet('new')}>Plan it myself</button>
+        <button className="gobtn ghost" style={{ width: '100%' }} onClick={() => start('new')}>Plan it myself</button>
         <button className="gobtn ghost" style={{ width: '100%' }} onClick={openSample}>Explore a sample trip</button>
-        <p className="hint">The sample is a made-up ten days through Kyoto, Nara, Osaka and Tokyo, set so that today is day two. Like it? <button className="linkbtn" onClick={() => setSheet('copy')}>Start from the sample</button> and change it to suit you.</p>
+        <p className="hint">The sample is a made-up ten days through Kyoto, Nara, Osaka and Tokyo, set so that today is day two. Like it? <button className="linkbtn" onClick={() => start('copy')}>Start from the sample</button> and change it to suit you.</p>
         <button className="gobtn ghost" style={{ width: '100%' }} onClick={() => setSheet('join')}>Join a trip with a code</button>
         <OpenTripFile trips={trips} />
         {sheet === 'plan' && <PlannerSheet close={() => setSheet(null)} />}
@@ -149,6 +167,7 @@ function Welcome({ trips }: { trips: Trip[] }) {
         {sheet === 'join' && <JoinSheet close={() => setSheet(null)} />}
         {sheet === 'copy' && <CopySampleSheet src={sample} close={() => setSheet(null)} />}
         {trips.length > 0 && <TripList trips={trips} />}
+        {signIn && <SignInSheet why={signIn.why} close={() => setSignIn(null)} then={signIn.then} />}
       </div>
     </div>
   );

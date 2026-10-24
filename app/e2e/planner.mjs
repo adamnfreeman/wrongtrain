@@ -35,6 +35,7 @@ const stopFor = (dates, city) => ({
 });
 const steps = [];
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+await ctx.addInitScript(() => localStorage.setItem('wt-test-open', '1'));
 await ctx.route(/supabase\.co/, async r => {
   const u = r.request().url(), json = (b, s = 200) => r.fulfill({ status: s, contentType: 'application/json', body: JSON.stringify(b) });
   if (/functions\/v1\/plan-trip/.test(u)) {

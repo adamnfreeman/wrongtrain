@@ -11,6 +11,7 @@ for (let i = 0; i < 100; i++) { try { await fetch('http://127.0.0.1:8092/'); bre
 /* the server is out of reach on purpose: these checks are about the screens */
 const browser = await chromium.launch({ args: ['--no-proxy-server'] });
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+await ctx.addInitScript(() => localStorage.setItem('wt-test-open', '1'));
 await ctx.route(/supabase\.co/, r => r.abort('internetdisconnected'));
 const page = await ctx.newPage();
 const errors = [];

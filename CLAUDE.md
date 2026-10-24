@@ -231,6 +231,14 @@ on a Mac.
 - Tapping the weather line on Today opens the next 7 days for one place: where you are (when the
   phone knows) or any of the trip's cities, with the next 24 hours in 3-hour steps (`WeekView` in
   `src/ui/weather.tsx`, Open-Meteo, kept on the phone for 30 minutes).
+- Accounts across devices (Oct 24): signed in, every trip you make is saved to your account at once
+  (`saveToAccount` in `src/sync/engine.ts`; shared with nobody until you invite), so it's on all
+  your devices; not the sample, nor a copy of a trip deleted or left (`wt-local-only`). Your name and
+  picture belong to the account (`restoreAccount`, `myAccount`; name also in the account's metadata):
+  a new device takes them instead of wiping them. Welcome screen: "Sign in or create an account";
+  starting a trip (Plan a trip for me, Plan it myself, Start from the sample) needs an account, the
+  sample doesn't. The code box offers the emailed code (`one-time-code`). Tests skip the sign-in step
+  with `wt-test-open` in localStorage.
 
 ## Commands (in `app/`)
 

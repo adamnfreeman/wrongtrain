@@ -14,7 +14,7 @@
 import { createClient, type RealtimeChannel, type Session } from '@supabase/supabase-js';
 import { useSyncExternalStore } from 'react';
 import type { Trip } from '../model/types';
-import { getState, onTripChange, onTripGate, pref, setSynced, type SyncInfo } from '../model/store';
+import { getState, onTripChange, onTripGate, pref, setPref, setSynced, type SyncInfo } from '../model/store';
 import { applyChange, changeOf, joinLevel, verdict, type Change, type Role, type Rule } from '../model/rules';
 import { merge3, same } from '../model/merge';
 import { receive, saved, type Remote } from './core';
@@ -296,6 +296,7 @@ export async function pullAll() {
     const have = new Set(rows.map(r => r.id));
     Object.keys(getState().sync).forEach(id => { if (!have.has(id)) dropShared(id); });
     pushAll();
+    void saveToAccount();
     listen();
     await flush();
     await fetchRequests();
@@ -309,8 +310,10 @@ export async function pullAll() {
   } catch (e) { setStatus({ lastError: errText(e) }); }
 }
 
-/** Keeps a trip that is no longer shared with you as a copy on this phone only. */
+/** Keeps a trip that is no longer shared with you as a copy on this phone only (and never saves it
+    to the account again: someone deleted it, or took you off it). */
 function dropShared(id: string) {
+  setPref(LOCAL_ONLY, [...new Set([...pref<string[]>(LOCAL_ONLY, []), id])]);
   const s = getState(); const sync = { ...s.sync }; delete sync[id];
   setSynced(s.trips, sync);
   const t = { ...status.trips }; delete t[id]; setStatus({ trips: t });
@@ -335,6 +338,23 @@ function listen() {
 function unlisten() { if (channel) { void supabase.removeChannel(channel); channel = null; } }
 
 /* ---------- account ---------- */
+
+const LOCAL_ONLY = 'wt-local-only';
+let saving = false;
+/** Signed in, every trip you make is saved to your account (shared with nobody but you until you
+    invite people), so it's on all your devices. Not the sample, and not a copy of a trip that was
+    deleted or that you were taken off. */
+export async function saveToAccount() {
+  if (saving || !signedIn() || !online()) return;
+  saving = true;
+  try {
+    const skip = new Set(pref<string[]>(LOCAL_ONLY, []));
+    for (const t of getState().trips) {
+      if (t.sample || getState().sync[t.id] || skip.has(t.id)) continue;
+      await shareTrip(t.id).catch(() => {});
+    }
+  } finally { saving = false; }
+}
 
 export async function sendCode(email: string) {
   /* the email's link, if tapped, comes back to this app rather than to the project's default address */
