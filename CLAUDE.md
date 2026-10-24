@@ -310,6 +310,18 @@ Next:
    (Places category tiles, Something nearby moods, the planner's choices, stars and hearts) with a
    custom icon set in WrongTrain's style, like the bottom bar's line icons. With Andrea.
 
+70. **An Info tab for quick reference** (feedback, Oct 24): just the essentials in one place: each
+   hotel's address and phone, reservation numbers, key phone numbers, without opening each day.
+71. **Documents shared with only some people** (feedback, Oct 23): today a document is private (this
+   phone) or the whole trip's; let the person adding it pick who sees it (`trip.docs`, `wallet.tsx`).
+72. **Weather** (feedback, Oct 23): the forecast for each day's city, on Today and the Days pages.
+73. **Assign to-dos to someone** (feedback, Oct 23): a to-do can have a person (or a few) it's for,
+   with "Mine" to filter (`src/model/todos.ts`; personal and group-check to-dos exist already).
+74. **Sign in with Google, Facebook, Apple; invites by person, not codes** (feedback, Oct 23): sign in
+   with a standard account, and the owner invites people (by email) and adds or removes them,
+   instead of sharing trip codes. Apple needs the developer account (see 11); Google and Facebook
+   need their own app registrations and Supabase providers switched on.
+
 ## Working together
 
 Two people work on this at once: Adam (adam@thefreemans.io, the technical side) and Andrea
