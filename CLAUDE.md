@@ -194,6 +194,12 @@ on a Mac.
   them; `needs` in `src/model/todos.ts`). Documents can be shared with only some people
   (`trip_docs_limited` in schema.sql, files under `<trip>/limited/<doc>/`, `src/sync/limitedDocs.ts`;
   the database hides them from everyone else). The Shopping tab is hidden (`ALL_MAIN` in `src/ui/ctx.tsx`).
+- Oct 24, later: Essentials fills itself in: hotels' and booked places' address, phone, website and
+  check-in/out are looked up online once for the group (`place-details` function,
+  `supabase/functions/_shared/details.ts`, `src/sync/details.ts`; `detailsAt`, `foundOnline` on places,
+  booked plan items with no place get one). Group notes can carry a screenshot (`note.image`, files under
+  `<trip>/notes/`), which `file-note` reads. To-do editor: faces and Everyone in one tap. To do has a
+  divider under the notes box and "Notes dealt with" at the foot.
 
 ## Commands (in `app/`)
 

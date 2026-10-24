@@ -3,6 +3,7 @@
    The function only suggests changes; they are made here through patchTrip, like anyone's edits,
    so on a shared trip the rule decides what goes straight in and what becomes a request (see
    model/filing.ts). What was filed is shown under the note until the app closes, with Undo. */
+import { sendWaiting } from './files';
 import { useSyncExternalStore } from 'react';
 import { getState, patchTrip } from '../model/store';
 import { addPart, hasPlanPart, planIsIn, planPart, prepareFiling, undoFiling, type Filed, type Filing } from '../model/filing';
@@ -37,8 +38,10 @@ export async function fileNote(tripId: string, noteId: string): Promise<void> {
   const note = getState().trips.find(t => t.id === tripId)?.notes.find(n => n.id === noteId);
   if (!note || filings[noteId]?.state === 'busy') return;
   set(noteId, { state: 'busy' });
+  /* a screenshot has to be in the trip's storage before Claude can read it */
+  if (note.image) await sendWaiting();
   const { data, error } = await supabase.functions.invoke<Filing & { left?: number }>('file-note', {
-    body: { trip_id: tripId, note: { text: note.text, author: note.author } },
+    body: { trip_id: tripId, note: { text: note.text, author: note.author, ...(note.image ? { image: note.image.path } : {}) } },
   });
   if (error || !data) return set(noteId, { state: 'error', message: await errorText(error) });
 

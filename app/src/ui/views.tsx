@@ -1,6 +1,10 @@
 /* Today, Days, Transit, Places and To do. */
 import { Weather } from './weather';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import type { FileRef } from '../model/types';
+import { keep, shrink, useFileUrl } from '../sync/files';
+import { newId } from '../model/trip';
+import { PictureView } from './picture';
 import type { Place } from '../model/types';
 import { lineOf, lineOfDest, runs, cityOf, mapsLink } from '../model/trip';
 import { longDate, shortDate, stamp } from '../model/time';
@@ -202,7 +206,9 @@ export function Prep() {
       <h1 className="page-h">To do</h1>
       <Requests trip={t} />
       <Notes />
-      <p className="lede" style={{ marginTop: 22 }}>Tap a box to tick it off for everyone on the trip.</p>
+      {/* the notes box above, the trip's to-do lists below */}
+      <hr className="sep" />
+      <p className="lede" style={{ marginTop: 0 }}>Tap a box to tick it off for everyone on the trip.</p>
       {t.todoGroups.map(g => {
         const items = visibleTodos(t.todos, me).filter(x => x.group === g), open = items.filter(x => !x.done), done = items.filter(x => x.done);
         return (
@@ -214,6 +220,7 @@ export function Prep() {
           </section>
         );
       })}
+      <Notes dealtWith />
     </>
   );
 }
@@ -235,7 +242,21 @@ function NoteFace({ tripId, name }: { tripId: string; name: string }) {
   return <Avatar name={name} src={useAvatarFor(tripId, name)} size={20} />;
 }
 
-function Notes() {
+/** A note's screenshot: a small picture that opens full screen. */
+function NoteShot({ f }: { f: FileRef }) {
+  const { url } = useFileUrl(f.path);
+  const [big, setBig] = useState(false);
+  if (!url) return null;
+  return (
+    <>
+      <button className="noteshot" onClick={() => setBig(true)} aria-label="Open the screenshot"><img src={url} alt="" /></button>
+      {big && <PictureView src={url} title="Screenshot" close={() => setBig(false)} />}
+    </>
+  );
+}
+
+/** The group notes box; with dealtWith, just the notes already dealt with (at the foot of To do). */
+function Notes({ dealtWith }: { dealtWith?: boolean }) {
   const { ix } = useApp();
   const { session } = useSync();
   const filings = useFilings();
@@ -250,10 +271,21 @@ function Notes() {
   const all = t.notes.slice().reverse();
   /* a note Claude just filed stays in view, with what was filed, until you tap OK */
   const open = all.filter(n => !n.done || filings[n.id]), done = all.filter(n => n.done && !filings[n.id]);
-  const add = () => {
-    if (!draft.trim()) return setMsg({ text: 'Write the note first.', bad: true });
-    const id = addNote(t.id, draft); setDraft('');
-    if (id && claude) { setMsg(null); void fileNote(t.id, id); } else setMsg({ text: JAPAN ? 'Saved to the Group Notes tab in the sheet.' : shared ? 'Added for everyone on the trip.' : 'Added.', bad: false });
+  const add = (image?: FileRef, id?: string) => {
+    if (!draft.trim() && !image) return setMsg({ text: 'Write the note first.', bad: true });
+    const made = addNote(t.id, draft.trim() || 'Screenshot', image, id); setDraft('');
+    if (made && claude) { setMsg(null); void fileNote(t.id, made); } else setMsg({ text: JAPAN ? 'Saved to the Group Notes tab in the sheet.' : shared ? 'Added for everyone on the trip.' : 'Added.', bad: false });
+  };
+  /* a screenshot (a booking email, a ticket): kept with the note, and read by Claude when it's filed */
+  const pick = useRef<HTMLInputElement>(null);
+  const addShot = async (f?: File) => {
+    if (!f) return;
+    try {
+      const id = newId('n'), small = await shrink(f, 1600), path = `${t.id}/notes/${id}.jpg`;
+      await keep(path, small);
+      add({ path, name: f.name || 'screenshot.jpg', type: small.type || 'image/jpeg', size: small.size }, id);
+    } catch { setMsg({ text: "Couldn't read that picture.", bad: true }); }
+    finally { if (pick.current) pick.current.value = ''; }
   };
   /* only the writer may change a note: notes carry a name, not an account, so match the name */
   const mine = (n: (typeof all)[number]) => !JAPAN && (n.author === (getState().me || 'Me') || !shared);
@@ -278,6 +310,7 @@ function Notes() {
       <button className="box" role="checkbox" aria-checked={n.done} aria-label={(n.done ? 'Reopen: ' : 'Mark dealt with: ') + n.text} disabled={JAPAN} onClick={() => toggleNote(t.id, n.id)}>{n.done ? '✓' : ''}</button>
       <div>
         <div className="kick notewho"><NoteFace tripId={t.id} name={n.author} />{n.author} · {stamp(n.at)}{n.edited && ' · changed'}</div><p className="item-d">{n.text}</p>
+        {n.image && <NoteShot f={n.image} />}
         {filings[n.id] ? <Filed tripId={t.id} noteId={n.id} f={filings[n.id]} />
           : <>
             {n.filed && <p className="filed">{n.filed}</p>}
@@ -292,6 +325,9 @@ function Notes() {
       </div>
     </li>
   );
+  if (dealtWith) return done.length > 0
+    ? <section className="blk"><Fold title="Notes dealt with" count={done.length}><ul className="sheet">{done.map(item)}</ul></Fold></section>
+    : null;
   return (
     <section className="blk" id="gnotes">
       <SecH title="Group notes"><span className="kicker">{open.filter(n => !n.done).length} open</span></SecH>
@@ -302,7 +338,12 @@ function Notes() {
         : 'Ideas, questions and things to add, for everyone on the trip to see.'}{why && <> {why}</>}</p>
       <textarea className="search notebox" id="gnote" rows={3} maxLength={600} value={draft} onChange={e => setDraft(e.target.value)}
         placeholder={claude ? 'For example: add the ramen place near the hotel to Nov 3' : 'For example: can we fit in a sentō one evening?'} aria-label="Your note" />
-      <div className="chips"><button className="chipbtn go" onClick={add}>Add note</button></div>
+      <div className="chips">
+        <button className="chipbtn go" onClick={() => add()}>Add note</button>
+        {!JAPAN && <button className="chipbtn" onClick={() => pick.current?.click()}>Add a screenshot</button>}
+        <input ref={pick} type="file" accept="image/*" hidden aria-label="Screenshot" onChange={e => void addShot(e.target.files?.[0])} />
+      </div>
+      {!JAPAN && claude && <p className="fhint">A screenshot of a booking email or a ticket works too: WrongTrain reads it and files what's in it. Write a line with it if you like.</p>}
       {msg && <p className={'geomsg' + (msg.bad ? ' bad' : '')} role="status">{msg.text}</p>}
       {/* a note being filed right now stays in view; notes left open fold away instead of sitting on top */}
       {open.filter(n => filings[n.id]).length > 0 && <ul className="sheet" style={{ marginTop: 12 }}>{open.filter(n => filings[n.id]).map(item)}</ul>}
@@ -312,7 +353,7 @@ function Notes() {
           <ul className="sheet">{open.filter(n => !filings[n.id]).map(item)}</ul>
         </Fold>
       )}
-      {done.length > 0 && <Fold title="Dealt with" count={done.length}><ul className="sheet">{done.map(item)}</ul></Fold>}
+
     </section>
   );
 }

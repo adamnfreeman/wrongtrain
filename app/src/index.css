@@ -644,6 +644,10 @@ details.fold > .linkbtn { display: inline-block; margin: 8px 14px 12px }
 .bestdays .chipbtn small { color: var(--muted); font-weight: 500 }
 .whopick { display: flex; flex-wrap: wrap; gap: 12px }
 .whopick .face { appearance: none; border: 0; background: none; color: var(--ink); cursor: pointer; padding: 0; width: 64px }
+/* in a picker, picked faces get a ring; the rest fade right back, so who's in reads at a glance */
+.whopick .face[aria-pressed="true"] .avatar { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent) }
+.whopick .face.waiting .avatar { opacity: .35; filter: grayscale(1) }
+.whopick .face.waiting span { color: var(--muted) }
 .pact[aria-label*="favourites"][aria-pressed="true"] span { color: #f2b84b }
 .mynotes { width: 100%; min-height: 60vh; border: 1px solid var(--rule); border-radius: 12px; background: var(--card); color: var(--ink); padding: 14px; font: 17px/1.5 var(--f-body); resize: vertical }
 
@@ -691,3 +695,12 @@ details.ess[open] .ess-chev { transform: rotate(90deg) }
 .sos-row { display: flex; flex-wrap: wrap; gap: 8px }
 .sos-row .chipbtn { text-decoration: none }
 .sos-row b { font-family: var(--f-data); margin-left: 4px }
+.ess-found { font-size: 12.5px; color: var(--muted); margin: 6px 0 0 }
+.ess-looking { font-size: 13.5px }
+
+/* a note's screenshot */
+.noteshot { display: block; margin: 6px 0 2px; padding: 0; border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; background: none; cursor: pointer; width: 96px }
+.noteshot img { display: block; width: 96px; height: 120px; object-fit: cover; object-position: top }
+
+/* To do: between the group notes box and the to-do lists */
+hr.sep { border: 0; height: 4px; border-radius: 2px; background: var(--rule); margin: 28px 0 20px }

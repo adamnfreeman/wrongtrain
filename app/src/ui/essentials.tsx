@@ -2,7 +2,7 @@
    phone, reservation), flights and trains, booked reservations, and the emergency numbers where
    you are. Each item is one line until tapped; nothing here is new data, it's gathered from the
    trip (stays from the days, travel from Transit, reservations from booked plan items). */
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { Day, Leg, Place, PlanItem } from '../model/types';
 import { addDays, fmtHM, shortDate } from '../model/time';
 import { destOf, dirLink, mapsLink, type TripIndex } from '../model/trip';
@@ -10,6 +10,8 @@ import { DocLinks } from './wallet';
 import { Empty, Ext, SecH, line } from './bits';
 import { useApp } from './ctx';
 import { lineOfDest } from '../model/trip';
+import { bookingNeedsPlace, fillDetails, needsDetails } from '../sync/details';
+import { getState } from '../model/store';
 
 /** Each place you sleep, in order, with its nights. */
 export function staysOf(ix: TripIndex): { p: Place; nights: Day[] }[] {
@@ -75,6 +77,7 @@ function StayItem({ p, nights }: { p: Place; nights: Day[] }) {
       {p.phone && <Row label="Phone"><a href={tel(p.phone)}>{p.phone}</a></Row>}
       {p.booking && <Row label="Reservation"><span className="pre">{p.booking}</span></Row>}
       {p.notes && <Row label="Notes"><span className="pre">{p.notes}</span></Row>}
+      {p.foundOnline && <p className="ess-found">Some of this was found online. Check before you rely on it.</p>}
       <DocLinks kind="place" id={p.id} />
       <div className="meta">
         {p.lat != null && <Ext href={dirLink(p, 'transit')}>Directions</Ext>}
@@ -110,8 +113,10 @@ function BookingEss({ d, p }: { d: Day; p: PlanItem }) {
   const place = p.placeId ? ix.place.get(p.placeId) : undefined;
   return (
     <Item title={p.text} sub={[shortDate(d.date), p.time && (p.timeKind === 'by' ? 'by ' : '') + fmtHM(p.time), destOf(ix, d)?.name].filter(Boolean).join(' · ')}>
-      {place && <Row label="Where"><Ext href={mapsLink(ix, place)}>{place.address || place.name}</Ext></Row>}
+      {place && <Row label="Where"><Ext href={mapsLink(ix, place)}>{place.name}{place.address ? `, ${place.address}` : ''}</Ext></Row>}
       {place?.phone && <Row label="Phone"><a href={tel(place.phone)}>{place.phone}</a></Row>}
+      {place?.link && <Row label="Website"><Ext href={place.link}>{place.link.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}</Ext></Row>}
+      {place?.foundOnline && <p className="ess-found">Found online. Check before you rely on it.</p>}
       {place?.booking && <Row label="Reservation"><span className="pre">{place.booking}</span></Row>}
       {p.sub?.map((s, i) => <p key={i} className="item-d">{s}</p>)}
       <DocLinks kind="plan" id={p.id} />
@@ -132,11 +137,23 @@ export function Essentials() {
     .map(l => ({ l, day: l.dayId ? dayOf.get(l.dayId) : undefined }))
     .sort((a, b) => (a.day?.date || '').localeCompare(b.day?.date || '') || (a.l.depart || '').localeCompare(b.l.depart || ''));
   const bookings = t.days.flatMap(d => d.plan.filter(p => p.fixed && p.text.trim()).map(p => ({ d, p })));
+  /* addresses and phone numbers fill themselves in: the hotels and booked places still missing
+     them are looked up online, once for the whole group */
+  const lookFor = [...stays.map(s => s.p), ...bookings.flatMap(b => (b.p.placeId && ix.place.get(b.p.placeId)) || [])].filter(needsDetails);
+  const unplaced = bookings.filter(b => bookingNeedsPlace(b.p));
+  const [looking, setLooking] = useState(false);
+  const canLook = !!getState().sync[t.id] && lookFor.length + unplaced.length > 0;
+  useEffect(() => {
+    if (!canLook) return;
+    setLooking(true);
+    void fillDetails(t, lookFor, unplaced).finally(() => setLooking(false));
+  }, [t.id, canLook]); // eslint-disable-line react-hooks/exhaustive-deps
   const countries = [...new Set(t.destinations.map(d => d.country).filter(Boolean))];
   return (
     <>
       <h1 className="page-h">Essentials</h1>
       <p className="note" style={{ marginTop: 0 }}>Hotels, travel, bookings and numbers. Tap one to see it all.</p>
+      {looking && <p className="note ess-looking">Looking up addresses and phone numbers…</p>}
       {!stays.length && !legs.length && !bookings.length && <Empty>Add where you're staying, your flights and trains, and booked plans; they'll gather here.</Empty>}
       {stays.length > 0 && (
         <section className="sec">

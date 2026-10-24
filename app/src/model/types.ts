@@ -101,6 +101,8 @@ export interface PlanItem {
   timeKind?: 'start' | 'by';
   placeId?: ID;
   sub?: string[];
+  /** A booked item with no place: when Essentials tried to find which place it is online. */
+  detailsAt?: string;
 }
 
 export type LegMode = 'flight' | 'train' | 'subway' | 'bus' | 'car' | 'ferry' | 'walk' | 'other';
@@ -145,6 +147,10 @@ export interface Place {
   /** For a stay: when you can check in and must check out, "HH:MM". */
   checkIn?: string;
   checkOut?: string;
+  /** When Essentials looked up its address and phone online (sync/details.ts), found or not. */
+  detailsAt?: string;
+  /** The address or phone came from that lookup: shown with "found online, check it". */
+  foundOnline?: boolean;
   notes?: string;
   /** Opening hours as local clock times; "24h" for always open. */
   hours?: { open: string; close: string } | '24h';
@@ -196,6 +202,8 @@ export interface Note {
   made?: string[];
   /** When its writer last changed it. */
   edited?: string;
+  /** A screenshot that came with it (a booking email, a ticket), read by Claude when it's filed. */
+  image?: FileRef;
 }
 
 export interface Guide {

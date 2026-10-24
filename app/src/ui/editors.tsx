@@ -271,22 +271,37 @@ export function TodoEditor({ trip, id, group, close }: Props & { id?: string; gr
       <Choice label="List" value={t.group} onChange={v => up({ group: v })}
         options={[...trip.todoGroups.map(x => ({ value: x, label: x })), { value: '__new', label: 'New list…' }]} />
       {t.group === '__new' && <Text label="Name of the new list" value={newGroup} onChange={setNewGroup} placeholder="e.g. Packing" />}
-      <Choice label="Who" value={t.everyone ? 'all' : t.mine ? 'me' : t.who ? 'some' : 'group'}
-        onChange={v => up({ everyone: v === 'all' || undefined, mine: v === 'me' ? (getState().me || 'Me') : undefined, who: v === 'some' ? (t.who || []) : undefined })}
-        options={[{ value: 'group', label: 'For the group: anyone ticks it' }, { value: 'all', label: 'Everyone does it: each person ticks their own' },
-          ...(trip.travelers.length > 1 ? [{ value: 'some', label: 'Some people: pick who, each ticks their own' }] : []), { value: 'me', label: 'Just me: only I see it' }]} />
-      {t.who && (
-        <div className="whopick">
-          {trip.travelers.map(n => {
-            const on = t.who!.some(w => w.trim().toLowerCase() === n.trim().toLowerCase());
-            return (
-              <button key={n} type="button" className={'face' + (on ? '' : ' waiting')} aria-pressed={on}
-                onClick={() => up({ who: on ? t.who!.filter(w => w.trim().toLowerCase() !== n.trim().toLowerCase()) : [...t.who!, n] })}>
-                <Face tripId={trip.id} name={n} size={44} /><span>{n}</span>
-              </button>
-            );
-          })}
-        </div>
+      {trip.travelers.length > 1 ? (
+        /* who it's for, in one tap: faces to pick, Everyone to pick them all; nobody picked means
+           anyone can tick it off for the group */
+        <Field label="Who">
+          <div className="chips" style={{ marginTop: 0 }}>
+            <button type="button" className="chipbtn plain" aria-pressed={!!t.everyone}
+              onClick={() => up({ everyone: !t.everyone || undefined, who: undefined, mine: undefined })}>Everyone</button>
+            <button type="button" className="chipbtn plain" aria-pressed={!!t.mine}
+              onClick={() => up({ mine: t.mine ? undefined : (getState().me || 'Me'), everyone: undefined, who: undefined })}>Just me, private</button>
+          </div>
+          {!t.mine && (
+            <div className="whopick" style={{ marginTop: 10 }}>
+              {trip.travelers.map(n => {
+                const same = (w: string) => w.trim().toLowerCase() === n.trim().toLowerCase();
+                const picked = t.everyone ? trip.travelers : t.who || [];
+                const on = picked.some(same);
+                const next = on ? picked.filter(w => !same(w)) : [...picked, n];
+                return (
+                  <button key={n} type="button" className={'face' + (on ? '' : ' waiting')} aria-pressed={on}
+                    onClick={() => up(next.length === trip.travelers.length ? { everyone: true, who: undefined } : { everyone: undefined, who: next.length ? next : undefined })}>
+                    <Face tripId={trip.id} name={n} size={44} /><span>{n}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          <p className="fhint">{t.mine ? 'Only you see it.' : t.everyone ? 'Each person ticks their own; done when everyone has.'
+            : t.who?.length ? 'Each of them ticks their own; done when all have.' : 'Nobody picked: anyone can tick it off for the group.'}</p>
+        </Field>
+      ) : (
+        <Check label="Just me, private" checked={!!t.mine} onChange={v => up({ mine: v ? (getState().me || 'Me') : undefined })} hint="Only you see it, even if you share the trip later." />
       )}
       <div className="field"><span className="flabel">Kind</span>
         <div className="chips" style={{ marginTop: 0 }}>{TODO_TAGS.map(x => (

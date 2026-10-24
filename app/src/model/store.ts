@@ -4,7 +4,7 @@
    Screens call these functions and never touch storage themselves. For a shared trip, the sync
    engine (sync/engine.ts) hears about every change through onTripChange and sends it on. */
 import { useSyncExternalStore } from 'react';
-import type { Note, Trip } from './types';
+import type { FileRef, Note, Trip } from './types';
 import type { Role, Rule } from './rules';
 import { addDays, daysBetween, todayIn } from './time';
 import { newId } from './trip';
@@ -159,13 +159,12 @@ export function toggleTodo(tripId: string, todoId: string, as?: string) {
 }
 
 /** Adds a group note and returns its id, or '' when there was nothing to add. */
-export function addNote(tripId: string, text: string): string {
+export function addNote(tripId: string, text: string, image?: FileRef, id = newId('n')): string {
   const clean = text.replace(/[ \t]+/g, ' ').trim().slice(0, 600);
   if (!clean) return '';
-  const id = newId('n');
   patchTrip(tripId, t => ({
     ...t,
-    notes: [...t.notes, { id, author: state.me || 'Me', text: clean, at: new Date().toISOString(), done: false }],
+    notes: [...t.notes, { id, author: state.me || 'Me', text: clean, at: new Date().toISOString(), done: false, ...(image ? { image } : {}) }],
   }));
   const note = state.trips.find(t => t.id === tripId)?.notes.find(n => n.id === id);
   if (note) noteHook?.(tripId, note);
