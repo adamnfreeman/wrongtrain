@@ -437,6 +437,19 @@ export async function members(id: string): Promise<Member[]> {
 export async function setMyName(name: string) {
   if (!signedIn()) return;
   await supabase.from('trip_members').update({ name }).eq('user_id', status.session!.user.id);
+  /* on the account too, so a new phone signing in finds it even before joining a trip */
+  await supabase.auth.updateUser({ data: { name } });
+}
+
+/** Your name and picture as the account knows them (the account's own name, else the one on your
+    trips; the picture on your trips), for a phone that has just signed in. */
+export async function myAccount(): Promise<{ name: string; avatar: string | null }> {
+  const user = status.session?.user;
+  if (!user) return { name: '', avatar: null };
+  const { data } = await supabase.from('trip_members').select('name, avatar').eq('user_id', user.id);
+  const rows = (data || []) as { name: string | null; avatar: string | null }[];
+  const meta = typeof user.user_metadata?.name === 'string' ? user.user_metadata.name.trim() : '';
+  return { name: meta || rows.find(r => r.name?.trim())?.name?.trim() || '', avatar: rows.find(r => r.avatar)?.avatar || null };
 }
 
 /** Your picture goes on a trip you've just shared or joined. */

@@ -3,8 +3,8 @@
    on every trip you're on (trip_members.avatar), where only the people on that trip can see it.
    Without a picture, a circle with your initials stands in. */
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { pref, setPref, getState } from '../model/store';
-import { members, setMyAvatar, useSync, type Member } from '../sync/engine';
+import { pref, setPref, getState, setMe } from '../model/store';
+import { isSignedIn, members, myAccount, setMyAvatar, useSync, type Member } from '../sync/engine';
 import { SAMPLE_PEOPLE } from '../model/sample';
 
 /* ---------- yours ---------- */
@@ -20,7 +20,25 @@ export const useMyAvatar = () => useSyncExternalStore(f => { listeners.add(f); r
     ready), and it goes on them the next time the trip's people are loaded (useTripPeople). */
 export async function saveMyAvatar(a: string | null): Promise<boolean> {
   mine = a; setPref(KEY, a); listeners.forEach(f => f());
-  try { await setMyAvatar(a); return true; } catch { return false; }
+  /* until it reaches the account, this phone's choice wins over what the account has */
+  setPref(PENDING, true);
+  try { await setMyAvatar(a); if (isSignedIn()) setPref(PENDING, false); return true; } catch { return false; }
+}
+
+/* the picture belongs to the account: a phone that has none (just signed in) takes the account's
+   rather than wiping it, and one whose new picture hasn't reached the account yet sends it */
+const PENDING = 'avatar-pending';
+const adopt = (a: string | null) => { mine = a; setPref(KEY, a); listeners.forEach(f => f()); };
+
+/** After signing in (or opening the app signed in): your name and picture from the account, so a new
+    phone or iPad starts as you; or this phone's newer picture up to the account. */
+export async function restoreAccount() {
+  const acc = await myAccount().catch(() => null);
+  if (!acc) return;
+  if (!getState().me && acc.name) setMe(acc.name);
+  if (pref<boolean>(PENDING, false) || (mine && !acc.avatar)) {
+    try { await setMyAvatar(mine); setPref(PENDING, false); } catch { /* next time */ }
+  } else if (acc.avatar && acc.avatar !== mine) adopt(acc.avatar);
 }
 export const myAvatar = () => mine;
 
@@ -72,9 +90,12 @@ export function useTripPeople(tripId: string): Member[] {
     peopleOnce(tripId).then(m => {
       if (!live) return;
       setPeople(m);
-      /* your picture didn't make it onto the trip before: put it there now */
+      /* your picture and the account's: never wipe the account's with "none" from a phone that has
+         none; put this phone's on a trip that doesn't have it */
       const me = m.find(p => p.user_id === session.user.id);
-      if (me && (me.avatar || null) !== mine) void setMyAvatar(mine).catch(() => {});
+      if (me && mine && me.avatar !== mine && pref<boolean>(PENDING, false)) void setMyAvatar(mine).then(() => setPref(PENDING, false)).catch(() => {});
+      else if (me && mine && !me.avatar) void setMyAvatar(mine).catch(() => {});
+      else if (me?.avatar && !mine) adopt(me.avatar);
       try { localStorage.setItem(cacheKey(tripId), JSON.stringify(m)); } catch { /* full: show without */ }
     }).catch(() => {});
     return () => { live = false; };

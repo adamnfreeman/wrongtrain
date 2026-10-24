@@ -1,4 +1,5 @@
 import { startTransition, useCallback, useEffect, useMemo, useState } from 'react';
+import { restoreAccount } from './ui/avatar';
 import { getState, importTrip, openSample, pref, resetSample, selectTrip, setPref, useStore } from './model/store';
 import { readTripFile } from './model/tripFile';
 import { JAPAN } from './edition';
@@ -91,6 +92,9 @@ export default function App() {
 
 function TheApp() {
   const { trips, activeId, me } = useStore();
+  /* signed in on this device: your name and picture from the account (or this phone's newer picture to it) */
+  const account = useSync().session?.user.id;
+  useEffect(() => { if (account) void restoreAccount(); }, [account]);
   const trip = trips.find(t => t.id === activeId);
   /* an invite link (…#join=CODE) opens the join sheet over whatever is showing */
   const [join, setJoin] = useState(joinCodeFromLink);

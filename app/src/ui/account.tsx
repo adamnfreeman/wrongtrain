@@ -10,7 +10,7 @@ import { ROLES } from '../model/rules';
 import { RoleControl, RuleSetting, useAccess } from './requests';
 import { ThemeSwitch } from './theme';
 import { canTest, isTestMode, setTestMode } from '../sync/planner';
-import { Avatar, makeAvatar, myAvatar, saveMyAvatar, useMyAvatar, type Crop } from './avatar';
+import { restoreAccount, Avatar, makeAvatar, myAvatar, saveMyAvatar, useMyAvatar, type Crop } from './avatar';
 import { JAPAN } from '../edition';
 import { savedCreds } from '../sheet/live';
 
@@ -35,13 +35,15 @@ export function SignInSheet({ close, then, why }: { close: () => void; then?: ()
     try {
       if (name.trim()) setMe(name);
       await verifyCode(email, code);
+      /* an account you've used before brings your name and picture; a name typed here wins */
+      await restoreAccount();
       if (name.trim()) await setMyName(name.trim());
       close(); then?.();
     } catch (e) { setMsg(errText(e)); setBusy(false); }
   };
   return (
     <Sheet title="Sign in" onCancel={close} onSave={sent ? verify : send} saveLabel={busy ? '…' : sent ? 'Sign in' : 'Send code'}
-      canSave={!busy && (sent ? code.replace(/\D/g, '').length >= 6 && !!name.trim() : okEmail)}>
+      canSave={!busy && (sent ? code.replace(/\D/g, '').length >= 6 : okEmail)}>
       {why && <p className="fhint" style={{ marginTop: 4 }}>{why}</p>}
       {!sent ? (
         <>
@@ -53,8 +55,9 @@ export function SignInSheet({ close, then, why }: { close: () => void; then?: ()
         <>
           <p className="fhint" style={{ marginTop: 10 }}>Sent to <b>{email.trim()}</b>. It can take a minute; check spam too. <button type="button" className="linkbtn" onClick={() => { setSent(false); setCode(''); }}>Use a different email</button></p>
           <Text label="Code" value={code} onChange={v => setCode(v.replace(/[^\d ]/g, '').slice(0, 8))} placeholder="12345678" autoFocus />
-          <Text label="Your name" value={name} onChange={setName} placeholder="As the group knows you" hint="Shown on your notes and ticks." />
-          <div className="chips"><button type="button" className="chipbtn go" disabled={busy || code.replace(/\D/g, '').length < 6 || !name.trim()} onClick={verify}>{busy ? 'Checking…' : 'Sign in'}</button></div>
+          <Text label="Your name" value={name} onChange={setName} placeholder="As the group knows you"
+            hint={me ? 'Shown on your notes and ticks.' : 'Used WrongTrain before? Leave it empty: your name and picture come with your account.'} />
+          <div className="chips"><button type="button" className="chipbtn go" disabled={busy || code.replace(/\D/g, '').length < 6} onClick={verify}>{busy ? 'Checking…' : 'Sign in'}</button></div>
         </>
       )}
       {msg && <p className="geomsg bad" role="alert">{msg}</p>}
