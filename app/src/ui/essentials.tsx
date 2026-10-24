@@ -157,8 +157,11 @@ export function Essentials() {
   }, [t.id, freeKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const lookFor = mine.filter(p => needsDetails(p) && !needsFree(p)), unplaced = bookings.filter(b => bookingNeedsPlace(b.p));
   const signedIn = !!useSync().session, shared = !!getState().sync[t.id];
-  const [looking, setLooking] = useState(false);
-  const findRest = () => { setLooking(true); void fillDetails(t, lookFor, unplaced).finally(() => setLooking(false)); };
+  const [looking, setLooking] = useState<string | null>(null);
+  const findRest = () => {
+    setLooking('Looking…');
+    void fillDetails(t, lookFor, unplaced, (done, of) => setLooking(done < of ? `Looking… ${done} of ${of}` : null)).finally(() => setLooking(null));
+  };
   const missing = lookFor.length + unplaced.length;
   const countries = [...new Set(t.destinations.map(d => d.country).filter(Boolean))];
   return (
@@ -169,7 +172,7 @@ export function Essentials() {
       {!freeBusy && missing > 0 && shared && signedIn && !t.sample && (
         <div className="ess-rest">
           <span>{missing === 1 ? 'One hotel or booking is' : `${missing} hotels and bookings are`} missing an address, phone or website.</span>
-          <button className="chipbtn go" disabled={looking} onClick={findRest}>{looking ? 'Looking…' : 'Find the rest online'}</button>
+          <button className="chipbtn go" disabled={!!looking} onClick={findRest}>{looking || 'Find the rest online'}</button>
         </div>
       )}
       {!stays.length && !legs.length && !bookings.length && <Empty>Add where you're staying, your flights and trains, and booked plans; they'll gather here.</Empty>}

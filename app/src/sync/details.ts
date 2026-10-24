@@ -62,8 +62,10 @@ export const needsDetails = (p: Place) =>
   !p.detailsAt && (!p.address || !p.phone || !p.link || (p.kind === 'stay' && (!p.checkIn || !p.checkOut)));
 export const bookingNeedsPlace = (p: PlanItem) => p.fixed && !p.placeId && !p.detailsAt && p.text.trim().length > 3;
 
-/** Looks up what's missing; resolves when done (or there was nothing to do). */
-export async function fillDetails(trip: Trip, places: Place[], bookings: { d: Day; p: PlanItem }[]): Promise<void> {
+/** Looks up what's missing, three at a time (a big request took over a minute and the phone stopped
+    waiting), saving each group's answers as they come; onStep says how far it has got. One tap
+    counts as one AI use however many groups it takes. Resolves when done. */
+export async function fillDetails(trip: Trip, places: Place[], bookings: { d: Day; p: PlanItem }[], onStep?: (done: number, of: number) => void): Promise<void> {
   if (!getState().sync[trip.id] || !navigator.onLine) return;
   const dest = new Map(trip.destinations.map(d => [d.id, d]));
   const where = (id?: string) => { const d = id ? dest.get(id) : undefined; return { city: d?.name || '', country: d?.country || '' }; };
@@ -73,16 +75,28 @@ export async function fillDetails(trip: Trip, places: Place[], bookings: { d: Da
       .map(p => ({ id: p.id, kind: p.kind === 'stay' ? 'stay' : 'place', name: p.name, area: p.area, ...where(p.destinationId) })),
     ...bookings.filter(b => bookingNeedsPlace(b.p) && !tried.has(b.p.id))
       .map(b => ({ id: 'plan:' + b.p.id, kind: 'booking', name: b.p.text, ...where(b.d.destinationId) })),
-  ].slice(0, 10);
+  ].slice(0, 30);
   if (!want.length) return;
   const { data: s } = await supabase.auth.getSession();
   if (!s.session) return;
   want.forEach(w => tried.add(w.id.replace(/^plan:/, '')));
-  const { data, error } = await supabase.functions.invoke<{ details: Found[] }>('place-details', { body: { trip_id: trip.id, places: want } });
-  if (error || !data?.details) return;
-  const at = new Date().toISOString(), by = new Map(data.details.map(d => [d.id, d]));
-  const asked = new Set(want.map(w => w.id));
-  patchTrip(trip.id, t => {
+  let useId: string | undefined;
+  for (let i = 0; i < want.length; i += 3) {
+    const group = want.slice(i, i + 3);
+    onStep?.(i, want.length);
+    const { data, error } = await supabase.functions.invoke<{ details: Found[]; use_id?: string }>('place-details', { body: { trip_id: trip.id, places: group, use_id: useId } });
+    if (error || !data?.details) return;
+    useId = data.use_id || useId;
+    apply(trip.id, group.map(w => w.id), data.details);
+  }
+  onStep?.(want.length, want.length);
+}
+
+/** One group's answers into the trip: only empty fields, and each thing marked as looked up. */
+function apply(tripId: string, ids: string[], details: Found[]) {
+  const at = new Date().toISOString(), by = new Map(details.map(d => [d.id, d]));
+  const asked = new Set(ids);
+  patchTrip(tripId, t => {
     const made: Place[] = [];
     const fill = (p: Place, f?: Found): Place => {
       const add: Partial<Place> = {};

@@ -1,6 +1,7 @@
 /* Photos: the Photos page (everyone's photos from the trip, by day or by person), the photos
    under each day, and the full-screen viewer, where people heart, comment and share a photo to
    anywhere the phone can (Instagram, Messages, saving it). See sync/photos.ts. */
+import { ZoomImg } from './picture';
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import type { Day, Trip } from '../model/types';
@@ -220,11 +221,11 @@ function Viewer({ list, at, me, onMove, onClose }: { list: Photo[]; at: number; 
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7.5 7.5 12 3l4.5 4.5M8 10H6.5A1.5 1.5 0 0 0 5 11.5v8A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5v-8a1.5 1.5 0 0 0-1.5-1.5H16" /></svg>
         </button>
       </div>
-      <div className="pview-img"
-        onTouchStart={e => { (e.currentTarget as HTMLElement).dataset.x = String(e.touches[0].clientX); }}
-        onTouchEnd={e => { const dx = e.changedTouches[0].clientX - Number((e.currentTarget as HTMLElement).dataset.x || 0); if (Math.abs(dx) > 60) onMove(Math.min(list.length - 1, Math.max(0, at + (dx < 0 ? 1 : -1)))); }}
-        onDoubleClick={() => { if (!hearted) void toggleHeart(p, me).catch(e => setMsg((e as Error).message)); }}>
-        {src ? <img src={src} alt={p.caption || ''} /> : <p className="geomsg">{missing ? 'This photo needs signal to open the first time.' : 'Loading…'}</p>}
+      <div className="pview-img">
+        {src
+          ? <ZoomImg src={src} alt={p.caption || ''} onSwipe={d => onMove(Math.min(list.length - 1, Math.max(0, at + d)))}
+              onDoubleTap={() => { if (!hearted) void toggleHeart(p, me).catch(e => setMsg((e as Error).message)); }} />
+          : <p className="geomsg">{missing ? 'This photo needs signal to open the first time.' : 'Loading…'}</p>}
       </div>
       <div className="pview-who">
         <Avatar name={p.author_name || '?'} src={useAvatarFor(p.trip_id, p.author_name) || face(p.author_name)} size={28} />
