@@ -371,6 +371,9 @@ Next:
    service (Resend or Postmark: DNS records at Namecheap, the key in Supabase's SMTP settings), which
    also lifts Gmail's ~2,000 a day limit before launch. Or give info@ its own Workspace seat with the icon.
 
+77. **Tap the weather for the week** (Adam, Oct 24): tapping the weather line on Today opens a popup with
+   that day's weather and the rest of the week (`src/ui/weather.tsx`, Open-Meteo).
+
 ## Working together
 
 Two people work on this at once: Adam (adam@thefreemans.io, the technical side) and Andrea
