@@ -16,7 +16,8 @@ export async function startPush(open: (tab: string) => void) {
   started = true;
   try {
     const { PushNotifications } = await import('@capacitor/push-notifications');
-    await PushNotifications.addListener('registration', t => { void supabase.rpc('save_push_token', { token: t.value, platform: 'ios' }); });
+    /* awaited: the database client only sends a request once its answer is asked for */
+    await PushNotifications.addListener('registration', async t => { await supabase.rpc('save_push_token', { token: t.value, platform: 'ios' }); });
     await PushNotifications.addListener('pushNotificationActionPerformed', a => {
       const tab = (a.notification.data as { tab?: string } | undefined)?.tab;
       if (tab) open(tab);
