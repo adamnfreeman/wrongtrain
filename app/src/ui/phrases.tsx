@@ -120,11 +120,15 @@ function PhraseItem({ pack, it, order }: { pack: PhrasePack; it: Phrase; order?:
 /** One box to translate anything: type it, or tap the camera for a menu or a sign. On an iPhone
     that can, both happen on the phone (free, no signal needed once the language is downloaded);
     elsewhere Google Translate opens, and its camera reads menus and signs. */
+/* the last three translations, newest first: kept while the app is open, gone when it's closed */
+let recent: { from: string; to: string }[] = [];
+
 function Translator({ pack }: { pack: PhrasePack }) {
   const [text, setText] = useState('');
   const [caps, setCaps] = useState<AppleCaps | null>(null);
   useEffect(() => { void appleCaps().then(setCaps); }, []);
-  const [out, setOut] = useState<{ from: string; to: string }[]>([]);
+  const [out, setOutState] = useState(recent);
+  const setOut = (more: { from: string; to: string }[]) => { recent = [...more.slice().reverse(), ...recent].slice(0, 3); setOutState(recent); };
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const lang = pack.name.replace(/ phrases?$/i, '');
