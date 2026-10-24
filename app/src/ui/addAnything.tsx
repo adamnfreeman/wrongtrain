@@ -28,7 +28,7 @@ const KINDS: Record<AddKind, { title: string; hint: string; examples: string[] }
 };
 /** What the Add button does on each page; null where it has nothing to add (Phrases, Right now). */
 export function addOn(tab: string): AddKind | 'photos' | 'expense' | 'doc' | null {
-  return ({ today: 'plan', days: 'plan', map: 'place', places: 'place', transit: 'travel', prep: 'todo', trip: 'any', photos: 'photos', wallet: 'expense' } as const)[tab as 'today'] ?? null;
+  return ({ today: 'plan', days: 'plan', map: 'place', places: 'place', essentials: 'travel', prep: 'todo', trip: 'any', photos: 'photos', wallet: 'expense' } as const)[tab as 'today'] ?? null;
 }
 
 const LABEL: Record<string, string> = { photos: 'Add photos', expense: 'Add expense', doc: 'Add document', plan: 'Add', place: 'Add place', travel: 'Add travel', todo: 'Add to-do', any: 'Add' };

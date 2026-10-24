@@ -1,7 +1,9 @@
 /* Essentials: the things you look up in a hurry, in one calm list. Where you're staying (address,
    phone, reservation), flights and trains, booked reservations, and the emergency numbers where
    you are. Each item is one line until tapped; nothing here is new data, it's gathered from the
-   trip (stays from the days, travel from Transit, reservations from booked plan items). */
+   trip (stays from the days, travel from its legs, reservations from booked plan items). Travel here
+   is the kind you book or sort out: flights, trains, buses, ferries and cars, anything still to
+   book, and what's set up before the trip; a day's local getting around stays on Days. */
 import { useEffect, useState, type ReactNode } from 'react';
 import type { Day, Leg, Place, PlanItem } from '../model/types';
 import { addDays, fmtHM, shortDate } from '../model/time';
@@ -27,7 +29,9 @@ export function staysOf(ix: TripIndex): { p: Place; nights: Day[] }[] {
 }
 
 const FAR: Leg['mode'][] = ['flight', 'train', 'bus', 'ferry', 'car'];
-const MODE: Record<string, string> = { flight: 'Flight', train: 'Train', bus: 'Bus', ferry: 'Ferry', car: 'Car' };
+const MODE: Record<string, string> = { flight: 'Flight', train: 'Train', subway: 'Subway', bus: 'Bus', car: 'Car', ferry: 'Ferry', walk: 'Walk', other: 'Travel' };
+/** Travel that belongs on Essentials (see the note at the top). */
+export const essentialLeg = (l: Leg) => FAR.includes(l.mode) || l.status === 'todo' || !l.dayId;
 
 /* Emergency numbers by country; 112 works from most mobile phones almost anywhere */
 const SOS: Record<string, [string, string][]> = {
@@ -94,7 +98,7 @@ function LegEss({ l, day }: { l: Leg; day?: Day }) {
   const { edit } = useApp();
   const when = [day && shortDate(day.date), l.depart && fmtHM(l.depart)].filter(Boolean).join(' · ');
   return (
-    <Item title={`${l.from} → ${l.to}`} sub={[MODE[l.mode], when].filter(Boolean).join(' · ')}>
+    <Item title={`${l.from} → ${l.to}`} sub={<>{[MODE[l.mode], when || (!l.dayId ? 'Before the trip' : '')].filter(Boolean).join(' · ')}{l.status === 'todo' && <b className="ess-tobook"> · To book</b>}</>}>
       {l.how && <Row label="Service"><span className="pre">{l.how}</span></Row>}
       {(l.depart || l.arrive) && <Row label="Times">{l.depart && `Leaves ${fmtHM(l.depart)}`}{l.depart && l.arrive && ', '}{l.arrive && `arrives ${fmtHM(l.arrive)}`}</Row>}
       <Row label="Booking">{l.statusText || (l.status === 'booked' ? 'Booked' : l.status === 'todo' ? 'Not booked yet' : 'Nothing to book')}</Row>
@@ -130,13 +134,15 @@ function BookingEss({ d, p }: { d: Day; p: PlanItem }) {
 }
 
 export function Essentials() {
-  const { ix } = useApp();
+  const { ix, edit } = useApp();
   const t = ix.trip;
   const dayOf = new Map(t.days.map(d => [d.id, d]));
   const stays = staysOf(ix);
-  const legs = t.legs.filter(l => FAR.includes(l.mode))
+  /* what's set up before the trip first, then by day and time */
+  const legs = t.legs.filter(essentialLeg)
     .map(l => ({ l, day: l.dayId ? dayOf.get(l.dayId) : undefined }))
     .sort((a, b) => (a.day?.date || '').localeCompare(b.day?.date || '') || (a.l.depart || '').localeCompare(b.l.depart || ''));
+  const toBook = legs.filter(x => x.l.status === 'todo').length;
   const bookings = t.days.flatMap(d => d.plan.filter(p => p.fixed && p.text.trim()).map(p => ({ d, p })));
   /* addresses, phones and websites fill themselves in from free map data (OpenStreetMap, then
      MapTiler), once for the whole group. Claude, which costs money, looks for the rest only when
@@ -173,12 +179,11 @@ export function Essentials() {
           <ul className="sheet esslist">{stays.map(s => <StayItem key={s.p.id + s.nights[0].id} p={s.p} nights={s.nights} />)}</ul>
         </section>
       )}
-      {legs.length > 0 && (
-        <section className="sec">
-          <SecH title="Flights and trains"><span className="kicker">{legs.length}</span></SecH>
-          <ul className="sheet esslist">{legs.map(x => <LegEss key={x.l.id} l={x.l} day={x.day} />)}</ul>
-        </section>
-      )}
+      <section className="sec">
+        <SecH title="Travel"><span className="kicker">{legs.length}{toBook ? ` · ${toBook} to book` : ''}</span></SecH>
+        {legs.length > 0 && <ul className="sheet esslist">{legs.map(x => <LegEss key={x.l.id} l={x.l} day={x.day} />)}</ul>}
+        <button className="linkbtn" onClick={() => edit({ kind: 'leg' })}>+ Add travel</button>
+      </section>
       {bookings.length > 0 && (
         <section className="sec">
           <SecH title="Reservations"><span className="kicker">{bookings.length}</span></SecH>

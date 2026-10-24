@@ -214,6 +214,9 @@ on a Mac.
   (`ShareNotice` in `src/ui/map.tsx`, `noticeSharers` in `src/sync/locations.ts`; once per share, per
   phone), and on the iPhone a notification goes to Notification Center. Only while the app is open:
   with it closed this needs push notifications. The sample shows it once a day.
+- The Transit tab is gone (Oct 24): Essentials' Travel section has flights, trains, buses, ferries and
+  cars, anything still to book and what's set up before the trip (`essentialLeg`); each day's local
+  getting around stays on Days. Search's travel results open Essentials.
 
 ## Commands (in `app/`)
 

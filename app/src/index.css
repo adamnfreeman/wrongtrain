@@ -740,9 +740,9 @@ hr.sep { border: 0; height: 4px; border-radius: 2px; background: var(--rule); ma
 /* landscape iPad and computers: list pages in two columns */
 @media (min-width: 1080px) {
   .pane > .wrap { max-width: 1120px }
-  .pane[data-tab="essentials"] > .wrap, .pane[data-tab="prep"] > .wrap, .pane[data-tab="transit"] > .wrap,
+  .pane[data-tab="essentials"] > .wrap, .pane[data-tab="prep"] > .wrap,
   .pane[data-tab="trip"] > .wrap, .pane[data-tab="wallet"] > .wrap { columns: 2; column-gap: 32px }
-  .pane[data-tab="essentials"] > .wrap > *, .pane[data-tab="prep"] > .wrap > *, .pane[data-tab="transit"] > .wrap > *,
+  .pane[data-tab="essentials"] > .wrap > *, .pane[data-tab="prep"] > .wrap > *,
   .pane[data-tab="trip"] > .wrap > *, .pane[data-tab="wallet"] > .wrap > * { break-inside: avoid }
   .pane > .wrap > .page-h, .pane > .wrap > .seg, .pane > .wrap > hr.sep, .pane > .wrap > .lede, .pane > .wrap > .note:first-of-type { column-span: all }
   .pane[data-tab="days"] > .wrap, .pane[data-tab="today"] > .wrap, .pane[data-tab="now"] > .wrap { max-width: 860px }
@@ -756,3 +756,4 @@ hr.sep { border: 0; height: 4px; border-radius: 2px; background: var(--rule); ma
   box-shadow: 0 12px 30px rgba(0,0,0,.35); font-size: 14.5px }
 .sharenote span { flex: 1; min-width: 0 }
 @media (min-width: 760px) { .sharenote { left: calc(var(--side) + 12px) } }
+.ess-tobook { color: var(--warn, #f2b84b); font-weight: 700 }

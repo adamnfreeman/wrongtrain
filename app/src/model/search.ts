@@ -7,7 +7,7 @@ import { PACKS } from '../phrases';
 /** Lower-case and strip accents one character at a time, so positions still line up for highlighting. */
 export const fold = (s: string) => s.replace(/[À-ɏ]/g, c => c.normalize('NFD')[0]).toLowerCase();
 
-export type Group = 'Days' | 'Transit' | 'Places' | 'Map' | 'Phrases' | 'To do' | 'Notes';
+export type Group = 'Days' | 'Travel' | 'Places' | 'Map' | 'Phrases' | 'To do' | 'Notes';
 export interface Entry {
   g: Group;
   /** Where it is, e.g. "Wed Oct 28 · Plan". */
@@ -15,7 +15,7 @@ export interface Entry {
   t: string;
   x: string;
   day?: string;
-  go?: 'transit' | 'places' | 'prep' | 'phrases' | 'map';
+  go?: 'essentials' | 'places' | 'prep' | 'phrases' | 'map';
   pq?: string;
   href?: string;
   h: string;
@@ -31,7 +31,7 @@ export function buildIndex(trip: Trip): Entry[] {
     d.tips.forEach(b => add({ g: 'Days', k: label + ' · Good to know', t: '', x: b.text, day: d.id }));
     d.around.forEach(b => add({ g: 'Days', k: label + ' · Getting around', t: '', x: b.text, day: d.id }));
   });
-  trip.legs.forEach(l => add({ g: 'Transit', k: l.dayId ? longDate(trip.days[ix.dayPos.get(l.dayId)!].date) : 'Before the trip', t: `${l.from} → ${l.to}`, x: [l.how, l.tickets, l.details].filter(Boolean).join(' · '), go: 'transit' }));
+  trip.legs.forEach(l => add({ g: 'Travel', k: l.dayId ? longDate(trip.days[ix.dayPos.get(l.dayId)!].date) : 'Before the trip', t: `${l.from} → ${l.to}`, x: [l.how, l.tickets, l.details].filter(Boolean).join(' · '), go: 'essentials' }));
   trip.places.forEach(p => add({ g: 'Places', k: [p.destinationId && ix.dest.get(p.destinationId)?.name, p.wishlist ? 'Wishlist' : KIND_LABEL[p.kind]].filter(Boolean).join(' · '), t: p.name, x: [p.notes, p.area, p.dietNote].filter(Boolean).join(' · '), go: p.kind === 'food' || p.kind === 'coffee' ? 'places' : 'map' }));
   trip.todos.forEach(t => add({ g: 'To do', k: t.group + (t.when ? ' · ' + t.when : ''), t: t.text, x: t.details || '', go: 'prep' }));
   trip.notes.forEach(n => add({ g: 'Notes', k: 'Group notes · ' + n.author, t: '', x: n.text, go: 'prep' }));

@@ -1,4 +1,4 @@
-/* Today, Days, Transit, Places and To do. */
+/* Today, Days, Places and To do. */
 import { Weather } from './weather';
 import { useRef, useState } from 'react';
 import type { FileRef } from '../model/types';
@@ -6,8 +6,8 @@ import { keep, shrink, useFileUrl } from '../sync/files';
 import { newId } from '../model/trip';
 import { PictureView } from './picture';
 import type { Place } from '../model/types';
-import { lineOf, lineOfDest, runs, cityOf, mapsLink } from '../model/trip';
-import { longDate, shortDate, stamp } from '../model/time';
+import { lineOfDest, runs, mapsLink } from '../model/trip';
+import { shortDate, stamp } from '../model/time';
 import { onToday } from '../model/next';
 import { addNote, editNote, toggleNote, getState } from '../model/store';
 import { JAPAN } from '../edition';
@@ -17,7 +17,7 @@ import { Requests } from './requests';
 import { useSync } from '../sync/engine';
 import { canFile, dismissFiling, fileNote, undoFile, useFilings, type NoteFiling } from '../sync/filing';
 import { Empty, Fold, Pill, SecH, Txt, line } from './bits';
-import { Board, DayBody, DaySlider, EatItem, LegItem, TodoItem, VegToggle, vegOk } from './day';
+import { Board, DayBody, DaySlider, EatItem, TodoItem, VegToggle, vegOk } from './day';
 import { NextCard } from './next';
 import { useApp } from './ctx';
 
@@ -80,46 +80,6 @@ export function Days() {
       <Board d={d} />
       <DayBody d={d} />
     </div>
-  );
-}
-
-/* ---------- Transit ---------- */
-
-export function Transit() {
-  const { ix, go, edit, now } = useApp();
-  const legs = ix.trip.legs;
-  const booked = legs.filter(l => l.status === 'booked').length, open = legs.filter(l => l.status === 'todo').length;
-  const before = legs.filter(l => !l.dayId);
-  return (
-    <>
-      <h1 className="page-h">Getting around</h1>
-      <p className="lede">{legs.length ? `${legs.length} legs. ${booked} booked, ${open} still need something.` : 'Flights, trains, transfers: everything that gets you from place to place.'}</p>
-      <div className="chips" style={{ marginTop: 0 }}><button className="chipbtn go" onClick={() => edit({ kind: 'leg' })}>+ Add a leg</button></div>
-      {/* each day's travel folded, with only the next day that has any open: the whole trip's
-          legs at once were too much to take in */}
-      {(() => {
-        const withLegs = ix.trip.days.filter(d => legs.some(l => l.dayId === d.id));
-        const todayIso = now.cur?.date || (now.phase === 'after' ? '9999' : '');
-        const past = withLegs.filter(d => todayIso && d.date < todayIso), coming = withLegs.filter(d => !(todayIso && d.date < todayIso));
-        const day = (d: (typeof withLegs)[number], open: boolean) => {
-          const ls = legs.filter(l => l.dayId === d.id), todo = ls.filter(l => l.status === 'todo').length;
-          return (
-            <div key={d.id} className="legday" style={line(lineOf(ix, d))}>
-              <Fold title={`${longDate(d.date)} · ${cityOf(ix, d)}`} count={todo ? `${ls.length} · ${todo} to sort` : ls.length} open={open}>
-                <ul className="sheet">{ls.map(l => <LegItem key={l.id} l={l} />)}</ul>
-                <button className="linkbtn" onClick={() => go('days', d.id)}>Day plan</button>
-              </Fold>
-            </div>
-          );
-        };
-        return <>
-          {before.length > 0 && <Fold title="Before the trip" count={before.length} open={now.phase === 'before' && !coming.length}><ul className="sheet">{before.map(l => <LegItem key={l.id} l={l} />)}</ul></Fold>}
-          {coming.map((d, i) => day(d, i === 0))}
-          {past.length > 0 && <Fold title="Already travelled" count={past.length}>{past.map(d => day(d, false))}</Fold>}
-        </>;
-      })()}
-      {!legs.length && <Empty>No legs yet.</Empty>}
-    </>
   );
 }
 

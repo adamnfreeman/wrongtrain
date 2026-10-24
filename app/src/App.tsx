@@ -13,7 +13,7 @@ import { Fold } from './ui/bits';
 import { shortDate } from './model/time';
 import { AppCtx, MAIN_TABS, TABS, type Tab, type UI } from './ui/ctx';
 import { useGeo } from './ui/geo';
-import { Days, Places, Prep, Today, Transit } from './ui/views';
+import { Days, Places, Prep, Today } from './ui/views';
 import { MapView, ShareNotice } from './ui/map';
 import { DocEditor, ExpenseEditor, Wallet } from './ui/wallet';
 import { Phrases } from './ui/phrases';
@@ -183,7 +183,6 @@ const ICONS: Record<string, { label: string; icon: React.ReactNode }> = {
   shop: { label: 'Shopping', icon: <><path d="M5 8h14l-1.2 12.5H6.2z" /><path d="M9 8V6.5a3 3 0 0 1 6 0V8" /></> },
   notes: { label: 'Notes', icon: <><path d="M6 3.5h9l3.5 3.5v13.5H6z" /><path d="M9 11h6M9 14.5h6M9 18h3.5" /></> },
   places: { label: 'Places', icon: <path d="M12 3.6l2.6 5.2 5.8.9-4.2 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.2-4.1 5.8-.9z" /> },
-  transit: { label: 'Transit', icon: <><rect x="5" y="3" width="14" height="14" rx="3.5" /><path d="M5 10.5h14M9 20.5l1.5-3.5M15 20.5L13.5 17M9 13.8h.01M15 13.8h.01" /></> },
   phrases: { label: 'Phrases', icon: <><path d="M4 5h16v11H10l-4.5 3.5V16H4z" /><path d="M8.5 9.5h7M8.5 12.5h4.5" /></> },
   prep: { label: 'To do', icon: <path d="M4 7.5l2 2 3-3.5M4 15.5l2 2 3-3.5M12.5 8H20M12.5 16H20" /> },
   wallet: { label: 'Wallet', icon: <><rect x="3.5" y="6" width="17" height="13" rx="2.5" /><path d="M3.5 10h17M15 14.5h2.5" /></> },
@@ -263,7 +262,7 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
 
   const q = ui.q.trim(), searching = q.length > 1;
   const waiting = useWaitingForMe(trip.id);
-  const PAGES = { today: Today, days: Days, essentials: Essentials, photos: PhotosPage, notes: MyNotes, transit: Transit, places: Places, map: MapView, phrases: Phrases, wallet: Wallet, trip: TripHub, prep: Prep };
+  const PAGES = { today: Today, days: Days, essentials: Essentials, photos: PhotosPage, notes: MyNotes, places: Places, map: MapView, phrases: Phrases, wallet: Wallet, trip: TripHub, prep: Prep };
   /* ---------- one long sheet: every page side by side, sliding with your finger ----------
      The pager scrolls sideways (the phone's own scrolling, so it tracks the finger and coasts);
      each page scrolls up and down by itself. The bottom bar and the pager move together: drag

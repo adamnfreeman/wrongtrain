@@ -101,7 +101,7 @@ export function DayBody({ d }: { d: Day }) {
       )}
       {(legs.length > 0 || d.around.length > 0) && (
         <section className="sec">
-          <SecH title="Getting around"><span><button className="linkbtn" onClick={() => edit({ kind: 'leg', dayId: d.id })}>+ Leg</button> · <button className="linkbtn" onClick={() => go('transit')}>All legs</button></span></SecH>
+          <SecH title="Getting around"><span><button className="linkbtn" onClick={() => edit({ kind: 'leg', dayId: d.id })}>+ Leg</button> · <button className="linkbtn" onClick={() => go('essentials')}>All travel</button></span></SecH>
           {legs.length > 0 && <ul className="sheet">{legs.map(l => <LegItem key={l.id} l={l} />)}</ul>}
           {/* the sheet's own getting-around notes often say what the legs already do: fold them then */}
           {d.around.length > 0 && (legs.length ? <Fold title="More on getting around" count={d.around.length}><div className="blk"><Bullets items={d.around} /></div></Fold> : <div className="blk"><Bullets items={d.around} /></div>)}

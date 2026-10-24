@@ -4,9 +4,9 @@ import { buildIndex, fold, search, type Entry, type Group } from '../model/searc
 import { Empty } from './bits';
 import { useApp, type Tab } from './ctx';
 
-const ORDER: Group[] = ['Days', 'Transit', 'Places', 'Map', 'Phrases', 'To do', 'Notes'];
-const FIRST: Record<Tab, Group[]> = { today: ['Days'], days: ['Days'], essentials: ['Days', 'Transit'], photos: ['Days'], notes: ['Notes'], transit: ['Transit'], places: ['Places'], map: ['Places'], phrases: ['Phrases'], wallet: ['To do'], trip: ['Days', 'Places'], prep: ['To do', 'Notes'], now: ['Transit', 'Days'] };
-const OPEN: Record<NonNullable<Entry['go']>, string> = { transit: 'Transit', places: 'Places', prep: 'To do', phrases: 'Phrases to hear it', map: 'Map' };
+const ORDER: Group[] = ['Days', 'Travel', 'Places', 'Map', 'Phrases', 'To do', 'Notes'];
+const FIRST: Record<Tab, Group[]> = { today: ['Days'], days: ['Days'], essentials: ['Travel', 'Days'], photos: ['Days'], notes: ['Notes'], places: ['Places'], map: ['Places'], phrases: ['Phrases'], wallet: ['To do'], trip: ['Days', 'Places'], prep: ['To do', 'Notes'], now: ['Travel', 'Days'] };
+const OPEN: Record<NonNullable<Entry['go']>, string> = { essentials: 'Essentials', places: 'Places', prep: 'To do', phrases: 'Phrases to hear it', map: 'Map' };
 
 /** Marks each search term inside the text. */
 function Hl({ s, terms }: { s: string; terms: string[] }) {

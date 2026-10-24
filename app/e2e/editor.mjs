@@ -81,8 +81,8 @@ await page.click('.tab:has-text("Map")');
 check(await page.locator('.leaflet-interactive').count() >= 1, 'place has a pin on the map');
 
 /* a booked leg on the Florence day */
-await page.click('.tab:has-text(\"Transit\")');
-await page.click('text=+ Add a leg');
+await page.click('.tab:has-text(\"Essentials\")');
+await page.click('#view >> text=+ Add travel');
 await sheet.waitFor();
 const opts = await sheet.getByLabel('When').locator('option').allTextContents();
 await sheet.getByLabel('When').selectOption({ label: opts.find(o => o.startsWith('Day 4')) });
@@ -92,8 +92,8 @@ await sheet.getByLabel('Leaves', { exact: true }).fill('10:00');
 await sheet.locator('.chipbtn', { hasText: /^Booked$/ }).click();
 await sheet.getByText('Save', { exact: true }).click();
 v = await view();
-check(v.includes('Rome → Florence') && v.includes('1 booked'), 'leg listed and counted as booked');
-check(/Florence/.test(v), 'leg filed under the Florence day');
+check(v.includes('Rome → Florence') && !v.includes('To book'), 'leg listed on Essentials, booked');
+check(/Train · May 4 · 10:00 AM/.test(v), 'leg on its day, with its time: ' + (v.match(/Train · [^\n]*/) || [''])[0]);
 
 /* a to-do, ticked */
 await page.click('.tab:has-text(\"To do\")');
@@ -126,11 +126,10 @@ await page.reload();
 await page.waitForSelector('.tab');
 await page.click('.tab:has-text("Today")');
 check(/Rome and Florence/.test(await page.textContent('#view .board .kicker')), 'new name kept after reload');
-await page.click('.tab:has-text(\"Transit\")');
+await page.click('.tab:has-text(\"Essentials\")');
 v = await view();
 check(v.includes('Rome → Florence'), 'leg kept after reload');
-const legDay = await page.locator('#view .legday summary').allTextContents();
-check(legDay.some(t => /May 3 · (Rome → )?Florence/.test(t)), 'leg moved with its day to May 3: ' + legDay.join(' | '));
+check(/Train · May 3/.test(v), 'leg moved with its day to May 3: ' + (v.match(/Train · [^\n]*/) || [''])[0]);
 await page.click('.tab:has-text("Days")');
 await page.locator('.dbox').first().click(); await wait(900);
 check((await view()).includes('Colosseum, timed entry'), 'day 1 plan kept after reload');
