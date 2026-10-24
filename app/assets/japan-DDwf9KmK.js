@@ -1,1 +1,0 @@
-export{r as seedFromOldPage}from"./japan-BorylVW2.js";
