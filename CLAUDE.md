@@ -56,7 +56,9 @@ on a Mac.
   Anthropic key is only a Supabase secret (`ANTHROPIC_API_KEY`), never in the app. Uses are
   counted per trip in `ai_uses` (20 free; `trip_passes` is there for the paid pass).
 - Sign-in is an emailed 8-digit code (Supabase's setting; the app says "a code"). The emails (sign-in, welcome,
-  change email) are branded HTML made by `supabase/emails/emails.py`. Email goes through Gmail SMTP (adam@thefreemans.io for
+  change email) are branded HTML made by `supabase/emails/emails.py`. They come from info@wrongtrain.lol
+  (a Send mail as address on adam@thefreemans.io; wrongtrain.lol is a user alias domain, so
+  info@ and affiliates@ are aliases info@thefreemans.io and affiliates@thefreemans.io on Adam's account). Email goes through Gmail SMTP (adam@thefreemans.io for
   now; wrongtrain.lol is being added to Google Workspace). The email templates contain only
   the code, no link.
 
@@ -115,7 +117,8 @@ on a Mac.
   I'm in / I'm out button. A day's getting-around notes fold away when it has legs.
 - Notes tab (last; `src/ui/mynotes.tsx`): your own notes for the trip, on this phone only, and
   below them comments about the app for Adam (`app_feedback`, `src/sync/feedback.ts`: kind, text,
-  build, phone; each person sees only their own; Adam reads them in Supabase's Table Editor).
+  build, phone; each person sees only their own; Adam reads them in Supabase's Table Editor). Each can be
+  ticked off (on this phone, pref `feedback-done`) into a folded Done section.
 - Photos: ☆ in the viewer keeps a photo in your favourites (on this phone); "★ Favourites" on the
   Photos page. Moving pages by the bottom bar blurs them by speed (`--mb`, `onBar` in App.tsx).
 - Added Oct 20 (night): Dealt with notes list what they became (`note.made`); archiving trips (per

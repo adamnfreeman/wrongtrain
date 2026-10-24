@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { pref, setPref } from '../model/store';
 import { useSync } from '../sync/engine';
 import { myFeedback, sendFeedback, type Feedback, type FeedbackKind } from '../sync/feedback';
-import { SecH } from './bits';
+import { Fold, SecH } from './bits';
 import { useApp } from './ctx';
 import { stamp } from '../model/time';
 import { JAPAN } from '../edition';
@@ -35,6 +35,19 @@ function AppComments() {
   const [msg, setMsg] = useState<{ text: string; bad: boolean } | null>(null);
   const [sent, setSent] = useState<Feedback[]>([]);
   useEffect(() => { if (session) void myFeedback().then(setSent).catch(() => {}); }, [session]);
+  /* ticked-off comments, on this phone only: they leave the list for a folded Done section */
+  const [done, setDone] = useState<string[]>(() => pref('feedback-done', [] as string[]));
+  const tick = (id: string) => { const next = done.includes(id) ? done.filter(x => x !== id) : [...done, id]; setDone(next); setPref('feedback-done', next); };
+  const open = sent.filter(f => !done.includes(f.id)), closed = sent.filter(f => done.includes(f.id));
+  const item = (f: Feedback) => {
+    const d = done.includes(f.id);
+    return (
+      <li key={f.id} className={'todo' + (d ? ' done' : '')}>
+        <button className="box" role="checkbox" aria-checked={d} aria-label={(d ? 'Reopen: ' : 'Done: ') + f.text} onClick={() => tick(f.id)}>{d ? '✓' : ''}</button>
+        <div><div className="kick">{KINDS.find(x => x.k === f.kind)?.label} · {stamp(f.created_at)}</div><p className="item-d">{f.text}</p></div>
+      </li>
+    );
+  };
   const send = async () => {
     try { await sendFeedback(kind, draft); setDraft(''); setMsg({ text: 'Sent. Thank you!', bad: false }); setSent(await myFeedback()); }
     catch (e) { setMsg({ text: (e as Error).message, bad: true }); }
@@ -53,7 +66,8 @@ function AppComments() {
         {msg && <p className={'geomsg' + (msg.bad ? ' bad' : '')} role="status">{msg.text}</p>}
         {sent.length > 0 && <>
           <h3 className="sub-h">What you've sent</h3>
-          <ul className="sheet">{sent.map(f => <li key={f.id}><div className="kick">{KINDS.find(x => x.k === f.kind)?.label} · {stamp(f.created_at)}</div><p className="item-d">{f.text}</p></li>)}</ul>
+          {open.length > 0 ? <ul className="sheet">{open.map(item)}</ul> : <p className="note">All done.</p>}
+          {closed.length > 0 && <Fold title="Done" count={closed.length}><ul className="sheet">{closed.map(item)}</ul></Fold>}
         </>}
       </>}
     </section>
