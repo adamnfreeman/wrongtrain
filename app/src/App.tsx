@@ -438,7 +438,7 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
       {/* on wide screens (iPad, a computer) the sections sit in a sidebar instead of the bottom bar;
           the CSS decides which one shows */}
       <nav className="side" aria-label="Sections">
-        <div className="side-brand"><img src="favicon.svg" alt="" />{trip.name}</div>
+        <div className="side-brand"><img src="icon.png" alt="" />{trip.name}</div>
         {order.map(t => (
           <button key={t} className={'sidetab' + (t === 'now' ? ' tab-now' : '')} aria-current={ui.tab === t ? 'page' : undefined} onClick={() => go(t)}>
             <svg viewBox="0 0 24 24" aria-hidden="true">{ICONS[t].icon}</svg><span>{ICONS[t].label}</span>
