@@ -80,7 +80,7 @@ function Cards({ answers, city }: { answers: Answers; city?: string }) {
   const c = cards[i % cards.length];
   return (
     <div className="pcard-wrap">
-      <div className="pcard" key={i} onClick={() => setHeld(true)}
+      <div className={'pcard' + (c.kind === 'phrase' ? '' : ' partner')} key={i} onClick={() => setHeld(true)}
         onTouchStart={e => { touch.current = e.touches[0].clientX; }}
         onTouchEnd={e => { const dx = e.changedTouches[0].clientX - touch.current; if (Math.abs(dx) > 50) { setHeld(true); setI(x => (x + (dx < 0 ? 1 : cards.length - 1)) % cards.length); } }}>
         {c.kind === 'phrase' ? (

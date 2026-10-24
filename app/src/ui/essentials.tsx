@@ -75,7 +75,7 @@ function StayItem({ p, nights }: { p: Place; nights: Day[] }) {
   const n = nights.length;
   return (
     <Item title={p.name} colour={line(lineOfDest(destOf(ix, first)))}
-      sub={`${shortDate(first.date)} – ${shortDate(out)} · ${n} ${n === 1 ? 'night' : 'nights'}`}>
+      sub={`${shortDate(first.date)} – ${shortDate(out)} · ${n} ${n === 1 ? 'night' : 'nights'}${p.checkIn || p.checkOut ? ` · in ${p.checkIn ? fmtHM(p.checkIn) : '?'}, out ${p.checkOut ? fmtHM(p.checkOut) : '?'}` : ''}`}>
       <Row label="Check in">{first.date && `${shortDate(first.date)}`}{p.checkIn ? `, from ${fmtHM(p.checkIn)}` : ''}</Row>
       <Row label="Check out">{shortDate(out)}{p.checkOut ? `, by ${fmtHM(p.checkOut)}` : ''}</Row>
       {(p.address || p.area) && <Row label="Address"><Ext href={mapsLink(ix, p)}>{p.address || p.area}</Ext></Row>}

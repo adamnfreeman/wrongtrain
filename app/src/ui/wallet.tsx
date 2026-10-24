@@ -15,6 +15,7 @@ import { newId } from '../model/trip';
 import { fmtHM, shortDate, todayIn } from '../model/time';
 import { drop, extOf, keep, openFile, readLocal, shrink, useFileUrl } from '../sync/files';
 import { rate } from '../sync/rates';
+import { docSuggestions } from '../model/docSuggest';
 import { FileTicket, PictureView } from './picture';
 import { Empty, Ext, Pill, SecH } from './bits';
 import { Check, Choice, DeleteButton, Sheet, Text } from './form';
@@ -77,10 +78,12 @@ function Docs() {
     <>
       <Empty>Keep tickets, bookings and IDs here, so they open with no signal.</Empty>
       <div className="chips" style={{ justifyContent: 'center' }}><button className="chipbtn go" onClick={() => edit({ kind: 'doc' })}>+ Add a document</button></div>
+      <Suggested />
     </>
   );
   return (
     <>
+      <Suggested />
       {DOC_KINDS.map(k => {
         const list = all.filter(d => d.kind === k.value);
         if (!list.length) return null;
@@ -180,15 +183,15 @@ async function store(path: string, f: File): Promise<FileRef> {
   return { path, name: f.name || path.split('/').pop()!, type: blob.type || f.type, size: blob.size };
 }
 
-export function DocEditor({ trip, id, forRef, close }: { trip: Trip; id?: string; forRef?: Doc['for']; close: () => void }) {
+export function DocEditor({ trip, id, forRef, title, as, close }: { trip: Trip; id?: string; forRef?: Doc['for']; title?: string; as?: DocKind; close: () => void }) {
   const shared = !!getState().sync[trip.id];
   const orig = (trip.docs || []).find(d => d.id === id) || limitedDocs(trip.id).find(d => d.id === id) || privateDocs(trip.id).find(d => d.id === id);
   const uid = useSync().session?.user.id;
   const others = useTripPeople(trip.id).filter(p => p.user_id !== uid);
   /* who can see it: everyone on the trip, some of them (shared trips, signed in), or only this phone */
   const modeOf = (x?: Doc) => (x?.private ? 'me' : x?.limited ? 'some' : 'all');
-  const [mode, setMode] = useState<'all' | 'some' | 'me'>(modeOf(orig));
-  const [d, setD] = useState<Doc>(orig || { id: newId('doc'), title: '', kind: 'ticket', at: new Date().toISOString(), ...(forRef ? { for: forRef } : {}) });
+  const [mode, setMode] = useState<'all' | 'some' | 'me'>(orig ? modeOf(orig) : as === 'id' ? 'me' : 'all');
+  const [d, setD] = useState<Doc>(orig || { id: newId('doc'), title: title || '', kind: as || 'ticket', at: new Date().toISOString(), ...(forRef ? { for: forRef } : {}) });
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
@@ -483,5 +486,33 @@ export function ExpenseEditor({ trip, id, close }: { trip: Trip; id?: string; cl
       <FilePick label="Receipt" file={receipt || e.receipt || null} onPick={setReceipt} hint="Shared with the trip, so everyone can see it." />
       {msg && <p className="geomsg bad" role="alert">{msg}</p>}
     </Sheet>
+  );
+}
+
+/** Documents this trip may need, until one is added or waved away (model/docSuggest.ts). */
+function Suggested() {
+  const { ix, edit } = useApp();
+  const t = ix.trip, mine = usePrivateDocs(t.id), some = useLimitedDocs(t.id);
+  const key = 'docs-skipped-' + t.id;
+  const [skipped, setSkipped] = useState<string[]>(() => pref<string[]>(key, []));
+  if (t.sample) return null;
+  const list = docSuggestions(t, [...(t.docs || []), ...some, ...mine], skipped);
+  if (!list.length) return null;
+  const skip = (k: string) => { const next = [...skipped, k]; setSkipped(next); setPref(key, next); };
+  return (
+    <section className="blk">
+      <SecH title="You may need"><span className="kicker">{list.length}</span></SecH>
+      <ul className="sheet">{list.map(s => (
+        <li key={s.key}>
+          <div className="item-h"><span className="item-n">{s.title}</span></div>
+          <p className="item-d">{s.why}</p>
+          <div className="meta">
+            <button className="chipbtn go" onClick={() => edit({ kind: 'doc', title: s.title, as: s.kind })}>Add</button>
+            {s.link && <Ext href={s.link}>Open the site</Ext>}
+            <button className="linkbtn" onClick={() => skip(s.key)}>Not needed</button>
+          </div>
+        </li>
+      ))}</ul>
+    </section>
   );
 }

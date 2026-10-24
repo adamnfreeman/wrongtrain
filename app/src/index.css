@@ -361,15 +361,20 @@ select.input { background-image: linear-gradient(45deg, transparent 50%, var(--m
 .planning-progress .done::before { content: '✓ '; color: var(--ok) }
 .planning-progress .failed { color: var(--no) }
 
-.planning { overflow-y: auto; justify-content: flex-start; padding-top: calc(env(safe-area-inset-top, 0px) + 48px) }
+.planning { overflow-y: auto; justify-content: flex-start; padding-top: calc(env(safe-area-inset-top, 0px) + 96px) }
 .pcard-wrap { margin: 22px auto 0; max-width: 360px; text-align: left }
 .pcard { background: var(--card); border: 1px solid var(--rule); border-radius: 14px; padding: 14px 16px; animation: fadein .5s ease; min-height: 190px }
 .pcard-en { font: 700 20px/1.25 var(--f-display); margin: 4px 0 2px }
 .pcard-ja { font: 700 24px/1.3 var(--f-display); margin: 0 }
 .pcard-ro { color: var(--muted); font-size: 14.5px; margin: 2px 0 10px }
-.pcard-title { font: 700 18px/1.25 var(--f-display); margin: 4px 0 4px }
-.pcard-body { font-size: 15px; margin: 0 0 10px }
-.pcard-note { font-size: 12px; color: var(--muted); margin: 8px 0 0 }
+.pcard-title { font: 700 18px/1.25 var(--f-display); margin: 6px 0 8px }
+.pcard-body { font-size: 15px; line-height: 1.5; margin: 0 0 16px }
+.pcard-note { font-size: 12px; line-height: 1.45; color: var(--muted); margin: 14px 0 0 }
+/* a partner suggestion: a little colour so it stands out from the phrases */
+.pcard.partner { padding: 20px 20px 18px; border-color: color-mix(in srgb, var(--accent) 55%, var(--rule));
+  background: linear-gradient(150deg, color-mix(in srgb, var(--accent) 16%, var(--card)), var(--card) 70%) }
+.pcard.partner .kick { color: var(--accent) }
+.pcard.partner .chipbtn.go { background: var(--accent); color: var(--on-accent, #0f1418); border-color: var(--accent) }
 .pcard-dots { display: flex; justify-content: center; gap: 6px; margin-top: 10px }
 .pcard-dots button { width: 7px; height: 7px; border-radius: 50%; border: 0; padding: 0; background: var(--rule); cursor: pointer }
 .pcard-dots button[aria-current="true"] { background: var(--ink) }
@@ -513,6 +518,12 @@ select.input { background-image: linear-gradient(45deg, transparent 50%, var(--m
 .rn-btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink) }
 .rn-next { color: var(--muted); font-size: 16px; margin: 4px 0 0 }
 .tab.tab-now { color: var(--warn) }
+/* Right now must stand out without relying on colour (colour-blind friendly): a solid yellow badge
+   with dark ink, which gently pulses, among plain grey tabs */
+.tab.tab-now { color: #14181b; background: #f2b84b; border-radius: 14px; margin: 5px 3px; font-weight: 800; animation: nowpulse 2.4s ease-in-out infinite }
+.tab.tab-now svg { stroke: #14181b; stroke-width: 2.2 }
+@keyframes nowpulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(242,184,75,.55) } 50% { box-shadow: 0 0 0 6px rgba(242,184,75,0) } }
+@media (prefers-reduced-motion: reduce) { .tab.tab-now { animation: none } }
 
 /* pictures: document thumbnails and who took a sample photo (ui/picture.tsx, wallet, photos) */
 .docthumb { appearance: none; border: 1px solid var(--rule); background: var(--card); border-radius: 8px; padding: 0; width: 52px; height: 40px; overflow: hidden; flex: none; margin-right: 10px; cursor: pointer }
@@ -728,7 +739,8 @@ hr.sep { border: 0; height: 4px; border-radius: 2px; background: var(--rule); ma
   .sidetab:hover { color: var(--ink); background: var(--chip) }
   .sidetab[aria-current="page"] { color: var(--ink); background: var(--chip) }
   .sidetab[aria-current="page"] svg { color: var(--accent) }
-  .sidetab.tab-now { color: var(--accent) }
+  .sidetab.tab-now { color: #14181b; background: #f2b84b; font-weight: 800 }
+  .sidetab.tab-now svg { color: #14181b }
   .sidetab .tabn { position: static; margin-left: auto }
   .pager { left: var(--side) }
   .statusbg { left: var(--side) }
@@ -798,3 +810,12 @@ button.wx { width: 100%; background: none; border: 0; padding: 0; text-align: le
 .cambtn { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 42px; height: 42px; border-radius: 12px; border: 1px solid var(--accent);
   background: var(--card); color: var(--accent); display: grid; place-items: center; cursor: pointer }
 .cambtn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round }
+
+/* Edit day: where to eat, a dropdown of checkboxes */
+.eatpick > summary { font: 600 15px/1.3 var(--f-body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.eatpick-body { padding: 0 14px 10px; max-height: 320px; overflow-y: auto; border-top: 1px solid var(--rule) }
+.eatpick-body .input { margin: 10px 0 4px }
+.eatrow { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--rule); font-size: 15px; cursor: pointer }
+.eatrow:last-child { border-bottom: 0 }
+.eatrow input { width: 20px; height: 20px; accent-color: var(--accent); flex: none }
+.eatrow small { color: var(--muted) }

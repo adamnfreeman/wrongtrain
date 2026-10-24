@@ -431,7 +431,7 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
         {!JAPAN && editing?.kind === 'leg' && <LegEditor trip={trip} id={editing.id} dayId={editing.dayId} close={close} />}
         {!JAPAN && editing?.kind === 'place' && <PlaceEditor trip={trip} id={editing.id} as={editing.as} dayId={editing.dayId} destinationId={editing.destinationId} close={close} />}
         {!JAPAN && editing?.kind === 'todo' && <TodoEditor trip={trip} id={editing.id} group={editing.group} close={close} />}
-        {!JAPAN && editing?.kind === 'doc' && <DocEditor trip={trip} id={editing.id} forRef={editing.for} close={close} />}
+        {!JAPAN && editing?.kind === 'doc' && <DocEditor trip={trip} id={editing.id} forRef={editing.for} title={editing.title} as={editing.as} close={close} />}
         {!JAPAN && editing?.kind === 'expense' && <ExpenseEditor trip={trip} id={editing.id} close={close} />}
       </div>
       {/* the main way in: on every page but Right now, out of the way of any open editor */}

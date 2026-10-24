@@ -2,7 +2,7 @@
    touches the trip when you press Save. */
 import { useTripPeople } from './avatar';
 import { useMemo, useState } from 'react';
-import type { Day, Destination, Leg, LegMode, LegStatus, Place, PlaceKind, PlanItem, Todo, Trip } from '../model/types';
+import type { DocKind, Day, Destination, Leg, LegMode, LegStatus, Place, PlaceKind, PlanItem, Todo, Trip } from '../model/types';
 import {
   copyTrip, deleteDay, deleteDestination, deleteLeg, deletePlace, deleteTodo, destinationUse, insertDay, newId, newTrip,
   nextColor, saveDestination, saveLeg, savePlace, saveTodo, setStart, sortPlan, updateDay, type Stop,
@@ -14,7 +14,6 @@ import { KIND_LABEL, cityOf, indexTrip } from '../model/trip';
 import { addDays, daysBetween, longDate, todayIn } from '../model/time';
 import { PACKS, packForZones } from '../phrases';
 import { Sharing } from './account';
-import { SayPicker } from './requests';
 import { TODO_TAGS, checkDone, needs } from '../model/todos';
 import { Face } from './planItem';
 import { Check, Choice, DeleteButton, Field, Lines, PinPicker, Segs, Sheet, Swatches, Text, ZonePicker, guessZone, phoneZone, zoneLabel } from './form';
@@ -25,7 +24,7 @@ export type Edit =
   | { kind: 'leg'; id?: string; dayId?: string }
   | { kind: 'place'; id?: string; as?: PlaceKind; dayId?: string; destinationId?: string }
   | { kind: 'todo'; id?: string; group?: string }
-  | { kind: 'doc'; id?: string; for?: { kind: 'plan' | 'leg' | 'place'; id: string } }
+  | { kind: 'doc'; id?: string; for?: { kind: 'plan' | 'leg' | 'place'; id: string }; title?: string; as?: DocKind }
   | { kind: 'expense'; id?: string }
   | { kind: 'plan'; dayId: string; id: string };
 
@@ -113,14 +112,8 @@ export function DayEditor({ trip, id, close, onDayChange }: Props & { id: string
 
       <div className="field">
         <span className="flabel">Where to eat</span>
-        {eats.length ? (
-          <div className="chips" style={{ marginTop: 0 }}>
-            {eats.map(p => {
-              const on = d.eatIds.includes(p.id);
-              return <button type="button" key={p.id} className="chipbtn plain" aria-pressed={on} onClick={() => up({ eatIds: on ? d.eatIds.filter(x => x !== p.id) : [...d.eatIds, p.id] })}>{p.name}</button>;
-            })}
-          </div>
-        ) : <p className="fhint">Add food and coffee places on the Places tab, then pick them here.</p>}
+        {eats.length ? <EatPicker eats={eats} picked={d.eatIds} onChange={eatIds => up({ eatIds })} />
+          : <p className="fhint">Add food and coffee places on the Places tab, then pick them here.</p>}
       </div>
     </Sheet>
   );
@@ -435,13 +428,12 @@ export function NewTripSheet({ close }: { close: () => void }) {
   const [people, setPeople] = useState('');
   const [stops, setStops] = useState<Stop[]>([{ name: '', timeZone: phoneZone(), nights: 3 }]);
   const [zoneOpen, setZoneOpen] = useState<number | null>(null);
-  const [say, setSay] = useState<'open' | 'approve' | 'look'>('open');
   const upStop = (k: number, p: Partial<Stop>) => setStops(stops.map((s, j) => (j === k ? { ...s, ...p } : s)));
   const named = stops.filter(s => s.name.trim());
   const nights = named.reduce((n, s) => n + Math.max(1, s.nights), 0);
   const pack = packForZones(named.map(s => s.timeZone || ''));
   const create = () => {
-    addTrip({ ...newTrip({ name: name || named.map(s => s.name.trim()).join(', '), start, stops: named, travelers: people.split(',').map(s => s.trim()).filter(Boolean), phrasePack: pack }), say });
+    addTrip({ ...newTrip({ name: name || named.map(s => s.name.trim()).join(', '), start, stops: named, travelers: people.split(',').map(s => s.trim()).filter(Boolean), phrasePack: pack }) });
     close();
   };
   return (
@@ -468,7 +460,6 @@ export function NewTripSheet({ close }: { close: () => void }) {
       <div className="chips"><button type="button" className="chipbtn" onClick={() => setStops([...stops, { name: '', timeZone: stops[stops.length - 1]?.timeZone || phoneZone(), nights: 2 }])}>+ Add a stop</button></div>
       {named.length > 0 && <p className="fhint">{nights + 1} days: {nights} nights away, plus the day you travel home{pack ? '. Japanese phrases are switched on.' : '.'}</p>}
       <Text label="Who's going" value={people} onChange={setPeople} placeholder="Names, separated by commas" />
-      <SayPicker value={say} onChange={setSay} />
       <Field label="Next">
         <p className="fhint" style={{ marginTop: 0 }}>You get an empty day for each night. Fill them in from the Days tab with Edit day, and add places, legs and to-dos as you go.</p>
       </Field>
@@ -485,5 +476,28 @@ export function CopySampleSheet({ src, close }: { src: Trip; close: () => void }
       <Text label="Trip name" value={name} onChange={setName} />
       <Text label="First day" type="date" value={start} onChange={setStartDate} hint={`Ends ${longDate(addDays(start, src.days.length - 1))}.`} />
     </Sheet>
+  );
+}
+
+/** The day's places to eat: one line until opened, then a list to tick, with a search for long lists. */
+function EatPicker({ eats, picked, onChange }: { eats: Place[]; picked: string[]; onChange: (ids: string[]) => void }) {
+  const [q, setQ] = useState('');
+  const names = eats.filter(p => picked.includes(p.id)).map(p => p.name);
+  const shown = eats.filter(p => !q.trim() || p.name.toLowerCase().includes(q.trim().toLowerCase()))
+    .sort((a, b) => Number(picked.includes(b.id)) - Number(picked.includes(a.id)) || a.name.localeCompare(b.name));
+  return (
+    <details className="fold eatpick">
+      <summary>{names.length ? names.join(', ') : 'None picked'}<span className="count">{names.length} of {eats.length}</span></summary>
+      <div className="eatpick-body">
+        {eats.length > 8 && <input className="input" type="search" placeholder="Find a place" value={q} onChange={e => setQ(e.target.value)} />}
+        {shown.map(p => (
+          <label key={p.id} className="eatrow">
+            <input type="checkbox" checked={picked.includes(p.id)}
+              onChange={e => onChange(e.target.checked ? [...picked, p.id] : picked.filter(x => x !== p.id))} />
+            <span>{p.name}{p.area ? <small> · {p.area}</small> : null}</span>
+          </label>
+        ))}
+      </div>
+    </details>
   );
 }

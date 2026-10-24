@@ -3,10 +3,9 @@
    See supabase/functions/_shared/planner.ts and src/model/planner.ts. */
 import { useEffect, useRef, useState } from 'react';
 import { addTrip, getState } from '../model/store';
-import { SayPicker } from './requests';
 import { planToTrip } from '../model/planner';
 import { longDate } from '../model/time';
-import {
+import { levels,
   DAY_STYLES, DIETS, PACES, STYLES, VIBES, blankAnswers, dollars, stopDates,
   type Answers, type Outline,
 } from '../../supabase/functions/_shared/planner.ts';
@@ -22,8 +21,6 @@ type Step = 'where' | 'who' | 'style' | 'outline' | 'fill';
 export function PlannerSheet({ close }: { close: () => void }) {
   const [draft, setDraftState] = useState<Draft>(() => loadDraft() || { answers: { ...blankAnswers(), travelers: [{ name: getState().me, from: '' }] } });
   const [step, setStep] = useState<Step>(() => (draft.stops ? 'fill' : draft.outline ? 'outline' : 'where'));
-  /* how much say everyone gets; it goes on the trip, not to the planner */
-  const [say, setSay] = useState<'open' | 'approve' | 'look'>('open');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [signIn, setSignIn] = useState(false);
@@ -74,7 +71,7 @@ export function PlannerSheet({ close }: { close: () => void }) {
   const make = () => {
     const t = planToTrip(a, draft.outline!, draft.stops || []);
     if (draft.planId !== 'test') rememberPlan(draft);
-    addTrip({ ...t, say }); saveDraft(null); close();
+    addTrip(t); saveDraft(null); close();
   };
 
   if (signIn) return <SignInSheet close={() => setSignIn(false)} then={() => void plan()} why="Sign in so WrongTrain can plan your trip. Planning is free for your first few trips." />;
@@ -93,7 +90,7 @@ export function PlannerSheet({ close }: { close: () => void }) {
       {back[step] && <button type="button" className="linkbtn" onClick={() => setStep(back[step]!)}>‹ Back</button>}
       {test && step !== 'fill' && <p className="testbanner">Test mode: replays “{savedPlan().outline.title}”. No charge.</p>}
       {step === 'where' && <Where a={a} up={up} />}
-      {step === 'who' && <><Who a={a} up={up} /><SayPicker value={say} onChange={setSay} /></>}
+      {step === 'who' && <Who a={a} up={up} />}
       {step === 'style' && <Style a={a} up={up} />}
       {step === 'style' && busy && <PlanningScreen answers={a} />}
       {step === 'outline' && draft.outline && <OutlineView o={draft.outline} days={a.days} left={draft.left} onChange={o => set({ ...draft, outline: o, stops: undefined })} />}
@@ -176,8 +173,14 @@ function Style({ a, up }: Q) {
             <div key={k} className="budrow">
               <span>{k[0].toUpperCase() + k.slice(1)}</span>
               <div className="chips" style={{ marginTop: 0 }}>{[1, 2, 3, 4, 5].map(n => (
-                <button key={n} type="button" className="chipbtn plain" aria-pressed={(a.budgetBy?.[k] ?? a.budget) === n}
-                  onClick={() => up({ budgetBy: { ...(a.budgetBy || {}), [k]: n } })}>{dollars(n)}</button>
+                /* any mix of levels: tap to add or take one away; none means the same as overall */
+                <button key={n} type="button" className="chipbtn plain" aria-pressed={levels(a.budgetBy?.[k]).includes(n)}
+                  onClick={() => {
+                    const cur = levels(a.budgetBy?.[k]), next = cur.includes(n) ? cur.filter(x => x !== n) : [...cur, n].sort();
+                    const by = { ...(a.budgetBy || {}) };
+                    if (next.length) by[k] = next; else delete by[k];
+                    up({ budgetBy: by });
+                  }}>{dollars(n)}</button>
               ))}</div>
             </div>
           ))}
