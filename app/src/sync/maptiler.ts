@@ -45,6 +45,17 @@ export async function geocode(q: string, opts: { near?: LatLng; country?: string
   } catch { return null; }
 }
 
+/** The street address at a point (for a hotel whose map data has none), or null. */
+export async function streetAddress(lat: number, lng: number): Promise<string | null> {
+  const p = new URLSearchParams({ key: MAPTILER_KEY, limit: '1', language: 'en', types: 'address' });
+  try {
+    const r = await fetch(`https://api.maptiler.com/geocoding/${lng},${lat}.json?${p}`);
+    if (!r.ok) return null;
+    const name = (await r.json())?.features?.[0]?.place_name;
+    return typeof name === 'string' && name.trim() ? name.trim() : null;
+  } catch { return null; }
+}
+
 /* each place is looked up once per phone, so a place MapTiler can't find isn't asked about again */
 const TRIED = 'pins-tried';
 let running = false;

@@ -200,6 +200,12 @@ on a Mac.
   booked plan items with no place get one). Group notes can carry a screenshot (`note.image`, files under
   `<trip>/notes/`), which `file-note` reads. To-do editor: faces and Everyone in one tap. To do has a
   divider under the notes box and "Notes dealt with" at the foot.
+- Oct 24, night: Essentials fills details from free map data first, by itself (OpenStreetMap near the
+  pin, then a MapTiler street address; `fillFree` in `src/sync/details.ts`, `src/model/osmDetails.ts`,
+  `freeAt` on places); Claude (`place-details`) runs only from the "Find the rest online" button.
+  Passport reminders: on the iPhone, a local notification 3 hours before each booked flight ("Do you
+  have your passport?"; `src/model/reminders.ts`, `src/sync/reminders.ts`,
+  @capacitor/local-notifications; home time for a flight before the first city).
 
 ## Commands (in `app/`)
 

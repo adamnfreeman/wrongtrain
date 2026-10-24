@@ -31,6 +31,18 @@ function parts(iso: string) {
   return { y, m, d };
 }
 
+/** The moment it is `min` minutes into `iso` (a calendar date) in time zone `tz`. */
+export function instantIn(tz: string, iso: string, min: number): Date {
+  const { y, m, d } = parts(iso);
+  let t = Date.UTC(y, m - 1, d, 0, 0) + min * 60_000;
+  /* twice: the zone's offset can differ on either side of a clock change */
+  for (let i = 0; i < 2; i++) {
+    const here = new Date(t), date = todayIn(tz, here), wall = minutesIn(tz, here);
+    t -= (daysBetween(iso, date) * 1440 + wall - min) * 60_000;
+  }
+  return new Date(t);
+}
+
 export function addDays(iso: string, n: number): string {
   const { y, m, d } = parts(iso);
   const t = new Date(Date.UTC(y, m - 1, d + n));

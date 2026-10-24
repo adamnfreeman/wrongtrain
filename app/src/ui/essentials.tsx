@@ -10,7 +10,8 @@ import { DocLinks } from './wallet';
 import { Empty, Ext, SecH, line } from './bits';
 import { useApp } from './ctx';
 import { lineOfDest } from '../model/trip';
-import { bookingNeedsPlace, fillDetails, needsDetails } from '../sync/details';
+import { bookingNeedsPlace, fillDetails, fillFree, needsDetails, needsFree } from '../sync/details';
+import { useSync } from '../sync/engine';
 import { getState } from '../model/store';
 
 /** Each place you sleep, in order, with its nights. */
@@ -137,23 +138,35 @@ export function Essentials() {
     .map(l => ({ l, day: l.dayId ? dayOf.get(l.dayId) : undefined }))
     .sort((a, b) => (a.day?.date || '').localeCompare(b.day?.date || '') || (a.l.depart || '').localeCompare(b.l.depart || ''));
   const bookings = t.days.flatMap(d => d.plan.filter(p => p.fixed && p.text.trim()).map(p => ({ d, p })));
-  /* addresses and phone numbers fill themselves in: the hotels and booked places still missing
-     them are looked up online, once for the whole group */
-  const lookFor = [...stays.map(s => s.p), ...bookings.flatMap(b => (b.p.placeId && ix.place.get(b.p.placeId)) || [])].filter(needsDetails);
-  const unplaced = bookings.filter(b => bookingNeedsPlace(b.p));
-  const [looking, setLooking] = useState(false);
-  const canLook = !!getState().sync[t.id] && lookFor.length + unplaced.length > 0;
+  /* addresses, phones and websites fill themselves in from free map data (OpenStreetMap, then
+     MapTiler), once for the whole group. Claude, which costs money, looks for the rest only when
+     someone taps "Find the rest online". */
+  const mine = [...stays.map(s => s.p), ...bookings.flatMap(b => (b.p.placeId && ix.place.get(b.p.placeId)) || [])];
+  const freeFor = mine.filter(needsFree), freeKey = freeFor.map(p => p.id).join();
+  const [freeBusy, setFreeBusy] = useState(false);
   useEffect(() => {
-    if (!canLook) return;
-    setLooking(true);
-    void fillDetails(t, lookFor, unplaced).finally(() => setLooking(false));
-  }, [t.id, canLook]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!freeFor.length) return;
+    setFreeBusy(true);
+    void fillFree(t, freeFor).finally(() => setFreeBusy(false));
+  }, [t.id, freeKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const lookFor = mine.filter(p => needsDetails(p) && !needsFree(p)), unplaced = bookings.filter(b => bookingNeedsPlace(b.p));
+  const signedIn = !!useSync().session, shared = !!getState().sync[t.id];
+  const [looking, setLooking] = useState(false);
+  const findRest = () => { setLooking(true); void fillDetails(t, lookFor, unplaced).finally(() => setLooking(false)); };
+  const missing = lookFor.length + unplaced.length;
   const countries = [...new Set(t.destinations.map(d => d.country).filter(Boolean))];
   return (
     <>
       <h1 className="page-h">Essentials</h1>
       <p className="note" style={{ marginTop: 0 }}>Hotels, travel, bookings and numbers. Tap one to see it all.</p>
-      {looking && <p className="note ess-looking">Looking up addresses and phone numbers…</p>}
+      {freeBusy && <p className="note ess-looking">Filling in addresses and phone numbers…</p>}
+      {!freeBusy && missing > 0 && shared && signedIn && !t.sample && (
+        <div className="ess-rest">
+          <span>{missing === 1 ? 'One hotel or booking is' : `${missing} hotels and bookings are`} missing an address, phone or website.</span>
+          <button className="chipbtn go" disabled={looking} onClick={findRest}>{looking ? 'Looking…' : 'Find the rest online'}</button>
+          <small>Uses one of the trip's AI uses.</small>
+        </div>
+      )}
       {!stays.length && !legs.length && !bookings.length && <Empty>Add where you're staying, your flights and trains, and booked plans; they'll gather here.</Empty>}
       {stays.length > 0 && (
         <section className="sec">

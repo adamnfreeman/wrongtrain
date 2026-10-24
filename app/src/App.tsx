@@ -32,6 +32,7 @@ import { useSync } from './sync/engine';
 import { usePullToRefresh } from './ui/pull';
 import { PlanItemEditor } from './ui/planItem';
 import { Essentials } from './ui/essentials';
+import { scheduleReminders } from './sync/reminders';
 import { MyNotes } from './ui/mynotes';
 import { PhotosPage } from './ui/photos';
 import { offCentre, useDock } from './ui/dock';
@@ -91,6 +92,8 @@ function TheApp() {
   const trip = trips.find(t => t.id === activeId);
   /* an invite link (…#join=CODE) opens the join sheet over whatever is showing */
   const [join, setJoin] = useState(joinCodeFromLink);
+  /* passport reminders before flights, kept in step with the trips (a moment after they change) */
+  useEffect(() => { const t = window.setTimeout(() => void scheduleReminders(trips), 2000); return () => clearTimeout(t); }, [trips]);
   useEffect(() => {
     const f = () => { const c = joinCodeFromLink(); if (c) setJoin(c); };
     window.addEventListener('hashchange', f);

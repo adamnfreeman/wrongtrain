@@ -704,3 +704,5 @@ details.ess[open] .ess-chev { transform: rotate(90deg) }
 
 /* To do: between the group notes box and the to-do lists */
 hr.sep { border: 0; height: 4px; border-radius: 2px; background: var(--rule); margin: 28px 0 20px }
+.ess-rest { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 12px 0 4px; padding: 12px 14px; border: 1px solid var(--rule); border-radius: 12px; background: var(--card); font-size: 14px }
+.ess-rest small { width: 100%; color: var(--muted); font-size: 12.5px; margin-top: -4px }

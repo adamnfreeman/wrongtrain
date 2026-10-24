@@ -147,7 +147,9 @@ export interface Place {
   /** For a stay: when you can check in and must check out, "HH:MM". */
   checkIn?: string;
   checkOut?: string;
-  /** When Essentials looked up its address and phone online (sync/details.ts), found or not. */
+  /** When Essentials looked it up in free map data (OpenStreetMap, MapTiler), found or not. */
+  freeAt?: string;
+  /** When Claude looked up its details online (sync/details.ts), found or not. */
   detailsAt?: string;
   /** The address or phone came from that lookup: shown with "found online, check it". */
   foundOnline?: boolean;
