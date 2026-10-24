@@ -9,7 +9,7 @@ import { after, rightNow } from './model/rightNow';
 import { liveCtx } from './model/next';
 import { RightNow } from './ui/rightnow';
 import { indexTrip, whereNow } from './model/trip';
-import type { Trip } from './model/types';
+import type { ThingRef, Trip } from './model/types';
 import { Fold } from './ui/bits';
 import { shortDate } from './model/time';
 import { AppCtx, MAIN_TABS, TABS, type Tab, type UI } from './ui/ctx';
@@ -21,6 +21,7 @@ import { startPush } from './sync/push';
 import { DocEditor, ExpenseEditor, Wallet } from './ui/wallet';
 import { Phrases } from './ui/phrases';
 import { Search } from './ui/search';
+import { DetailsCard } from './ui/details';
 import { CopySampleSheet, DayEditor, LegEditor, NewTripSheet, PlaceEditor, TodoEditor, TripSettings, type Edit } from './ui/editors';
 import { makeSample } from './model/sample';
 import { SignInSheet, AccountButton, JoinSheet, SyncLine, joinCodeFromLink } from './ui/account';
@@ -242,6 +243,7 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
     setUi(u => { if (u.tab !== tab || (day && day !== u.day)) toTop.current = tab; return { ...u, tab, day: day || u.day, q: '' }; });
   }, []);
   const [editing, edit] = useState<Edit | null>(null);
+  const [showing, show] = useState<ThingRef | null>(null);
   const [adding, setAdding] = useState(false);
   const photoPick = useRef<HTMLInputElement>(null);
   const walletSeg = useWalletSeg();
@@ -406,7 +408,7 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
   }, [ui.tab, ui.day, order]);
 
   return (
-    <AppCtx.Provider value={{ ix, now, ui, set, go, geo, me, edit }}>
+    <AppCtx.Provider value={{ ix, now, ui, set, go, geo, me, edit, show }}>
       <div className="pager" ref={pager}>
         {order.map(t => {
           const Page = t === 'now' ? null : PAGES[t];
@@ -424,6 +426,7 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
         })}
       </div>
       <div className="sheets">
+        {showing && !editing && <DetailsCard thing={showing} close={() => show(null)} />}
         {JAPAN && editing && <SheetOnly close={close} toNotes={() => go('prep')} />}
         {!JAPAN && editing?.kind === 'trip' && <TripSettings trip={trip} close={close} />}
         {!JAPAN && editing?.kind === 'plan' && <PlanItemEditor trip={trip} dayId={editing.dayId} id={editing.id} close={close} />}

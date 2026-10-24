@@ -4,12 +4,12 @@
    trip (stays from the days, travel from its legs, reservations from booked plan items). Travel here
    is the kind you book or sort out: flights, trains, buses, ferries and cars, anything still to
    book, and what's set up before the trip; a day's local getting around stays on Days. */
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import type { Day, Leg, Place, PlanItem } from '../model/types';
 import { addDays, fmtHM, shortDate } from '../model/time';
-import { destOf, dirLink, mapsLink, type TripIndex } from '../model/trip';
-import { DocLinks } from './wallet';
-import { Empty, Ext, SecH, line } from './bits';
+import { destOf, type TripIndex } from '../model/trip';
+import { Empty, SecH, line } from './bits';
+import { ThingRow, tel } from './details';
 import { useApp } from './ctx';
 import { lineOfDest } from '../model/trip';
 import { bookingNeedsPlace, fillDetails, fillFree, needsDetails, needsFree } from '../sync/details';
@@ -47,90 +47,27 @@ const SOS: Record<string, [string, string][]> = {
 const sos = (cc: string) => SOS[cc.toUpperCase()] || [['Emergency', '112']];
 const COUNTRY = (cc: string) => { try { return new Intl.DisplayNames(['en'], { type: 'region' }).of(cc.toUpperCase()) || cc; } catch { return cc; } };
 
-const tel = (n: string) => 'tel:' + n.replace(/[^\d+]/g, '');
-
-/** One thing, one line until tapped. */
-function Item({ title, sub, colour, children }: { title: ReactNode; sub?: ReactNode; colour?: React.CSSProperties; children: ReactNode }) {
-  return (
-    <li>
-      <details className="ess">
-        <summary>
-          {colour && <i className="ess-dot" style={colour} aria-hidden />}
-          <span className="ess-t">{title}{sub && <small>{sub}</small>}</span>
-          <span className="ess-chev" aria-hidden>›</span>
-        </summary>
-        <div className="ess-body">{children}</div>
-      </details>
-    </li>
-  );
-}
-
-function Row({ label, children }: { label: string; children: ReactNode }) {
-  return <div className="ess-row"><span>{label}</span><div>{children}</div></div>;
-}
-
 function StayItem({ p, nights }: { p: Place; nights: Day[] }) {
-  const { ix, edit } = useApp();
+  const { ix } = useApp();
   const first = nights[0], out = addDays(nights[nights.length - 1].date, 1);
   const n = nights.length;
   return (
-    <Item title={p.name} colour={line(lineOfDest(destOf(ix, first)))}
-      sub={`${shortDate(first.date)} – ${shortDate(out)} · ${n} ${n === 1 ? 'night' : 'nights'}${p.checkIn || p.checkOut ? ` · in ${p.checkIn ? fmtHM(p.checkIn) : '?'}, out ${p.checkOut ? fmtHM(p.checkOut) : '?'}` : ''}`}>
-      <Row label="Check in">{first.date && `${shortDate(first.date)}`}{p.checkIn ? `, from ${fmtHM(p.checkIn)}` : ''}</Row>
-      <Row label="Check out">{shortDate(out)}{p.checkOut ? `, by ${fmtHM(p.checkOut)}` : ''}</Row>
-      {(p.address || p.area) && <Row label="Address"><Ext href={mapsLink(ix, p)}>{p.address || p.area}</Ext></Row>}
-      {p.phone && <Row label="Phone"><a href={tel(p.phone)}>{p.phone}</a></Row>}
-      {p.booking && <Row label="Reservation"><span className="pre">{p.booking}</span></Row>}
-      {p.notes && <Row label="Notes"><span className="pre">{p.notes}</span></Row>}
-      {p.foundOnline && <p className="ess-found">Some of this was found online. Check before you rely on it.</p>}
-      <DocLinks kind="place" id={p.id} />
-      <div className="meta">
-        {p.lat != null && <Ext href={dirLink(p, 'transit')}>Directions</Ext>}
-        {p.link && <Ext href={p.link}>Website</Ext>}
-        <button className="linkbtn" onClick={() => edit({ kind: 'place', id: p.id })}>{p.phone || p.booking || p.address ? 'Edit' : 'Add address, phone, reservation'}</button>
-        <button className="linkbtn" onClick={() => edit({ kind: 'doc', for: { kind: 'place', id: p.id } })}>+ Booking</button>
-      </div>
-    </Item>
+    <ThingRow thing={{ kind: 'place', id: p.id }} title={p.name} colour={line(lineOfDest(destOf(ix, first)))}
+      sub={`${shortDate(first.date)} – ${shortDate(out)} · ${n} ${n === 1 ? 'night' : 'nights'}${p.checkIn || p.checkOut ? ` · in ${p.checkIn ? fmtHM(p.checkIn) : '?'}, out ${p.checkOut ? fmtHM(p.checkOut) : '?'}` : ''}`} />
   );
 }
 
 function LegEss({ l, day }: { l: Leg; day?: Day }) {
-  const { edit } = useApp();
   const when = [day && shortDate(day.date), l.depart && fmtHM(l.depart)].filter(Boolean).join(' · ');
   return (
-    <Item title={`${l.from} → ${l.to}`} sub={<>{[MODE[l.mode], when || (!l.dayId ? 'Before the trip' : '')].filter(Boolean).join(' · ')}{l.status === 'todo' && <b className="ess-tobook"> · To book</b>}</>}>
-      {l.how && <Row label="Service"><span className="pre">{l.how}</span></Row>}
-      {(l.depart || l.arrive) && <Row label="Times">{l.depart && `Leaves ${fmtHM(l.depart)}`}{l.depart && l.arrive && ', '}{l.arrive && `arrives ${fmtHM(l.arrive)}`}</Row>}
-      <Row label="Booking">{l.statusText || (l.status === 'booked' ? 'Booked' : l.status === 'todo' ? 'Not booked yet' : 'Nothing to book')}</Row>
-      {l.tickets && <Row label="Tickets"><span className="pre">{l.tickets}</span></Row>}
-      {l.details && <Row label="Details"><span className="pre">{l.details}</span></Row>}
-      <DocLinks kind="leg" id={l.id} />
-      <div className="meta">
-        <button className="linkbtn" onClick={() => edit({ kind: 'leg', id: l.id })}>Edit</button>
-        <button className="linkbtn" onClick={() => edit({ kind: 'doc', for: { kind: 'leg', id: l.id } })}>+ Ticket</button>
-      </div>
-    </Item>
+    <ThingRow thing={{ kind: 'leg', id: l.id }} title={`${l.from} → ${l.to}`}
+      sub={<>{[MODE[l.mode], when || (!l.dayId ? 'Before the trip' : '')].filter(Boolean).join(' · ')}{l.status === 'todo' && <b className="ess-tobook"> · To book</b>}</>} />
   );
 }
 
 function BookingEss({ d, p }: { d: Day; p: PlanItem }) {
-  const { ix, edit } = useApp();
-  const place = p.placeId ? ix.place.get(p.placeId) : undefined;
-  return (
-    <Item title={p.text} sub={[shortDate(d.date), p.time && (p.timeKind === 'by' ? 'by ' : '') + fmtHM(p.time), destOf(ix, d)?.name].filter(Boolean).join(' · ')}>
-      {place && <Row label="Where"><Ext href={mapsLink(ix, place)}>{place.name}{place.address ? `, ${place.address}` : ''}</Ext></Row>}
-      {place?.phone && <Row label="Phone"><a href={tel(place.phone)}>{place.phone}</a></Row>}
-      {place?.link && <Row label="Website"><Ext href={place.link}>{place.link.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}</Ext></Row>}
-      {place?.foundOnline && <p className="ess-found">Found online. Check before you rely on it.</p>}
-      {place?.booking && <Row label="Reservation"><span className="pre">{place.booking}</span></Row>}
-      {p.sub?.map((s, i) => <p key={i} className="item-d">{s}</p>)}
-      <DocLinks kind="plan" id={p.id} />
-      <div className="meta">
-        <button className="linkbtn" onClick={() => edit({ kind: 'plan', dayId: d.id, id: p.id })}>Edit</button>
-        <button className="linkbtn" onClick={() => edit({ kind: 'doc', for: { kind: 'plan', id: p.id } })}>+ Ticket</button>
-      </div>
-    </Item>
-  );
+  const { ix } = useApp();
+  return <ThingRow thing={{ kind: 'plan', dayId: d.id, id: p.id }} title={p.text.split('\n')[0]} sub={[shortDate(d.date), p.time && (p.timeKind === 'by' ? 'by ' : '') + fmtHM(p.time), destOf(ix, d)?.name].filter(Boolean).join(' · ')} />;
 }
 
 export function Essentials() {
@@ -167,7 +104,7 @@ export function Essentials() {
   return (
     <>
       <h1 className="page-h">Essentials</h1>
-      <p className="note" style={{ marginTop: 0 }}>Hotels, travel, bookings and numbers. Tap one to see it all.</p>
+      <p className="note" style={{ marginTop: 0 }}>Hotels, travel, bookings and numbers. Tap one for its details.</p>
       {freeBusy && <p className="note ess-looking">Filling in addresses and phone numbers…</p>}
       {!freeBusy && missing > 0 && shared && signedIn && !t.sample && (
         <div className="ess-rest">

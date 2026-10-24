@@ -50,7 +50,7 @@ const Bullets = ({ items }: { items: Bullet[] }) => (
 );
 
 export function DayBody({ d }: { d: Day }) {
-  const { ix, ui, go, edit } = useApp();
+  const { ix, ui, go, edit, show } = useApp();
   const legs = ix.trip.legs.filter(l => l.dayId === d.id);
   const eats = d.eatIds.map(id => ix.place.get(id)).filter((p): p is Place => !!p);
   const shown = eats.filter(p => vegOk(p, ui.veg));
@@ -74,7 +74,7 @@ export function DayBody({ d }: { d: Day }) {
             {d.plan.map(p => {
               const place = p.placeId ? ix.place.get(p.placeId) : undefined;
               return (
-                <li key={p.id} className="planitem" onClick={e => { if (!(e.target as HTMLElement).closest('a, button')) edit({ kind: 'plan', dayId: d.id, id: p.id }); }}>
+                <li key={p.id} className="planitem" onClick={tapped(() => show({ kind: 'plan', dayId: d.id, id: p.id }))}>
                   {p.time && <div className="kick">{fmtHM(p.time)}{p.end ? '–' + fmtHM(p.end) : ''}{p.fixed && (p.timeKind === 'by' ? ' · at the latest' : ' · booked')}</div>}
                   <Txt text={p.text} />
                   {p.sub?.length ? <ul className="sub">{p.sub.map((s, j) => <li key={j}><Txt text={s} /></li>)}</ul> : null}
@@ -92,7 +92,7 @@ export function DayBody({ d }: { d: Day }) {
           <SecH title="Be on time for" />
           <ul className="sheet">
             {fixed.map((a, i) => (
-              <li key={i}>
+              <li key={i} className="tapme" onClick={tapped(() => show(a.ref))}>
                 <div className="kick">{a.at == null ? 'All day' : fmtT(a.at) + (a.kind === 'deadline' ? ' at the latest' : '')}</div>
                 <div className="item-h"><span className="item-n">{a.name}</span></div>
                 {a.what !== a.name && <Txt text={a.what} className="item-d" />}
@@ -194,11 +194,11 @@ export function DaySlider({ cur }: { cur: Day }) {
 }
 
 export function LegItem({ l }: { l: Leg }) {
-  const { edit } = useApp();
+  const { edit, show } = useApp();
   const sk = l.status === 'booked' ? 'ok' : l.status === 'todo' ? 'todo' : '';
   const label = l.statusText || (l.status === 'booked' ? 'Booked' : l.status === 'todo' ? 'To book' : 'Nothing to book');
   return (
-    <li>
+    <li className="tapme" onClick={tapped(() => show({ kind: 'leg', id: l.id }))}>
       <div className="item-h"><span className="item-n">{l.from} → {l.to}</span><Pill kind={sk}>{l.status === 'booked' ? '✓ ' : ''}{label}</Pill></div>
       <Txt text={l.how} className="item-d" />
       {(l.depart || l.arrive) && <div className="meta">{l.depart && <span>Leaves <span className="tm">{fmtHM(l.depart)}</span></span>}{l.arrive && <span>Arrives <span className="tm">{fmtHM(l.arrive)}</span></span>}</div>}
@@ -222,12 +222,13 @@ export function VegPill({ p }: { p: Place }) {
   return null;
 }
 
-/** A place to eat; with `onOpen` (Places), tapping it opens the place and Add to itinerary. */
+/** A place to eat; tapping it opens its details card. On Places it also offers Add to itinerary. */
 export function EatItem({ p, onOpen, day }: { p: Place; onOpen?: () => void; day?: string }) {
-  const { ix, edit } = useApp();
+  const { ix, edit, show } = useApp();
+  const open = () => show({ kind: 'place', id: p.id });
   const hours = p.hours === '24h' ? 'Open 24 hours' : p.hours ? `${fmtHM(p.hours.open)}–${fmtHM(p.hours.close)}` : '';
   return (
-    <li className={(p.closed ? 'dim' : '') + (onOpen ? ' tapme' : '')} onClick={onOpen && tapped(onOpen)}>
+    <li className={(p.closed ? 'dim ' : '') + 'tapme'} onClick={tapped(open)}>
       <div className="item-h"><span className="item-n">{p.name}</span><VegPill p={p} />{day && <Pill kind="ok">On {shortDate(day)}</Pill>}</div>
       <Txt text={p.notes} className="item-d" />
       <div className="meta">

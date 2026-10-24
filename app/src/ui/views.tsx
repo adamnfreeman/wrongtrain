@@ -7,7 +7,8 @@ import { newId } from '../model/trip';
 import { PictureView } from './picture';
 import type { Place } from '../model/types';
 import { lineOfDest, runs, mapsLink } from '../model/trip';
-import { shortDate, stamp } from '../model/time';
+import { fmtHM, shortDate, stamp } from '../model/time';
+import { ThingRow } from './details';
 import { onToday } from '../model/next';
 import { addNote, editNote, toggleNote, getState } from '../model/store';
 import { JAPAN } from '../edition';
@@ -18,7 +19,6 @@ import { useSync } from '../sync/engine';
 import { canFile, dismissFiling, fileNote, undoFile, useFilings, type NoteFiling } from '../sync/filing';
 import { Empty, Fold, Pill, SecH, Txt, line } from './bits';
 import { Board, DayBody, DaySlider, EatItem, TodoItem, VegToggle, tapped, vegOk } from './day';
-import { PlaceSheet } from './addToPlan';
 import { NextCard } from './next';
 import { useApp } from './ctx';
 
@@ -41,6 +41,13 @@ export function Today() {
   const rs = runs(ix);
   const big = now.phase === 'after' ? 'Trip complete' : now.togo > 1 ? `${now.togo} days to go` : now.togo === 1 ? 'Tomorrow' : 'Time to go';
   const open = visibleTodos(ix.trip.todos, me).filter(t => t.group === ix.trip.todoGroups[0] && !t.done);
+  /* the first day's travel and the first night's stay, each opening its details card */
+  const stay1 = days[0].stayId ? ix.place.get(days[0].stayId) : undefined;
+  const firstUp = [
+    ...ix.trip.legs.filter(l => l.dayId === days[0].id).sort((a, b) => (a.depart || '').localeCompare(b.depart || '')).map(l => (
+      <ThingRow key={l.id} thing={{ kind: 'leg', id: l.id }} kick={[shortDate(days[0].date), l.depart && fmtHM(l.depart)].filter(Boolean).join(' · ')} title={`${l.from} → ${l.to}`} sub={l.how || undefined} />)),
+    ...(stay1 ? [<ThingRow key="stay" thing={{ kind: 'place', id: stay1.id }} kick={`First night · ${shortDate(days[0].date)}`} title={stay1.name} sub={[stay1.checkIn && `Check in from ${fmtHM(stay1.checkIn)}`, stay1.address || stay1.area].filter(Boolean).join(' · ') || undefined} />] : []),
+  ];
   return (
     <>
       <header className="board">
@@ -58,6 +65,12 @@ export function Today() {
         </div>
       </header>
       {now.phase === 'before' && <Weather ix={ix} day={days[0]} live={false} />}
+      {now.phase === 'before' && firstUp.length > 0 && (
+        <section className="sec">
+          <SecH title="Getting there" />
+          <ul className="sheet esslist">{firstUp}</ul>
+        </section>
+      )}
       {now.phase === 'before' && open.length > 0 && (
         <section className="sec">
           <SecH title="Next to do"><button className="linkbtn" onClick={() => go('prep')}>All {open.length}</button></SecH>
@@ -114,20 +127,17 @@ const CATS: { key: string; label: string; icon: string; has: (p: Place) => boole
 ];
 
 export function Places() {
-  const { ix, ui, set, edit } = useApp();
-  const [open, setOpen] = useState<string | null>(null);
+  const { ix, ui, set, edit, show } = useApp();
   const inCity = ix.trip.places.filter(p => (ui.dest === 'all' || p.destinationId === ui.dest) && p.kind !== 'transit');
   const counts = CATS.map(c => ({ ...c, n: inCity.filter(c.has).length }));
   const cat = counts.find(c => c.key === ui.seg && c.n) || counts.find(c => c.n);
   const dayOf = (p: Place) => ix.trip.days.find(d => onToday(p, d));
   const list = cat ? inCity.filter(cat.has).filter(p => !(cat.key === 'food' || cat.key === 'coffee') || vegOk(p, ui.veg)) : [];
   const food = cat?.key === 'food' || cat?.key === 'coffee';
-  /* the Japan edition's plan is changed in the sheet, so no Add to itinerary there */
-  const tap = (p: Place) => JAPAN ? undefined : () => setOpen(p.id);
-  const opened = open ? ix.trip.places.find(p => p.id === open) : undefined;
+  /* the card's Add to itinerary; the Japan edition's plan is changed in the sheet, so not there */
+  const tap = (p: Place) => JAPAN ? undefined : () => { show({ kind: 'place', id: p.id }); setTimeout(() => document.getElementById('addplan')?.scrollIntoView({ block: 'start' }), 60); };
   return (
     <>
-      {opened && <PlaceSheet p={opened} close={() => setOpen(null)} />}
       <h1 className="page-h">Places</h1>
       <div className="chips"><DestChips /></div>
       {counts.some(c => c.n) ? (
@@ -152,9 +162,9 @@ export function Places() {
 }
 
 function IdeaItem({ p, day, onOpen }: { p: Place; day?: string; onOpen?: () => void }) {
-  const { ix, edit } = useApp();
+  const { ix, edit, show } = useApp();
   return (
-    <li className={onOpen ? 'tapme' : undefined} onClick={onOpen && tapped(onOpen)}>
+    <li className="tapme" onClick={tapped(() => show({ kind: 'place', id: p.id }))}>
       <div className="item-h"><span className="item-n">{p.name}</span>{day && <Pill kind="ok">On {shortDate(day)}</Pill>}{p.wishlist && <Pill>Wishlist</Pill>}</div>
       <Txt text={p.notes} className="item-d" />
       <div className="meta">{p.area && <span>{p.area}</span>}<a href={mapsLink(ix, p)} target="_blank" rel="noopener noreferrer">Find in Maps</a><button className="linkbtn" onClick={() => edit({ kind: 'place', id: p.id })}>Edit</button>{onOpen && <button className="linkbtn strong" onClick={onOpen}>Add to itinerary</button>}</div>

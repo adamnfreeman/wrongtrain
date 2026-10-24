@@ -133,6 +133,14 @@ on a Mac.
 - Oct 22: the Days slider opens each day as it passes the middle, mid-drag (`DaySlider`); Right
   now's Show ticket also finds tickets attached elsewhere that day by a shared word in the name, and
   opens pictures and PDFs full screen in the app (`FileTicket`); favourite phrases move up and down.
+- The details card (`DetailsCard` in `src/ui/details.tsx`, opened by `show` in the app context with a
+  `ThingRef`: a place, a leg or a plan item): one look for everything you can tap, on Today, Days,
+  Places, Map and Essentials. What and when, big Directions / Call / Website buttons, labelled rows
+  (check in and out, address, phone, hours, reservation, service, tickets), tickets as big buttons,
+  Edit at the foot; places also get Add to itinerary. Essentials is a list of one-line rows
+  (`ThingRow`) that open it. Today is the hub (Oct 24): How much time, then Coming up (each opens its
+  card) with Tonight's hotel, Waiting on you (to-dos that are yours), What's nearby, the day's plan;
+  before the trip, Getting there (day one's travel and first night).
 - Add to itinerary (Places; `PlaceSheet` in `src/ui/addToPlan.tsx`, `fitPlace` in `src/model/fit.ts`):
   tap a place (or its Add to itinerary) for the three days it fits best (its city, still to come,
   open that weekday, not already on it, least full) with a time around what's planned and inside its
@@ -406,7 +414,8 @@ Next:
    details (Coming up boxes can't be tapped today). Fewer tabs overall. Ideas in the Oct 24 chat:
    Today as the hub (tappable Coming up opening the Essentials details, tonight's hotel, today's
    plan, nearby, weather), Map and Places as one tab, Essentials folded into Today, Days and Wallet,
-   and the rest under Trip. With Andrea.
+   and the rest under Trip. With Andrea. Done Oct 24: Today as the hub and one details card for
+   everything; still to do: Map and Places as one tab, Essentials folded in, the tab cut.
 81. **Change plans on the fly** (Adam, Oct 24): an easy way, during the trip, to swap what's planned
    when the group's mood changes, e.g. shopping in one neighbourhood is on the plan but everyone
    wants something chill near the hotel. Suggest alternatives nearby (Something nearby, the trip's
@@ -414,6 +423,9 @@ Next:
 82. **Share a finished trip** (Adam, Oct 24): after a trip, share it so other people can use it and the
    ideas in it (places, the plan, tips), e.g. a public read-only link or a copy someone can start
    their own trip from, without the private things (bookings, wallet, money, notes).
+83. **A problem statement and product goal** (Adam, Oct 24; for Andrea): write down, in a few lines,
+   the problem WrongTrain solves for a group of friends and the goal the product is working toward
+   (see VISION.md), to steer design decisions such as the tab cut (80).
 
 ## Working together
 

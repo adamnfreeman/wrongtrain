@@ -9,6 +9,7 @@ import { ALL_PIN_GROUPS, KIND_LABEL, fmtDist, mapsLink, metres, pinGroup } from 
 import { Empty, Ext, Fold, Pill, Txt, pinColor } from './bits';
 import { DestChips } from './views';
 import { useApp } from './ctx';
+import { tapped } from './day';
 import { Avatar, useTripPeople } from './avatar';
 import { JAPAN } from '../edition';
 import { useStore } from '../model/store';
@@ -127,9 +128,9 @@ export function MapView() {
 }
 
 function PinItem({ p, away }: { p: Place; away?: number }) {
-  const { ix, edit } = useApp();
+  const { ix, edit, show } = useApp();
   return (
-    <li>
+    <li className="tapme" onClick={tapped(() => show({ kind: 'place', id: p.id }))}>
       <div className="item-h"><span className="item-n"><span className="dot" style={pinColor(pinGroup(p).color)} />{p.name}</span><Pill>{p.wishlist ? 'Wishlist' : KIND_LABEL[p.kind]}</Pill></div>
       <Txt text={p.notes} className="item-d" />
       <div className="meta">{away != null && <span>{fmtDist(away)} away</span>}<Ext href={mapsLink(ix, p)}>Open in Google Maps</Ext><button className="linkbtn" onClick={() => edit({ kind: 'place', id: p.id })}>Edit</button></div>

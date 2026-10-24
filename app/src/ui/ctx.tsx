@@ -1,6 +1,7 @@
 /* What every screen needs: the open trip, where we are in it, view state, and navigation. */
 import { createContext, useContext } from 'react';
 import type { Now, TripIndex } from '../model/trip';
+import type { ThingRef } from '../model/types';
 import type { Geo } from './geo';
 import type { Edit } from './editors';
 import { JAPAN } from '../edition';
@@ -40,6 +41,8 @@ export interface App {
   me: string;
   /** Opens an editor sheet. */
   edit: (e: Edit) => void;
+  /** Opens a thing's details card (ui/details.tsx). */
+  show: (t: ThingRef) => void;
 }
 
 export const AppCtx = createContext<App | null>(null);

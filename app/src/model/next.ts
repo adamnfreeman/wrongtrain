@@ -4,7 +4,7 @@
    Fixed times come from booked legs with a departure time, and plan items marked fixed.
    Everything else with a map pin is a candidate stop, ranked by distance and by whether it
    is on today's list. */
-import type { Day, Place } from './types';
+import type { Day, Place, ThingRef } from './types';
 import { fmtT, hm, minutesIn, weekday } from './time';
 import { type TripIndex, metres, travel, tzOf, pinGroup } from './trip';
 
@@ -16,6 +16,8 @@ export interface Anchor {
   what: string;
   place: Place | null;
   kind: 'flight' | 'ride' | 'event' | 'deadline';
+  /** The leg or plan item it comes from, for its details card. */
+  ref: ThingRef;
 }
 
 export function anchorsFor(ix: TripIndex, d: Day): Anchor[] {
@@ -25,14 +27,14 @@ export function anchorsFor(ix: TripIndex, d: Day): Anchor[] {
     const at = hm(l.depart); if (at == null) return;
     const flight = l.mode === 'flight';
     out.push({ at, lead: flight ? 150 : 10, name: `${l.from} → ${l.to}`, what: l.how,
-      place: (l.fromPlaceId && ix.place.get(l.fromPlaceId)) || null, kind: flight ? 'flight' : 'ride' });
+      place: (l.fromPlaceId && ix.place.get(l.fromPlaceId)) || null, kind: flight ? 'flight' : 'ride', ref: { kind: 'leg', id: l.id } });
   });
   d.plan.forEach(p => {
     if (!p.fixed) return;
     const place = (p.placeId && ix.place.get(p.placeId)) || null;
     const by = p.timeKind === 'by';
     out.push({ at: hm(p.time), lead: by || hm(p.time) == null ? 0 : 10, name: place?.name || p.text.split(/[.:—]/)[0].trim(),
-      what: p.text, place, kind: by ? 'deadline' : 'event' });
+      what: p.text, place, kind: by ? 'deadline' : 'event', ref: { kind: 'plan', dayId: d.id, id: p.id } });
   });
   return out.sort((a, b) => (a.at ?? -1) - (b.at ?? -1));
 }

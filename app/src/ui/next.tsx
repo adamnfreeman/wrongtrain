@@ -4,7 +4,10 @@
 import { useEffect, useState } from 'react';
 import { anchorsFor, liveCtx, previewCtx, stopsFor, type Ctx, type Stop } from '../model/next';
 import { dirLink, fmtDist, mapsLink, metres, pinGroup, travel, KIND_LABEL } from '../model/trip';
-import { fmtDur, fmtT, longDate } from '../model/time';
+import { fmtDur, fmtHM, fmtT, longDate } from '../model/time';
+import { needs, remindsMe, stillToDo, visibleTodos } from '../model/todos';
+import { ThingRow } from './details';
+import { TodoItem, tapped } from './day';
 import { Ext, Pill, SecH, Txt, pinColor } from './bits';
 import { useApp } from './ctx';
 import { Nearby } from './nearby';
@@ -18,7 +21,7 @@ function useMinute() {
 }
 
 export function NextCard() {
-  const { ix, now, ui, set, geo } = useApp();
+  const { ix, now, ui, set, geo, go, me } = useApp();
   useMinute();
   let c: Ctx | null = null;
   if (now.phase === 'during' && now.cur) c = liveCtx(ix, now.cur, geo.on ? geo.pos : null);
@@ -54,6 +57,12 @@ export function NextCard() {
   const tomorrow = ix.trip.days[(ix.dayPos.get(c.d.id) ?? 0) + 1];
   const tfirst = tomorrow ? anchorsFor(ix, tomorrow).find(a => a.at != null) : undefined;
   const times: number[] = []; for (let m = 360; m <= 1380; m += 30) times.push(m);
+  const tonight = c.d.stayId ? ix.place.get(c.d.stayId) : undefined;
+  const prevStay = ix.trip.days[(ix.dayPos.get(c.d.id) ?? 0) - 1]?.stayId;
+  /* to-dos that are yours to do: just for you, or assigned to you and not ticked yet; reminders first */
+  const waiting = visibleTodos(ix.trip.todos, me)
+    .filter(t => !t.done && (!!t.mine || (!!needs(t, ix.trip) && stillToDo(t, ix.trip).some(n => n.trim().toLowerCase() === me.trim().toLowerCase()))))
+    .sort((a, b) => Number(remindsMe(b, ix.trip, me)) - Number(remindsMe(a, ix.trip, me)));
 
   return (
     <section className="sec" id="next">
@@ -78,6 +87,25 @@ export function NextCard() {
         <p className="bigtime">{big}</p><p>{say}</p>
         {next?.place?.lat != null && <div className="meta"><Ext href={dirLink(next.place, tr ? tr.mode : 'transit')}>Directions to {next.place.name}</Ext></div>}
       </div>
+      {(up.length > 0 || allDay.length > 0 || tfirst || tonight) && (
+        <>
+          <h3 className="sub-h">Coming up</h3>
+          <ul className="sheet esslist">
+            {allDay.map((a, i) => <ThingRow key={'a' + i} thing={a.ref} kick="All day" title={a.name} />)}
+            {up.map((a, i) => <ThingRow key={'u' + i} thing={a.ref} kick={`${fmtT(a.at!)}${a.at! - c.min > 0 ? ` · in ${fmtDur(a.at! - c.min)}` : ' · now'}`} title={a.name} sub={a.what !== a.name ? a.what.split('\n')[0] : undefined} />)}
+            {tonight && <ThingRow thing={{ kind: 'place', id: tonight.id }} kick="Tonight" title={tonight.name}
+              sub={[tonight.checkIn && c.d.stayId !== prevStay && `Check in from ${fmtHM(tonight.checkIn)}`, tonight.address || tonight.area].filter(Boolean).join(' · ') || undefined} />}
+            {tfirst && <ThingRow thing={tfirst.ref} kick={`Tomorrow · ${fmtT(tfirst.at!)}`} title={tfirst.name} sub={tfirst.what !== tfirst.name ? tfirst.what.split('\n')[0] : undefined} />}
+          </ul>
+        </>
+      )}
+      {c.live && waiting.length > 0 && (
+        <>
+          <h3 className="sub-h">Waiting on you</h3>
+          <ul className="sheet">{waiting.slice(0, 3).map(t => <TodoItem key={t.id} t={t} brief />)}</ul>
+          {waiting.length > 3 && <button className="linkbtn" onClick={() => go('prep')}>All {waiting.length}</button>}
+        </>
+      )}
       {c.live && !c.pos && geo.supported && (
         <>
           <div className="chips"><button className="chipbtn plain" aria-pressed={geo.on} onClick={geo.toggle}>{geo.on ? 'Finding you…' : 'Use my location'}</button></div>
@@ -92,33 +120,18 @@ export function NextCard() {
       </>}
       <h3 className="sub-h">What's nearby?</h3>
       <Nearby inline />
-      {(up.length > 0 || allDay.length > 0 || tfirst) && (
-        <>
-          <h3 className="sub-h">Coming up</h3>
-          <ul className="sheet">
-            {allDay.map((a, i) => <li key={'a' + i}><div className="kick">All day</div><div className="item-h"><span className="item-n">{a.name}</span></div></li>)}
-            {up.map((a, i) => (
-              <li key={'u' + i}>
-                <div className="kick">{fmtT(a.at!)}{a.at! - c.min > 0 ? ` · in ${fmtDur(a.at! - c.min)}` : ' · now'}</div>
-                <div className="item-h"><span className="item-n">{a.name}</span></div>{a.what !== a.name && <Txt text={a.what} className="item-d" />}
-              </li>
-            ))}
-            {tfirst && <li><div className="kick">Tomorrow · {fmtT(tfirst.at!)}</div><div className="item-h"><span className="item-n">{tfirst.name}</span></div><Txt text={tfirst.what} className="item-d" /></li>}
-          </ul>
-        </>
-      )}
       <p className="geomsg">Travel times are rough guesses from straight-line distance. Check Directions before relying on one.</p>
     </section>
   );
 }
 
 function StopItem({ x }: { x: Stop }) {
-  const { ix } = useApp();
+  const { ix, show } = useApp();
   const p = x.p, bits: string[] = [];
   if (x.dist != null) bits.push(`${fmtDist(x.dist)} · ${about(x.tr!)}`);
   if (x.status) bits.push(x.status);
   return (
-    <li>
+    <li className="tapme" onClick={tapped(() => show({ kind: 'place', id: p.id }))}>
       <div className="item-h">
         <span className="item-n"><span className="dot" style={pinColor(pinGroup(p).color)} />{p.name}</span>
         <Pill>{KIND_LABEL[p.kind]}</Pill>{x.today && <Pill kind="ok">On today's list</Pill>}

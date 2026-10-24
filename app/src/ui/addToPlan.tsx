@@ -1,23 +1,21 @@
-/* Tapping a place on Places: what it is, and "Add to itinerary" with the days it would fit best
-   (model/fit.ts), each with a time that fits. One tap adds it; Undo takes it straight off again. */
+/* "Add to itinerary" on a place's details card: the days it would fit best (model/fit.ts), each
+   with a time that fits. One tap adds it; Undo takes it straight off again. */
 import { useState } from 'react';
 import type { Place } from '../model/types';
 import { deletePlanItem, savePlanItem } from '../model/edit';
 import { patchTrip } from '../model/store';
-import { cityOf, mapsLink, newId } from '../model/trip';
+import { cityOf, newId } from '../model/trip';
 import { fmtHM, longDate } from '../model/time';
 import { fitOn, fitPlace, type Fit } from '../model/fit';
-import { Field, Sheet } from './form';
-import { Rich, Txt } from './bits';
+import { Field } from './form';
 import { useApp } from './ctx';
 
-export function PlaceSheet({ p, close }: { p: Place; close: () => void }) {
-  const { ix, edit } = useApp();
+export function AddToItinerary({ p, close }: { p: Place; close: () => void }) {
+  const { ix } = useApp();
   const t = ix.trip;
   const [added, setAdded] = useState<{ fit: Fit; id: string } | null>(null);
   const [other, setOther] = useState('');
   const best = fitPlace(t, p);
-  const hours = p.hours === '24h' ? 'Open 24 hours' : p.hours ? `${fmtHM(p.hours.open)}–${fmtHM(p.hours.close)}` : '';
   const when = (f: Fit) => `${longDate(f.day.date)}${f.time ? ` · ${fmtHM(f.time)}` : ''}`;
   const add = (f: Fit) => {
     const id = newId('i');
@@ -25,15 +23,9 @@ export function PlaceSheet({ p, close }: { p: Place; close: () => void }) {
     setAdded({ fit: f, id });
   };
   const pick = other ? t.days.find(d => d.id === other) : undefined;
+  const picked = pick && fitOn(p, pick);
   return (
-    <Sheet title={p.name} onCancel={close} cancelLabel="Close">
-      <Txt text={p.notes} className="item-d" />
-      <div className="meta">
-        {p.area && <span>{p.area}</span>}
-        {hours && <span><Rich text={hours} /></span>}
-        {!p.closed && <a href={mapsLink(ix, p)} target="_blank" rel="noopener noreferrer">Find in Maps</a>}
-        <button className="linkbtn" onClick={() => { close(); edit({ kind: 'place', id: p.id }); }}>Edit</button>
-      </div>
+    <section className="dc-sec" id="addplan">
       <h3 className="sub-h">Add to itinerary</h3>
       {added ? (
         <div className="fitdone" role="status">
@@ -43,7 +35,7 @@ export function PlaceSheet({ p, close }: { p: Place; close: () => void }) {
             <button className="chipbtn plain" aria-pressed="true" onClick={close}>Done</button>
           </div>
         </div>
-      ) : p.closed ? <p className="fhint">It's marked closed.</p> : (
+      ) : (
         <>
           {best.length ? (
             <ul className="fits">{best.map(f => (
@@ -60,9 +52,9 @@ export function PlaceSheet({ p, close }: { p: Place; close: () => void }) {
               {t.days.map(d => <option key={d.id} value={d.id}>{longDate(d.date)} · {cityOf(ix, d)}</option>)}
             </select>
           </Field>
-          {pick && <button className="fitbtn" onClick={() => add(fitOn(p, pick))}><b>{when(fitOn(p, pick))}</b><span>{fitOn(p, pick).why}</span><i aria-hidden="true">+</i></button>}
+          {picked && <button className="fitbtn" onClick={() => add(picked)}><b>{when(picked)}</b><span>{picked.why}</span><i aria-hidden="true">+</i></button>}
         </>
       )}
-    </Sheet>
+    </section>
   );
 }

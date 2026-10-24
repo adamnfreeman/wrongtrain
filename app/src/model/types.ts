@@ -105,6 +105,10 @@ export interface PlanItem {
   detailsAt?: string;
 }
 
+/** One thing in a trip that has a details card (ui/details.tsx): a place (a hotel too), a leg of
+    travel, or an item on a day's plan. */
+export type ThingRef = { kind: 'place'; id: ID } | { kind: 'leg'; id: ID } | { kind: 'plan'; dayId: ID; id: ID };
+
 export type LegMode = 'flight' | 'train' | 'subway' | 'bus' | 'car' | 'ferry' | 'walk' | 'other';
 export type LegStatus = 'booked' | 'todo' | 'none';
 
