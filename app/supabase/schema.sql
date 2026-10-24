@@ -778,3 +778,44 @@ do $$ begin
   alter publication supabase_realtime add table public.trip_locations;
 exception when duplicate_object then null;
 end $$;
+
+-- ---------- push notifications ----------
+
+-- Each phone's push address (an APNs device token), saved by the app (src/sync/push.ts) for whoever is
+-- signed in on it. Read only by the send-push function, with the service key: nobody can list them.
+create table if not exists public.push_tokens (
+  token       text primary key,
+  user_id     uuid not null references auth.users (id) on delete cascade,
+  platform    text not null default 'ios',
+  updated_at  timestamptz not null default now()
+);
+create index if not exists push_tokens_user on public.push_tokens (user_id);
+alter table public.push_tokens enable row level security;
+
+create or replace function public.save_push_token(token text, platform text default 'ios')
+returns void language plpgsql security definer set search_path = public as $$
+#variable_conflict use_column
+begin
+  if auth.uid() is null then raise exception 'sign in first'; end if;
+  insert into push_tokens (token, user_id, platform) values (save_push_token.token, auth.uid(), coalesce(save_push_token.platform, 'ios'))
+    on conflict (token) do update set user_id = auth.uid(), platform = excluded.platform, updated_at = now();
+end $$;
+create or replace function public.drop_push_token(token text)
+returns void language sql security definer set search_path = public as $$
+  delete from push_tokens where push_tokens.token = drop_push_token.token and user_id = auth.uid();
+$$;
+revoke all on function public.save_push_token(text, text), public.drop_push_token(text) from public, anon;
+grant execute on function public.save_push_token(text, text), public.drop_push_token(text) to authenticated;
+
+-- What send-push has sent, so a reminder or an alert isn't repeated within minutes.
+create table if not exists public.push_sent (
+  id          bigserial primary key,
+  trip_id     text not null,
+  kind        text not null,
+  ref         text not null default '',
+  sender      uuid not null,
+  created_at  timestamptz not null default now()
+);
+create index if not exists push_sent_recent on public.push_sent (trip_id, kind, ref, created_at);
+alter table public.push_sent enable row level security;
+

@@ -11,6 +11,7 @@ import { dayOfMonth, fmtHM, fmtT, longDate } from '../model/time';
 import { anchorsFor } from '../model/next';
 import { TODO_TAGS, hasTicked, needs, stillToDo } from '../model/todos';
 import { getState, patchTrip, toggleTodo } from '../model/store';
+import { sendPush } from '../sync/push';
 import { stamp } from '../model/time';
 import { Ext, Pill, Rich, SecH, Txt, line, Fold } from './bits';
 import { useApp } from './ctx';
@@ -262,6 +263,7 @@ export function TodoItem({ t, brief }: { t: Todo; brief?: boolean }) {
   const [sent, setSent] = useState(false);
   const remind = () => {
     patchTrip(ix.trip.id, tr => ({ ...tr, todos: tr.todos.map(x => (x.id === t.id ? { ...x, nudge: { by: me || 'Someone', at: new Date().toISOString() } } : x)) }));
+    if (!ix.trip.sample) sendPush(ix.trip.id, { kind: 'remind', todo_id: t.id });
     setSent(true);
   };
   const message = async () => {
@@ -296,7 +298,7 @@ export function TodoItem({ t, brief }: { t: Todo; brief?: boolean }) {
           </div>
         )}
         {!brief && sent && (
-          <p className="remindsent">Reminder sent to {left.join(', ')}. They'll see it next time WrongTrain syncs. <button className="linkbtn" onClick={() => void message()}>Send as a message too</button></p>
+          <p className="remindsent">Reminder sent to {left.join(', ')}. <button className="linkbtn" onClick={() => void message()}>Send as a message too</button></p>
         )}
         {!brief && !sent && t.nudge && left.length > 0 && <div className="when nudged">Reminded by {t.nudge.by} · {stamp(t.nudge.at)}</div>}
       </div>

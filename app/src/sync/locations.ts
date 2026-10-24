@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { supabase, useSync } from './engine';
 import { getState } from '../model/store';
 import { sampleSpots } from '../model/sample';
+import { sendPush } from './push';
 
 export interface FriendSpot { user_id: string; lat: number; lng: number; acc: number | null; at: string; until: string }
 
@@ -23,7 +24,11 @@ export function useSharingUntil(tripId: string): Date | null {
   return d && d.getTime() > Date.now() ? d : null;
 }
 
-export function startSharing(tripId: string, until: Date) { sharing = { ...sharing, [tripId]: until.toISOString() }; save(); }
+export function startSharing(tripId: string, until: Date) {
+  sharing = { ...sharing, [tripId]: until.toISOString() }; save();
+  /* the others get a push, so they know even with the app closed */
+  if (!getState().trips.find(t => t.id === tripId)?.sample) sendPush(tripId, { kind: 'sharing' });
+}
 
 export async function stopSharing(tripId: string) {
   const next = { ...sharing }; delete next[tripId]; sharing = next; save();

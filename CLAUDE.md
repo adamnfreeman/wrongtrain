@@ -222,6 +222,12 @@ on a Mac.
   syncs, and on the iPhone a notification; "Send as a message too" opens the share sheet. People who
   joined but weren't on Who's going are added to it (WhosGoing in `src/ui/trip.tsx`) and show in the
   to-do picker.
+- Push notifications (Oct 24): the iPhone app registers once signed in (`src/sync/push.ts`,
+  @capacitor/push-notifications, `push_tokens` in schema.sql, AppDelegate.swift, App.entitlements);
+  Remind and starting to share call the `send-push` function (`supabase/functions/send-push`,
+  `_shared/push.ts`), which sends fixed words through APNs to the others on the trip, not the same
+  thing twice within 10 minutes. Needs the APNs key as secrets (APNS_KEY, APNS_KEY_ID): steps in
+  `app/supabase/functions/README.md`. While the app is open its own banners say it instead.
 
 ## Commands (in `app/`)
 

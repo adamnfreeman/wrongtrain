@@ -16,6 +16,7 @@ import { useGeo } from './ui/geo';
 import { Days, Places, Prep, Today } from './ui/views';
 import { MapView, ShareNotice } from './ui/map';
 import { RemindNotice } from './ui/remind';
+import { startPush } from './sync/push';
 import { DocEditor, ExpenseEditor, Wallet } from './ui/wallet';
 import { Phrases } from './ui/phrases';
 import { Search } from './ui/search';
@@ -223,6 +224,8 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
   const walletSeg = useWalletSeg();
   const addKind = ui.tab === 'wallet' ? (walletSeg === 'docs' ? 'doc' : 'expense') : addOn(ui.tab);
   const signedIn = useSync().session;
+  /* push notifications (reminders, someone sharing where they are): asked for once you're signed in */
+  useEffect(() => { if (signedIn && !trip.sample) void startPush(t => go(t as Tab)); }, [!!signedIn]); // eslint-disable-line react-hooks/exhaustive-deps
   const close = useCallback(() => edit(null), []);
   /* Today needs it during the trip, and for "Something nearby" at any time */
   /* while you share where you are with the group, location stays on as you move between pages */

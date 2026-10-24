@@ -147,3 +147,19 @@ Run step 4.4 again whenever `file-note/index.ts` or `_shared/filing.ts` changes.
 
 If it says something went wrong, open **Edge Functions → file-note → Logs** in the dashboard to
 see why. "Filing notes is not set up yet" means the secret from step 3 is missing.
+
+## Push notifications (send-push)
+
+Reminders on to-dos and "someone is sharing where they are" reach phones with the app closed through
+Apple's push service. Passport reminders don't use this: they're scheduled on the phone itself.
+
+1. Apple developer account → Certificates, Identifiers & Profiles → **Keys** → **+**. Name it
+   "WrongTrain push", tick **Apple Push Notifications service (APNs)**, Configure: **Sandbox &
+   Production**, Save, Continue, Register, **Download** the `.p8` (only once; keep it in 1Password).
+   Note the **Key ID**.
+2. In Terminal, in `app/` (the key goes straight from the file to Supabase, never into chat):
+   `npx supabase secrets set APNS_KEY_ID=<Key ID> --project-ref wklwpihkpiuniazhidjz`
+   `npx supabase secrets set APNS_KEY="$(cat ~/Downloads/AuthKey_<Key ID>.p8)" --project-ref wklwpihkpiuniazhidjz`
+3. `npx supabase functions deploy send-push --project-ref wklwpihkpiuniazhidjz --no-verify-jwt --use-api`
+4. In Xcode, the App target's **Signing & Capabilities** shows **Push Notifications** (from
+   `App.entitlements`); with automatic signing Xcode adds it to the app's profile.

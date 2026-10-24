@@ -12,6 +12,8 @@ const config: CapacitorConfig = {
   plugins: {
     /* hidden by the app once it has drawn (src/native.ts), so there is no blank flash */
     SplashScreen: { launchAutoHide: false, backgroundColor: '#0F1418', showSpinner: false },
+    /* while the app is open its own banners say it (ShareNotice, RemindNotice), so a push isn't shown twice */
+    PushNotifications: { presentationOptions: [] },
   },
 };
 
