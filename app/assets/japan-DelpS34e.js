@@ -1,0 +1,1 @@
+export{r as seedFromOldPage}from"./japan-_gp4_VZ3.js";
