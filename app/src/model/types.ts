@@ -190,6 +190,8 @@ export interface Todo {
   who?: string[];
   /** Who has ticked a group check (or their part of an assigned one), by name. */
   checks?: string[];
+  /** The last "Remind" tap: who asked and when; the people who still have it to do get a banner. */
+  nudge?: { by: string; at: string };
 }
 
 export interface Note {

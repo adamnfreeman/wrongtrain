@@ -2,15 +2,16 @@
    list items other screens reuse (legs, food, to-dos). */
 import { Face, WhoGoing } from './planItem';
 import { JAPAN } from '../edition';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { centre, offCentre, useDock } from './dock';
 import type { Bullet, Day, Leg, Place, Todo } from '../model/types';
 import { DocLinks } from './wallet';
 import { cityOf, codeOf, lineOf, mapsLink, stayLine, destOf } from '../model/trip';
 import { dayOfMonth, fmtHM, fmtT, longDate } from '../model/time';
 import { anchorsFor } from '../model/next';
-import { toggleTodo } from '../model/store';
-import { TODO_TAGS, hasTicked, needs } from '../model/todos';
+import { TODO_TAGS, hasTicked, needs, stillToDo } from '../model/todos';
+import { getState, patchTrip, toggleTodo } from '../model/store';
+import { stamp } from '../model/time';
 import { Ext, Pill, Rich, SecH, Txt, line, Fold } from './bits';
 import { useApp } from './ctx';
 
@@ -254,6 +255,19 @@ export function TodoItem({ t, brief }: { t: Todo; brief?: boolean }) {
   const forMe = !need || !me || need.some(n => n.trim().toLowerCase() === me.trim().toLowerCase());
   const mineTicked = need ? hasTicked(t, me || 'Me') : t.done;
   const tag = TODO_TAGS.find(x => x.value === t.tag);
+  /* Remind: the people who still have it to do get a banner when their app next syncs (and on the
+     iPhone a notification); a message to the group can go too */
+  const left = stillToDo(t, ix.trip).filter(n => n.trim().toLowerCase() !== (me || '').trim().toLowerCase());
+  const shared = !!getState().sync[ix.trip.id] || !!ix.trip.sample;
+  const [sent, setSent] = useState(false);
+  const remind = () => {
+    patchTrip(ix.trip.id, tr => ({ ...tr, todos: tr.todos.map(x => (x.id === t.id ? { ...x, nudge: { by: me || 'Someone', at: new Date().toISOString() } } : x)) }));
+    setSent(true);
+  };
+  const message = async () => {
+    const text = `Reminder: ${t.text}${t.when ? ` (${t.when})` : ''}${t.link ? `\n${t.link}` : ''}\n\nTick it off in WrongTrain when it's done.`;
+    try { if (typeof navigator.share === 'function') await navigator.share({ text }); else await navigator.clipboard.writeText(text); } catch { /* cancelled */ }
+  };
   return (
     <li className={'todo' + (t.done ? ' done' : '')}>
       <button className="box" role="checkbox" aria-checked={need && !forMe ? t.done : mineTicked} disabled={!forMe}
@@ -278,8 +292,13 @@ export function TodoItem({ t, brief }: { t: Todo; brief?: boolean }) {
             {t.link && <Ext href={t.link}>Open link</Ext>}
             {t.done && t.doneBy && <span>Ticked by {t.doneBy}</span>}
             <button className="linkbtn" onClick={() => edit({ kind: 'todo', id: t.id })}>Edit</button>
+            {shared && left.length > 0 && !sent && <button className="linkbtn" onClick={remind}>Remind</button>}
           </div>
         )}
+        {!brief && sent && (
+          <p className="remindsent">Reminder sent to {left.join(', ')}. They'll see it next time WrongTrain syncs. <button className="linkbtn" onClick={() => void message()}>Send as a message too</button></p>
+        )}
+        {!brief && !sent && t.nudge && left.length > 0 && <div className="when nudged">Reminded by {t.nudge.by} · {stamp(t.nudge.at)}</div>}
       </div>
     </li>
   );

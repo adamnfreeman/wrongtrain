@@ -1,5 +1,6 @@
 /* The editors: one full-screen sheet per thing you can change. Each works on a draft and only
    touches the trip when you press Save. */
+import { useTripPeople } from './avatar';
 import { useMemo, useState } from 'react';
 import type { Day, Destination, Leg, LegMode, LegStatus, Place, PlaceKind, PlanItem, Todo, Trip } from '../model/types';
 import {
@@ -253,6 +254,9 @@ export function PlaceEditor({ trip, id, as, dayId, destinationId, close }: Props
 /* ---------- to-do ---------- */
 
 export function TodoEditor({ trip, id, group, close }: Props & { id?: string; group?: string }) {
+  /* everyone who could do it: Who's going, and anyone who has joined but isn't on it yet */
+  const joined = useTripPeople(trip.id).map(p => (p.name || '').trim()).filter(Boolean);
+  const names = [...trip.travelers, ...joined.filter(n => !trip.travelers.some(x => x.trim().toLowerCase() === n.toLowerCase()))];
   const orig = id ? trip.todos.find(t => t.id === id) : undefined;
   const [t, setT] = useState<Todo>(orig || { id: newId('t'), group: group || trip.todoGroups[0] || 'Before the trip', text: '', done: false });
   const [newGroup, setNewGroup] = useState('');
@@ -271,7 +275,7 @@ export function TodoEditor({ trip, id, group, close }: Props & { id?: string; gr
       <Choice label="List" value={t.group} onChange={v => up({ group: v })}
         options={[...trip.todoGroups.map(x => ({ value: x, label: x })), { value: '__new', label: 'New list…' }]} />
       {t.group === '__new' && <Text label="Name of the new list" value={newGroup} onChange={setNewGroup} placeholder="e.g. Packing" />}
-      {trip.travelers.length > 1 ? (
+      {names.length > 1 ? (
         /* who it's for, in one tap: faces to pick, Everyone to pick them all; nobody picked means
            anyone can tick it off for the group */
         <Field label="Who">
@@ -283,14 +287,14 @@ export function TodoEditor({ trip, id, group, close }: Props & { id?: string; gr
           </div>
           {!t.mine && (
             <div className="whopick" style={{ marginTop: 10 }}>
-              {trip.travelers.map(n => {
+              {names.map(n => {
                 const same = (w: string) => w.trim().toLowerCase() === n.trim().toLowerCase();
-                const picked = t.everyone ? trip.travelers : t.who || [];
+                const picked = t.everyone ? names : t.who || [];
                 const on = picked.some(same);
                 const next = on ? picked.filter(w => !same(w)) : [...picked, n];
                 return (
                   <button key={n} type="button" className={'face' + (on ? '' : ' waiting')} aria-pressed={on}
-                    onClick={() => up(next.length === trip.travelers.length ? { everyone: true, who: undefined } : { everyone: undefined, who: next.length ? next : undefined })}>
+                    onClick={() => up(next.length === names.length ? { everyone: true, who: undefined } : { everyone: undefined, who: next.length ? next : undefined })}>
                     <Face tripId={trip.id} name={n} size={44} /><span>{n}</span>
                   </button>
                 );

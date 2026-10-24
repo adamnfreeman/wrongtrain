@@ -15,6 +15,7 @@ import { AppCtx, MAIN_TABS, TABS, type Tab, type UI } from './ui/ctx';
 import { useGeo } from './ui/geo';
 import { Days, Places, Prep, Today } from './ui/views';
 import { MapView, ShareNotice } from './ui/map';
+import { RemindNotice } from './ui/remind';
 import { DocEditor, ExpenseEditor, Wallet } from './ui/wallet';
 import { Phrases } from './ui/phrases';
 import { Search } from './ui/search';
@@ -427,6 +428,7 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
       }} />
       {adding && <AddAnything kind={(addOn(ui.tab) as AddKind) || 'any'} close={() => setAdding(false)} />}
       {!JAPAN && <ShareNotice />}
+      {!JAPAN && <RemindNotice />}
       <div className="statusbg" aria-hidden="true" />
       <div className="ptr" ref={pullLabel} role="status" aria-live="polite" />
       <div className="tabpeek" ref={peek} aria-hidden="true" />

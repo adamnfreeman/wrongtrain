@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkDone, tick, visibleTodos } from './todos';
+import { checkDone, remindsMe, stillToDo, tick, visibleTodos } from './todos';
 import { makeSample } from './sample';
 import type { Trip } from './types';
 
@@ -42,5 +42,12 @@ describe('to-do kinds', () => {
     expect(t.todos[0].done).toBe(true);
     t = tick(t, 'a', 'Alex');
     expect(t.todos[0].done).toBe(false);
+  });
+  it('a reminder goes to whoever still has it to do, not to who sent it', () => {
+    const t: Trip = { ...trip(), todos: [{ id: 'a', group: 'Before the trip', text: 'Visit Japan Web', done: false, everyone: true, checks: ['Sam'], nudge: { by: 'Alex', at: '2026-10-24T10:00:00Z' } }] };
+    expect(stillToDo(t.todos[0], t)).toEqual(['Alex', 'Jordan', 'Riley']);
+    expect(remindsMe(t.todos[0], t, 'Jordan')).toBe(true);
+    expect(remindsMe(t.todos[0], t, 'sam')).toBe(false);
+    expect(remindsMe(t.todos[0], t, 'Alex')).toBe(false);
   });
 });

@@ -217,6 +217,11 @@ on a Mac.
 - The Transit tab is gone (Oct 24): Essentials' Travel section has flights, trains, buses, ferries and
   cars, anything still to book and what's set up before the trip (`essentialLeg`); each day's local
   getting around stays on Days. Search's travel results open Essentials.
+- To-dos have Remind (`nudge` on the to-do; `stillToDo`, `remindsMe` in `src/model/todos.ts`): the people
+  who still have it to do get a banner ("Adam reminded you", `src/ui/remind.tsx`) when their app next
+  syncs, and on the iPhone a notification; "Send as a message too" opens the share sheet. People who
+  joined but weren't on Who's going are added to it (WhosGoing in `src/ui/trip.tsx`) and show in the
+  to-do picker.
 
 ## Commands (in `app/`)
 

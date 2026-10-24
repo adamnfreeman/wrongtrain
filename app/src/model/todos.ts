@@ -18,6 +18,18 @@ export const needs = (t: Todo, trip: Trip): string[] | null => (t.everyone ? tri
 
 export const hasTicked = (t: Todo, name: string) => (t.checks || []).some(c => same(c, name));
 
+/** Who still has it to do: the people it's for who haven't ticked it; for a group to-do, everyone
+    until someone ticks it. */
+export const stillToDo = (t: Todo, trip: Trip): string[] => {
+  if (t.done || t.mine) return [];
+  const n = needs(t, trip);
+  return n ? n.filter(p => !hasTicked(t, p)) : trip.travelers;
+};
+
+/** Whether a reminder is for this person: it's still theirs to do, and someone else sent it. */
+export const remindsMe = (t: Todo, trip: Trip, me: string) =>
+  !!t.nudge && !!me && !same(t.nudge.by, me) && stillToDo(t, trip).some(p => same(p, me));
+
 /** A group check (or an assigned to-do) is done when everyone it's for has ticked it. */
 export const checkDone = (t: Todo, trip: Trip) => {
   const n = needs(t, trip);

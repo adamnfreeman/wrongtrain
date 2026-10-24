@@ -3,7 +3,8 @@
    in Account & settings. */
 import { PictureView } from './picture';
 import { getState, patchTrip, pref, setPref, useStore } from '../model/store';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { verdict } from '../model/rules';
 import type { Trip } from '../model/types';
 import { updateFromSheet } from '../model/sheetSync';
 import { Sheet, Text } from './form';
@@ -100,6 +101,17 @@ function WhosGoing() {
     .map(n => ({ key: 'n:' + n, name: n, src: n === me ? mine : null, waiting: shared }));
   const all = [...joined, ...listed];
   const [big, setBig] = useState<{ src: string; name: string } | null>(null);
+  /* someone who joined without a name and named themselves later never made it onto Who's going,
+     so to-dos couldn't be assigned to them: whoever may change the plan adds them */
+  const missing = people.map(p => (p.name || '').trim()).filter(n => n && !t.travelers.some(x => x.trim().toLowerCase() === n.toLowerCase()));
+  useEffect(() => {
+    if (!missing.length) return;
+    const now = getState().trips.find(x => x.id === t.id), role = getState().sync[t.id]?.role;
+    if (!now) return;
+    const add = (x: Trip): Trip => ({ ...x, travelers: [...x.travelers, ...missing.filter(n => !x.travelers.some(y => y.trim().toLowerCase() === n.toLowerCase()))] });
+    if (role && verdict(now, add(now), role) !== 'ok') return;
+    patchTrip(t.id, add);
+  }, [missing.join('|')]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!all.length && JAPAN) return null;
   return (
     <section className="sec">
