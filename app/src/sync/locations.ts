@@ -58,12 +58,22 @@ export function useFriendSpots(tripId: string, on: boolean): FriendSpot[] {
   const shared = !!getState().sync[tripId];
   const [spots, setSpots] = useState<FriendSpot[]>([]);
   const made = useMemo(() => (sample && on ? sampleSpots() : null), [sample, on]);
+  /* the sample's made-up friends start sharing too, so the banner shows there (once per phone) */
+  useEffect(() => {
+    if (!made) return;
+    /* a fixed "until" (the end of today), so it shows once a day rather than every launch */
+    const end = new Date(); end.setHours(23, 59, 0, 0);
+    noticeSharers(tripId, made.slice(0, 1).map(s => ({ ...s, until: end.toISOString() })));
+  }, [made, tripId]);
   useEffect(() => {
     if (!on || !shared || !session) { setSpots([]); return; }
     let live = true;
     const load = async () => {
       const { data } = await supabase.from('trip_locations').select('user_id, lat, lng, acc, at, until').eq('trip_id', tripId);
-      if (live && data) setSpots((data as FriendSpot[]).filter(s => s.user_id !== session.user.id));
+      if (!live || !data) return;
+      const others = (data as FriendSpot[]).filter(s => s.user_id !== session.user.id);
+      setSpots(others);
+      noticeSharers(tripId, others);
     };
     void load();
     const t = window.setInterval(() => { if (!document.hidden) void load(); }, 30_000);
@@ -71,6 +81,27 @@ export function useFriendSpots(tripId: string, on: boolean): FriendSpot[] {
   }, [tripId, on, shared, session]);
   return made || spots;
 }
+
+/* ---------- telling you when someone starts sharing ---------- */
+
+/** Someone who just started sharing, for the banner (ShareNotice in ui/map.tsx). */
+export interface ShareStart { tripId: string; userId: string; until: string }
+const SEEN = 'wt-shares-seen';
+const noticeListeners = new Set<() => void>();
+let notices: ShareStart[] = [];
+const seen = (): string[] => { try { return JSON.parse(localStorage.getItem(SEEN) || '[]'); } catch { return []; } };
+
+/** Each time someone starts sharing (a new "until"), once per phone: a banner, and on the iPhone a
+    notification too. Only while the app is open: with it closed, that would need push. */
+export function noticeSharers(tripId: string, spots: FriendSpot[]) {
+  const had = seen(), fresh = spots.filter(s => new Date(s.until).getTime() > Date.now() && !had.includes(`${tripId}:${s.user_id}:${s.until}`));
+  if (!fresh.length) return;
+  try { localStorage.setItem(SEEN, JSON.stringify([...had, ...fresh.map(s => `${tripId}:${s.user_id}:${s.until}`)].slice(-300))); } catch { /* ignore */ }
+  notices = [...notices, ...fresh.map(s => ({ tripId, userId: s.user_id, until: s.until }))];
+  noticeListeners.forEach(f => f());
+}
+export const useShareNotices = () => useSyncExternalStore(f => { noticeListeners.add(f); return () => noticeListeners.delete(f); }, () => notices);
+export const dismissShareNotice = (n: ShareStart) => { notices = notices.filter(x => x !== n); noticeListeners.forEach(f => f()); };
 
 /** "2 min ago", "just now". */
 export function ago(iso: string): string {

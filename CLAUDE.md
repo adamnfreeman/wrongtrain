@@ -210,6 +210,10 @@ on a Mac.
   (`TARGETED_DEVICE_FAMILY = "1,2"`, all iPad orientations in Info.plist). From 760 px wide a sidebar
   replaces the bottom bar (`.side` in App.tsx), pages widen, editors open as a centred panel, and from
   1080 px Essentials, To do, Transit, Trip and Wallet flow into two columns (end of `src/index.css`).
+- When someone on the trip starts sharing where they are, a banner says so with a way to the Map
+  (`ShareNotice` in `src/ui/map.tsx`, `noticeSharers` in `src/sync/locations.ts`; once per share, per
+  phone), and on the iPhone a notification goes to Notification Center. Only while the app is open:
+  with it closed this needs push notifications. The sample shows it once a day.
 
 ## Commands (in `app/`)
 

@@ -14,7 +14,7 @@ import { shortDate } from './model/time';
 import { AppCtx, MAIN_TABS, TABS, type Tab, type UI } from './ui/ctx';
 import { useGeo } from './ui/geo';
 import { Days, Places, Prep, Today, Transit } from './ui/views';
-import { MapView } from './ui/map';
+import { MapView, ShareNotice } from './ui/map';
 import { DocEditor, ExpenseEditor, Wallet } from './ui/wallet';
 import { Phrases } from './ui/phrases';
 import { Search } from './ui/search';
@@ -427,6 +427,7 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
         if (f.length) void addPhotos(trip, f, now.cur?.id);
       }} />
       {adding && <AddAnything kind={(addOn(ui.tab) as AddKind) || 'any'} close={() => setAdding(false)} />}
+      {!JAPAN && <ShareNotice />}
       <div className="statusbg" aria-hidden="true" />
       <div className="ptr" ref={pullLabel} role="status" aria-live="polite" />
       <div className="tabpeek" ref={peek} aria-hidden="true" />

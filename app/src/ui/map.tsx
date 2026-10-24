@@ -13,7 +13,8 @@ import { Avatar, useTripPeople } from './avatar';
 import { JAPAN } from '../edition';
 import { useStore } from '../model/store';
 import { errText, useSync, type Member } from '../sync/engine';
-import { ago, startSharing, stopSharing, useFriendSpots, useSharingUntil, type FriendSpot } from '../sync/locations';
+import { ago, dismissShareNotice, startSharing, stopSharing, useFriendSpots, useShareNotices, useSharingUntil, type FriendSpot } from '../sync/locations';
+import { Capacitor } from '@capacitor/core';
 
 /** Further than this from every pin, you are not on the trip yet, so the map stays put. */
 const FAR = 300000;
@@ -194,4 +195,34 @@ function FriendList({ spots, people, onShow }: { spots: FriendSpot[]; people: Me
                   </li>
                 );
               })}</ul>;
+}
+
+/** "Sam is sharing where they are": a banner over the app when someone on this trip starts sharing,
+    with a way to the Map; on the iPhone, a notification goes to Notification Center as well. */
+export function ShareNotice() {
+  const { ix, go } = useApp();
+  const people = useTripPeople(ix.trip.id);
+  const n = useShareNotices().find(x => x.tripId === ix.trip.id);
+  const who = n ? people.find(p => p.user_id === n.userId)?.name || 'Someone on the trip' : '';
+  const until = n ? new Date(n.until).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+  useEffect(() => {
+    if (!n || !Capacitor.isNativePlatform()) return;
+    void (async () => {
+      const { LocalNotifications } = await import('@capacitor/local-notifications');
+      let p = await LocalNotifications.checkPermissions();
+      if (p.display === 'prompt' || p.display === 'prompt-with-rationale') p = await LocalNotifications.requestPermissions();
+      if (p.display === 'granted') await LocalNotifications.schedule({ notifications: [{ id: 8000 + Math.floor(Math.random() * 999), title: `${who} is sharing where they are`, body: `Until ${until}. See them on the Map in WrongTrain.` }] });
+    })().catch(() => {});
+    const t = window.setTimeout(() => dismissShareNotice(n), 12_000);
+    return () => clearTimeout(t);
+  }, [n]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!n) return null;
+  return (
+    <div className="sharenote" role="status">
+      <Avatar name={who} src={people.find(p => p.user_id === n.userId)?.avatar} size={30} />
+      <span><b>{who}</b> is sharing where they are, until {until}.</span>
+      <button className="chipbtn go" onClick={() => { dismissShareNotice(n); go('map'); }}>See</button>
+      <button className="linkbtn" aria-label="Close" onClick={() => dismissShareNotice(n)}>✕</button>
+    </div>
+  );
 }

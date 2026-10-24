@@ -748,3 +748,11 @@ hr.sep { border: 0; height: 4px; border-radius: 2px; background: var(--rule); ma
   .pane[data-tab="days"] > .wrap, .pane[data-tab="today"] > .wrap, .pane[data-tab="now"] > .wrap { max-width: 860px }
   .pgrid { grid-template-columns: repeat(6, 1fr) }
 }
+
+/* someone started sharing where they are (ShareNotice in ui/map.tsx) */
+/* it stops short of the round account button in the corner, which stays tappable */
+.sharenote { position: fixed; z-index: 1100; left: 12px; right: 58px; top: calc(8px + env(safe-area-inset-top, 0px)); max-width: 520px; margin-inline: auto;
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--card); border: 1px solid var(--rule); border-radius: 14px;
+  box-shadow: 0 12px 30px rgba(0,0,0,.35); font-size: 14.5px }
+.sharenote span { flex: 1; min-width: 0 }
+@media (min-width: 760px) { .sharenote { left: calc(var(--side) + 12px) } }
