@@ -7,6 +7,9 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 import type { Doc, DocKind, Expense, FileRef, Trip } from '../model/types';
 import { getState, patchTrip, pref, setPref, useStore } from '../model/store';
 import { deletePrivateDoc, privateDocs, savePrivateDoc, usePrivateDocs } from '../model/privateDocs';
+import { deleteLimited, limitedDocs, saveLimited, useLimitedDocs } from '../sync/limitedDocs';
+import { useSync } from '../sync/engine';
+import { Avatar, useTripPeople } from './avatar';
 import { CURRENCIES, balances, fmtMoney, settleUp, shares, tripCurrency, venmoLink } from '../model/money';
 import { newId } from '../model/trip';
 import { fmtHM, shortDate, todayIn } from '../model/time';
@@ -58,6 +61,7 @@ export function Wallet() {
 function forLabel(t: Trip, f?: Doc['for']): string {
   if (!f) return '';
   if (f.kind === 'leg') { const l = t.legs.find(x => x.id === f.id); return l ? `${l.from} → ${l.to}` : ''; }
+  if (f.kind === 'place') return t.places.find(x => x.id === f.id)?.name || '';
   for (const d of t.days) {
     const p = d.plan.find(x => x.id === f.id);
     if (p) return `${shortDate(d.date)} · ${p.time ? fmtHM(p.time) + ' ' : ''}${p.text}`;
@@ -67,8 +71,8 @@ function forLabel(t: Trip, f?: Doc['for']): string {
 
 function Docs() {
   const { ix, edit } = useApp();
-  const t = ix.trip, mine = usePrivateDocs(t.id);
-  const all = [...(t.docs || []), ...mine];
+  const t = ix.trip, mine = usePrivateDocs(t.id), some = useLimitedDocs(t.id);
+  const all = [...(t.docs || []), ...some, ...mine];
   if (!all.length) return (
     <>
       <Empty>Keep tickets, bookings and IDs here, so they open with no signal.</Empty>
@@ -93,8 +97,19 @@ function Docs() {
   );
 }
 
+/** Who a limited doc is shared with, as names (you included as "you"). */
+function useSharedWith(tripId: string, d: Doc): string {
+  const people = useTripPeople(tripId), uid = useSync().session?.user.id;
+  if (!d.limited) return '';
+  const name = (id: string) => (id === uid ? 'you' : people.find(p => p.user_id === id)?.name || 'someone');
+  const others = [d.owner, ...(d.viewers || [])].filter((x): x is string => !!x && x !== uid);
+  return others.length ? `You and ${others.map(name).join(', ')}` : 'Only you';
+}
+
 function DocItem({ d }: { d: Doc }) {
   const { ix, edit } = useApp();
+  const uid = useSync().session?.user.id;
+  const withWho = useSharedWith(ix.trip.id, d);
   const [msg, setMsg] = useState('');
   const [pic, setPic] = useState(false);
   const f = forLabel(ix.trip, d.for);
@@ -106,13 +121,14 @@ function DocItem({ d }: { d: Doc }) {
   return (
     <li>
       <div className="item-h">{(thumb || kind === 'pdf') && <button className="docthumb" onClick={() => setPic(true)} aria-label={`Open ${d.title}`}>{thumb ? <img src={thumb} alt="" /> : <span className="docpdf">PDF</span>}</button>}<span className="item-n">{d.title}</span>{d.private ? <Pill>Private</Pill> : null}</div>
+      {withWho && <div className="when">Shared with: {withWho}</div>}
       {f && <div className="when">For {f}</div>}
       {d.notes && <p className="item-d">{d.notes}</p>}
       <div className="meta">
         {(d.picture || (kind && url)) && <button className="chipbtn go openbtn" onClick={() => setPic(true)}>Open</button>}
         {d.file && !kind && <button className="chipbtn go openbtn" onClick={share}>Open</button>}
         {d.link && <Ext href={d.link}>Open link</Ext>}
-        <button className="linkbtn" onClick={() => edit({ kind: 'doc', id: d.id })}>Edit</button>
+        {(!d.limited || d.owner === uid) && <button className="linkbtn" onClick={() => edit({ kind: 'doc', id: d.id })}>Edit</button>}
       </div>
       {msg && <p className="geomsg bad">{msg}</p>}
       {pic && (d.picture || url) && <PictureView src={d.picture || url} title={d.title} pdf={kind === 'pdf'} onShare={share} close={() => setPic(false)} />}
@@ -121,13 +137,13 @@ function DocItem({ d }: { d: Doc }) {
 }
 
 /** Tickets for a plan item or leg, as links on the timeline. */
-export function DocLinks({ kind, id }: { kind: 'plan' | 'leg'; id: string }) {
+export function DocLinks({ kind, id }: { kind: 'plan' | 'leg' | 'place'; id: string }) {
   const { ix } = useApp();
-  const mine = usePrivateDocs(ix.trip.id);
+  const mine = usePrivateDocs(ix.trip.id), some = useLimitedDocs(ix.trip.id);
   const [msg, setMsg] = useState('');
   const [pic, setPic] = useState<Doc | null>(null);
   const [fileDoc, setFileDoc] = useState<Doc | null>(null);
-  const list = [...(ix.trip.docs || []), ...mine].filter(d => d.for?.kind === kind && d.for.id === id);
+  const list = [...(ix.trip.docs || []), ...some, ...mine].filter(d => d.for?.kind === kind && d.for.id === id);
   if (!list.length) return null;
   return (
     <div className="meta doclinks">
@@ -166,7 +182,12 @@ async function store(path: string, f: File): Promise<FileRef> {
 
 export function DocEditor({ trip, id, forRef, close }: { trip: Trip; id?: string; forRef?: Doc['for']; close: () => void }) {
   const shared = !!getState().sync[trip.id];
-  const orig = (trip.docs || []).find(d => d.id === id) || privateDocs(trip.id).find(d => d.id === id);
+  const orig = (trip.docs || []).find(d => d.id === id) || limitedDocs(trip.id).find(d => d.id === id) || privateDocs(trip.id).find(d => d.id === id);
+  const uid = useSync().session?.user.id;
+  const others = useTripPeople(trip.id).filter(p => p.user_id !== uid);
+  /* who can see it: everyone on the trip, some of them (shared trips, signed in), or only this phone */
+  const modeOf = (x?: Doc) => (x?.private ? 'me' : x?.limited ? 'some' : 'all');
+  const [mode, setMode] = useState<'all' | 'some' | 'me'>(modeOf(orig));
   const [d, setD] = useState<Doc>(orig || { id: newId('doc'), title: '', kind: 'ticket', at: new Date().toISOString(), ...(forRef ? { for: forRef } : {}) });
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
@@ -174,36 +195,46 @@ export function DocEditor({ trip, id, forRef, close }: { trip: Trip; id?: string
   const up = (p: Partial<Doc>) => setD({ ...d, ...p });
   const options = [
     { value: '', label: 'Nothing in particular' },
+    ...trip.places.filter(p => p.kind === 'stay').map(p => ({ value: `place:${p.id}`, label: `Stay: ${p.name}` })),
     ...trip.legs.map(l => ({ value: `leg:${l.id}`, label: `Travel: ${l.from} → ${l.to}` })),
     ...trip.days.flatMap(day => day.plan.filter(p => p.text.trim()).map(p => ({ value: `plan:${p.id}`, label: `${shortDate(day.date)}${p.time ? ' ' + fmtHM(p.time) : ''}: ${p.text.slice(0, 50)}` }))),
   ];
   const commit = async () => {
     setBusy(true); setMsg('');
     try {
-      let next: Doc = { ...d, title: d.title.trim() || file?.name || 'Document', addedBy: d.addedBy || getState().me || undefined };
-      const base = next.private ? `private/${next.id}` : `${trip.id}/docs/${next.id}`;
+      let next: Doc = { ...d, title: d.title.trim() || file?.name || 'Document', addedBy: d.addedBy || getState().me || undefined,
+        private: mode === 'me' || undefined, limited: mode === 'some' || undefined, viewers: mode === 'some' ? d.viewers || [] : undefined, owner: mode === 'some' ? d.owner || uid : undefined };
+      if (mode === 'some' && !next.viewers!.length) throw new Error('Pick who can see it.');
+      const base = mode === 'me' ? `private/${next.id}` : mode === 'some' ? `${trip.id}/limited/${next.id}/doc` : `${trip.id}/docs/${next.id}`;
       if (file) {
         next.file = await store(`${base}.${extOf(file.type, file.name)}`, file);
         if (orig?.file && orig.file.path !== next.file.path) await drop(orig.file.path);
-      } else if (orig?.file && !!orig.private !== !!next.private) {
-        /* moved between private and shared: the file moves with it */
+      } else if (orig?.file && modeOf(orig) !== mode) {
+        /* moved between private, some people and everyone: the file moves with it */
         const blob = await readLocal(orig.file.path);
         if (blob) { const path = `${base}.${orig.file.path.split('.').pop()}`; await keep(path, blob); next.file = { ...orig.file, path }; await drop(orig.file.path); }
       }
       if (!next.file && !next.link && !next.notes) throw new Error('Add a file, a link or a note.');
-      if (next.private) {
-        savePrivateDoc(trip.id, next);
-        if (orig && !orig.private) patchTrip(trip.id, t => ({ ...t, docs: (t.docs || []).filter(x => x.id !== next.id) }));
-      } else {
-        next = { ...next, private: undefined };
-        patchTrip(trip.id, t => ({ ...t, docs: (t.docs || []).some(x => x.id === next.id) ? (t.docs || []).map(x => (x.id === next.id ? next : x)) : [...(t.docs || []), next] }));
-        if (orig?.private) deletePrivateDoc(trip.id, next.id);
+      const was = modeOf(orig);
+      if (mode === 'some') await saveLimited(trip.id, next);
+      else if (mode === 'me') savePrivateDoc(trip.id, next);
+      else patchTrip(trip.id, t => ({ ...t, docs: (t.docs || []).some(x => x.id === next.id) ? (t.docs || []).map(x => (x.id === next.id ? next : x)) : [...(t.docs || []), next] }));
+      /* and it leaves where it was */
+      if (orig && was !== mode) {
+        if (was === 'all') patchTrip(trip.id, t => ({ ...t, docs: (t.docs || []).filter(x => x.id !== next.id) }));
+        if (was === 'me') deletePrivateDoc(trip.id, next.id);
+        if (was === 'some') await deleteLimited(trip.id, next.id);
       }
       close();
     } catch (e) { setMsg((e as Error).message); setBusy(false); }
   };
   const remove = async () => {
     if (orig?.private) { deletePrivateDoc(trip.id, orig.id); if (orig.file) await drop(orig.file.path); return close(); }
+    if (orig?.limited) {
+      try { await deleteLimited(trip.id, orig.id); } catch (e) { return setMsg((e as Error).message); }
+      if (orig.file) await drop(orig.file.path);
+      return close();
+    }
     patchTrip(trip.id, t => ({ ...t, docs: (t.docs || []).filter(x => x.id !== d.id) }));
     /* the file goes only if the document did (it may be waiting for the owner's OK) */
     if (orig?.file && !(getState().trips.find(t => t.id === trip.id)?.docs || []).some(x => x.id === d.id)) await drop(orig.file.path);
@@ -213,15 +244,31 @@ export function DocEditor({ trip, id, forRef, close }: { trip: Trip; id?: string
     <Sheet title={orig ? 'Document' : 'Add a document'} onCancel={close} onSave={() => void commit()} saveLabel={busy ? '…' : 'Save'} canSave={!busy}
       footer={orig && <DeleteButton label="Delete this document" confirmText={`Delete “${orig.title}”?`} onDelete={() => void remove()} />}>
       <Text label="What it is" value={d.title} onChange={v => up({ title: v })} placeholder="e.g. Shinkansen to Tokyo, Ana's passport" autoFocus={!orig} />
-      <Choice<DocKind> label="Kind" value={d.kind} options={DOC_KINDS} onChange={v => up({ kind: v, ...(v === 'id' && !orig ? { private: true } : {}) })} />
+      <Choice<DocKind> label="Kind" value={d.kind} options={DOC_KINDS} onChange={v => { up({ kind: v }); if (v === 'id' && !orig) setMode('me'); }} />
       <FilePick label="File" file={file || d.file || null} onPick={setFile} hint="A photo, a scan or a PDF. Kept on this phone, so it opens with no signal." />
       <Text label="Or a link" type="url" value={d.link || ''} onChange={v => up({ link: v.trim() || undefined })} placeholder="https://" />
       <Choice label="For" value={d.for ? `${d.for.kind}:${d.for.id}` : ''} options={options}
-        onChange={v => { const [k, i] = v.split(':'); up({ for: v ? { kind: k as 'plan' | 'leg', id: i } : undefined }); }}
+        onChange={v => { const [k, i] = v.split(':'); up({ for: v ? { kind: k as 'plan' | 'leg' | 'place', id: i } : undefined }); }}
         hint="It shows there on the timeline, ready to open." />
       <Text label="Notes" value={d.notes || ''} onChange={v => up({ notes: v || undefined })} placeholder="e.g. Seat 7A, booking ref ABC123" multiline />
-      <Check label="Private" checked={!!d.private} onChange={v => up({ private: v || undefined })}
-        hint={shared ? 'Only on this phone, never shared. Use for passports and IDs.' : 'Only on this phone, even if you share the trip later.'} />
+      <Choice label="Who can see it" value={mode} onChange={v => setMode(v as typeof mode)}
+        options={[{ value: 'all', label: shared ? 'Everyone on the trip' : 'Everyone, once the trip is shared' },
+          ...(shared && uid && others.length ? [{ value: 'some', label: 'Only some people' }] : []),
+          { value: 'me', label: 'Just me, on this phone' }]}
+        hint={mode === 'me' ? 'Only on this phone, never uploaded. Use for passports and IDs.' : mode === 'some' ? 'Only you and the people you pick can open it.' : undefined} />
+      {mode === 'some' && (
+        <div className="whopick">
+          {others.map(p => {
+            const on = !!d.viewers?.includes(p.user_id);
+            return (
+              <button key={p.user_id} type="button" className={'face' + (on ? '' : ' waiting')} aria-pressed={on}
+                onClick={() => up({ viewers: on ? d.viewers!.filter(x => x !== p.user_id) : [...(d.viewers || []), p.user_id] })}>
+                <Avatar name={p.name || '?'} src={p.avatar} size={44} /><span>{p.name || 'Someone'}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
       {msg && <p className="geomsg bad" role="alert">{msg}</p>}
     </Sheet>
   );

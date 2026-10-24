@@ -541,6 +541,15 @@ select.input { background-image: linear-gradient(45deg, transparent 50%, var(--m
 .ttag { background: var(--tc) }
 .ttag-pick[aria-pressed="true"] { background: var(--tc); border-color: var(--tc); color: #fff }
 .checks { font-size: 13px; color: var(--muted); margin-top: 2px }
+/* who's ticked an assigned to-do or a group check: faces, bright with a tick when done, faded until then */
+.checks { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px }
+.tickfaces { display: inline-flex; gap: 4px }
+.tickface { position: relative; padding: 0; border: 0; background: none; border-radius: 99px; cursor: pointer; line-height: 0 }
+.tickface .avatar { opacity: .38; filter: grayscale(1) }
+.tickface.on .avatar { opacity: 1; filter: none }
+.tickface i { position: absolute; right: -3px; bottom: -3px; width: 13px; height: 13px; border-radius: 99px; background: var(--green, #3B8212); color: #fff;
+  font: 800 9px/13px var(--f-body, system-ui); font-style: normal; text-align: center; box-shadow: 0 0 0 2px var(--card) }
+.todo .box:disabled { opacity: .45 }
 
 /* placing a profile photo in the circle (CropSheet in ui/account.tsx) */
 .crop { position: relative; margin: 14px auto 10px; border-radius: 999px; overflow: hidden; touch-action: none; background: #000; cursor: grab }
@@ -657,3 +666,28 @@ details.fold > .linkbtn { display: inline-block; margin: 8px 14px 12px }
 .pmove button { appearance: none; border: 1px solid var(--rule); background: none; color: var(--ink); border-radius: 8px; width: 30px; height: 28px; font-size: 15px; cursor: pointer }
 .pmove button:disabled { opacity: .3 }
 .pmove + .pstar { margin-left: 6px }
+
+/* the weather line on Today: one quiet row */
+.wx { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin: 10px 2px 2px; font-size: 14.5px; color: var(--muted) }
+.wx-i { font-size: 18px; align-self: center }
+.wx b { font: 700 18px var(--f-display); color: var(--ink) }
+.wx small { margin-left: auto; font-size: 12.5px }
+
+/* Essentials: one line per thing until it's tapped open */
+.esslist > li { padding: 0 }
+details.ess > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 12px 14px }
+details.ess > summary::-webkit-details-marker { display: none }
+.ess-dot { width: 10px; height: 10px; border-radius: 99px; background: var(--line, var(--muted)); flex: none }
+.ess-t { flex: 1; min-width: 0; font: 700 15.5px/1.3 var(--f-display) }
+.ess-t small { display: block; font: 500 13px/1.4 var(--f-body); color: var(--muted); margin-top: 2px }
+.ess-chev { color: var(--muted); font-size: 20px; transition: transform .15s ease }
+details.ess[open] .ess-chev { transform: rotate(90deg) }
+.ess-body { padding: 0 14px 14px 34px }
+.ess-row { display: grid; grid-template-columns: 92px 1fr; gap: 10px; padding: 5px 0; font-size: 14.5px; border-top: 1px solid var(--rule) }
+.ess-row:first-child { border-top: 0 }
+.ess-row > span { color: var(--muted); font-size: 13px; padding-top: 1px }
+.ess-body .pre { white-space: pre-line }
+.sos { padding: 12px 14px }
+.sos-row { display: flex; flex-wrap: wrap; gap: 8px }
+.sos-row .chipbtn { text-decoration: none }
+.sos-row b { font-family: var(--f-data); margin-left: 4px }

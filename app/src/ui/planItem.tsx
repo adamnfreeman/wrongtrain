@@ -13,7 +13,7 @@ import { SAMPLE_PEOPLE } from '../model/sample';
 
 const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
-function Face({ tripId, name, size = 22 }: { tripId: string; name: string; size?: number }) {
+export function Face({ tripId, name, size = 22 }: { tripId: string; name: string; size?: number }) {
   const src = useAvatarFor(tripId, name) || SAMPLE_PEOPLE.find(p => p.name === name)?.avatar;
   return <Avatar name={name} src={src} size={size} />;
 }

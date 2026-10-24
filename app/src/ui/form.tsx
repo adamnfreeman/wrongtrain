@@ -46,7 +46,7 @@ export function Field({ label, hint, children, id }: { label: string; hint?: Rea
 export function Text({ label, value, onChange, hint, placeholder, multiline, type = 'text', autoFocus }: {
   label: string; value: string; onChange: (v: string) => void; hint?: ReactNode; placeholder?: string; multiline?: boolean;
   /** decimal: money and rates, with the keypad that has a decimal point */
-  type?: 'text' | 'date' | 'time' | 'url' | 'number' | 'decimal'; autoFocus?: boolean;
+  type?: 'text' | 'date' | 'time' | 'url' | 'tel' | 'number' | 'decimal'; autoFocus?: boolean;
 }) {
   const id = useId();
   return (

@@ -6,6 +6,7 @@ import type { Moment } from '../model/rightNow';
 import { fmtT, fmtDur } from '../model/time';
 import { dirLink, fmtDist, mapsLink } from '../model/trip';
 import { usePrivateDocs } from '../model/privateDocs';
+import { useLimitedDocs } from '../sync/limitedDocs';
 import type { Doc } from '../model/types';
 import { useApp } from './ctx';
 import { FileTicket, PictureView } from './picture';
@@ -19,7 +20,7 @@ function countdown(m: Moment): string {
 
 export function RightNow({ moment: m, next }: { moment: Moment | null; next: Moment | null }) {
   const { ix } = useApp();
-  const mine = usePrivateDocs(ix.trip.id);
+  const mine = [...usePrivateDocs(ix.trip.id), ...useLimitedDocs(ix.trip.id)];
   const [msg, setMsg] = useState('');
   const [pic, setPic] = useState<{ src: string; title: string } | null>(null);
   const [fileDoc, setFileDoc] = useState<Doc | null>(null);

@@ -1,4 +1,5 @@
 /* Today, Days, Transit, Places and To do. */
+import { Weather } from './weather';
 import { useState } from 'react';
 import type { Place } from '../model/types';
 import { lineOf, lineOfDest, runs, cityOf, mapsLink } from '../model/trip';
@@ -26,6 +27,7 @@ export function Today() {
     return (
       <>
         <Board d={now.cur} compact />
+        <Weather ix={ix} day={now.cur} live />
         <NextCard />
         <DayBody d={now.cur} />
       </>
@@ -50,6 +52,7 @@ export function Today() {
           ))}
         </div>
       </header>
+      {now.phase === 'before' && <Weather ix={ix} day={days[0]} live={false} />}
       {now.phase === 'before' && open.length > 0 && (
         <section className="sec">
           <SecH title="Next to do"><button className="linkbtn" onClick={() => go('prep')}>All {open.length}</button></SecH>

@@ -31,7 +31,7 @@ import { canFile } from './sync/filing';
 import { useSync } from './sync/engine';
 import { usePullToRefresh } from './ui/pull';
 import { PlanItemEditor } from './ui/planItem';
-import { Shop } from './ui/shop';
+import { Essentials } from './ui/essentials';
 import { MyNotes } from './ui/mynotes';
 import { PhotosPage } from './ui/photos';
 import { offCentre, useDock } from './ui/dock';
@@ -173,6 +173,7 @@ function OpenTripFile({ trips }: { trips: Trip[] }) {
 const ICONS: Record<string, { label: string; icon: React.ReactNode }> = {
   now: { label: 'Right now', icon: <path d="M13.5 2.5 5 13.5h6.2l-1 8 8.8-11.2h-6.3z" /> },
   today: { label: 'Today', icon: <><circle cx="12" cy="12" r="8.5" /><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none" /></> },
+  essentials: { label: 'Essentials', icon: <><circle cx="8" cy="12" r="4.2" /><path d="M12.2 12H21M17.5 12v3.4M20.5 12v2.4" /></> },
   days: { label: 'Days', icon: <><rect x="3.5" y="5" width="17" height="15.5" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></> },
   map: { label: 'Map', icon: <><path d="M12 21s7-6.2 7-11.5a7 7 0 0 0-14 0C5 14.8 12 21 12 21z" /><circle cx="12" cy="9.5" r="2.4" /></> },
   photos: { label: 'Photos', icon: <><rect x="3" y="6" width="18" height="14" rx="3" /><circle cx="12" cy="13" r="3.6" /><path d="M8.5 6l1.4-2.2h4.2L15.5 6" /></> },
@@ -259,7 +260,7 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
 
   const q = ui.q.trim(), searching = q.length > 1;
   const waiting = useWaitingForMe(trip.id);
-  const PAGES = { today: Today, days: Days, photos: PhotosPage, notes: MyNotes, shop: Shop, transit: Transit, places: Places, map: MapView, phrases: Phrases, wallet: Wallet, trip: TripHub, prep: Prep };
+  const PAGES = { today: Today, days: Days, essentials: Essentials, photos: PhotosPage, notes: MyNotes, transit: Transit, places: Places, map: MapView, phrases: Phrases, wallet: Wallet, trip: TripHub, prep: Prep };
   /* ---------- one long sheet: every page side by side, sliding with your finger ----------
      The pager scrolls sideways (the phone's own scrolling, so it tracks the finger and coasts);
      each page scrolls up and down by itself. The bottom bar and the pager move together: drag

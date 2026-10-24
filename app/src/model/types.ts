@@ -137,6 +137,14 @@ export interface Place {
   lng?: number;
   /** Short area or address, e.g. "Near Nishiki Market". */
   area?: string;
+  /** Street address, for a taxi driver or a map (Essentials). */
+  address?: string;
+  phone?: string;
+  /** Reservation details: confirmation number, name it's under, what's included. */
+  booking?: string;
+  /** For a stay: when you can check in and must check out, "HH:MM". */
+  checkIn?: string;
+  checkOut?: string;
   notes?: string;
   /** Opening hours as local clock times; "24h" for always open. */
   hours?: { open: string; close: string } | '24h';
@@ -170,7 +178,9 @@ export interface Todo {
   mine?: string;
   /** A group check: everyone ticks their own, and it's done when all of Who's going have. */
   everyone?: boolean;
-  /** Who has ticked a group check, by name. */
+  /** Who it's for, by name: each of them ticks their own, and it's done when all have. */
+  who?: string[];
+  /** Who has ticked a group check (or their part of an assigned one), by name. */
   checks?: string[];
 }
 
@@ -216,8 +226,13 @@ export interface Doc {
   at: string;
   /** Only on this phone, never uploaded. Private docs are not part of the trip. */
   private?: boolean;
+  /** Shared with only some people: kept apart from the trip, in its own table (sync/limitedDocs.ts). */
+  limited?: boolean;
+  /** For a limited doc: who added it, and who else may see it (account ids). */
+  owner?: string;
+  viewers?: string[];
   /** What it is for, so it shows there on the timeline: a plan item or a travel leg. */
-  for?: { kind: 'plan' | 'leg'; id: ID };
+  for?: { kind: 'plan' | 'leg' | 'place'; id: ID };
 }
 
 export interface Expense {

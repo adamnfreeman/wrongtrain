@@ -41,7 +41,8 @@ const listeners = new Set<() => void>();
 function load(): State {
   try {
     const s = JSON.parse(localStorage.getItem(KEY) || 'null') as State | null;
-    if (s && Array.isArray(s.trips)) return { ...s, sync: s.sync || {}, trips: s.trips.map(t => (!t.sample ? t : t.legs.some(l => l.id === 'l-now') ? freshenSample(keepSampleCurrent(t)) : makeSample(new Date()))) };
+    if (s && Array.isArray(s.trips)) return { ...s, sync: s.sync || {}, trips: s.trips.map(t => (!t.sample ? t : /* an older sample, without what's newer (Right now's train, the hotels' details), is made afresh */
+      t.legs.some(l => l.id === 'l-now') && t.places.some(p => p.id === 's-kyo' && p.booking) ? freshenSample(keepSampleCurrent(t)) : makeSample(new Date()))) };
   } catch { /* storage blocked or corrupt: start empty */ }
   return { trips: [], activeId: null, me: '', sync: {} };
 }
@@ -151,10 +152,10 @@ export function replaceTrip(t: Trip) {
   set({ trips: have ? state.trips.map(x => (x.id === t.id ? t : x)) : [...state.trips, t], activeId: t.id });
 }
 
-export function toggleTodo(tripId: string, todoId: string) {
+export function toggleTodo(tripId: string, todoId: string, as?: string) {
   const was = state.trips.find(t => t.id === tripId)?.todos.find(x => x.id === todoId);
   if (was) todoHook?.(tripId, todoId, !was.done);
-  patchTrip(tripId, t => tick(t, todoId, state.me));
+  patchTrip(tripId, t => tick(t, todoId, state.me, as));
 }
 
 /** Adds a group note and returns its id, or '' when there was nothing to add. */

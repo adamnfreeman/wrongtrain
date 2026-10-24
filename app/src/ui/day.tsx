@@ -1,6 +1,6 @@
 /* A day: its station board, plan, getting around, and where to eat. Plus the route list and the
    list items other screens reuse (legs, food, to-dos). */
-import { WhoGoing } from './planItem';
+import { Face, WhoGoing } from './planItem';
 import { JAPAN } from '../edition';
 import { useEffect, useRef } from 'react';
 import { centre, offCentre, useDock } from './dock';
@@ -10,7 +10,7 @@ import { cityOf, codeOf, lineOf, mapsLink, stayLine, destOf } from '../model/tri
 import { dayOfMonth, fmtHM, fmtT, longDate } from '../model/time';
 import { anchorsFor } from '../model/next';
 import { toggleTodo } from '../model/store';
-import { TODO_TAGS } from '../model/todos';
+import { TODO_TAGS, hasTicked, needs } from '../model/todos';
 import { Ext, Pill, Rich, SecH, Txt, line, Fold } from './bits';
 import { useApp } from './ctx';
 
@@ -247,16 +247,30 @@ export function VegToggle() {
 
 export function TodoItem({ t, brief }: { t: Todo; brief?: boolean }) {
   const { ix, edit, me } = useApp();
-  /* a group check is ticked per person: your box shows your tick, the line shows everyone's */
-  const mineTicked = t.everyone ? (t.checks || []).some(c => c.trim().toLowerCase() === (me || 'Me').trim().toLowerCase()) : t.done;
+  /* a group check or an assigned to-do is ticked per person: your box shows your tick, the faces
+     show everyone's (tap a face to tick for them); it's done when all of them have */
+  const need = needs(t, ix.trip);
+  /* with no name set on this phone, the box ticks for "Me" as it always has */
+  const forMe = !need || !me || need.some(n => n.trim().toLowerCase() === me.trim().toLowerCase());
+  const mineTicked = need ? hasTicked(t, me || 'Me') : t.done;
   const tag = TODO_TAGS.find(x => x.value === t.tag);
   return (
     <li className={'todo' + (t.done ? ' done' : '')}>
-      <button className="box" role="checkbox" aria-checked={mineTicked} aria-label={(mineTicked ? 'Untick: ' : 'Tick off: ') + t.text}
-        onClick={() => toggleTodo(ix.trip.id, t.id)}>{mineTicked ? '✓' : ''}</button>
+      <button className="box" role="checkbox" aria-checked={need && !forMe ? t.done : mineTicked} disabled={!forMe}
+        aria-label={!forMe ? `For ${need!.join(', ')}: ${t.text}` : (mineTicked ? 'Untick: ' : 'Tick off: ') + t.text}
+        onClick={() => toggleTodo(ix.trip.id, t.id)}>{(forMe ? mineTicked : t.done) ? '✓' : ''}</button>
       <div>
         <div className="item-h"><span className="item-n">{t.text}</span>{tag && <span className={'ttag t-' + tag.value}>{tag.label}</span>}{t.mine && <Pill>Just you</Pill>}</div>
-        {t.everyone && <div className="checks">Everyone: {(t.checks || []).length} of {ix.trip.travelers.length || '?'}{(t.checks || []).length ? ` · ${t.checks!.join(', ')}` : ''}</div>}
+        {need && need.length > 0 && (
+          <div className="checks">
+            <span className="tickfaces">{need.map(n => {
+              const on = hasTicked(t, n);
+              return <button key={n} type="button" className={'tickface' + (on ? ' on' : '')} aria-pressed={on} aria-label={`${n}: ${on ? 'done' : 'not yet'}`}
+                onClick={() => toggleTodo(ix.trip.id, t.id, n)}><Face tripId={ix.trip.id} name={n} size={24} />{on && <i>✓</i>}</button>;
+            })}</span>
+            <small>{t.everyone ? 'Everyone' : need.length === 1 ? `For ${need[0]}` : `For ${need.join(', ')}`} · {need.filter(n => hasTicked(t, n)).length} of {need.length} done</small>
+          </div>
+        )}
         {t.when && <div className="when">{t.when}</div>}
         {!brief && <Txt text={t.details} className="item-d" />}
         {!brief && (

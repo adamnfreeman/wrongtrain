@@ -44,7 +44,7 @@ check(kept, '... and the file is kept on the phone');
 await page.click('text=+ Add a document');
 await sheet.getByLabel('What it is').fill('Adam passport');
 await sheet.getByLabel('Kind').selectOption('id');
-check(await sheet.getByLabel('Private').isChecked(), 'an ID is private by default');
+check(await sheet.getByLabel('Who can see it').inputValue() === 'me', 'an ID is just yours, on this phone, by default');
 await sheet.locator('input[type=file]').setInputFiles({ name: 'passport.png', mimeType: 'image/png', buffer: PNG });
 await sheet.getByText('Save', { exact: true }).click();
 await page.waitForSelector('text=Adam passport');

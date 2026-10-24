@@ -524,9 +524,43 @@ insert into storage.buckets (id, name, public, file_size_limit)
   values ('trip-files', 'trip-files', false, 26214400)
   on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit;
 
+-- Documents shared with only some people on the trip (Wallet: "Who can see it"). They are kept
+-- apart from the trip, which everyone on it reads: a row, and its file under
+-- "<trip id>/limited/<doc id>/", can be seen only by who added it and the people they picked.
+create table if not exists public.trip_docs_limited (
+  id          text primary key,
+  trip_id     text not null references public.trips (id) on delete cascade,
+  owner       uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  viewers     uuid[] not null default '{}',
+  doc         jsonb not null,
+  updated_at  timestamptz not null default now()
+);
+create index if not exists trip_docs_limited_trip on public.trip_docs_limited (trip_id);
+alter table public.trip_docs_limited enable row level security;
+drop policy if exists "who added it and who it's for see a limited doc" on public.trip_docs_limited;
+create policy "who added it and who it's for see a limited doc" on public.trip_docs_limited for select to authenticated
+  using (public.is_member(trip_id) and (owner = auth.uid() or auth.uid() = any (viewers)));
+drop policy if exists "members add their own limited docs" on public.trip_docs_limited;
+create policy "members add their own limited docs" on public.trip_docs_limited for insert to authenticated
+  with check (owner = auth.uid() and public.is_member(trip_id));
+drop policy if exists "who added it changes a limited doc" on public.trip_docs_limited;
+create policy "who added it changes a limited doc" on public.trip_docs_limited for update to authenticated
+  using (owner = auth.uid()) with check (owner = auth.uid() and public.is_member(trip_id));
+drop policy if exists "who added it removes a limited doc" on public.trip_docs_limited;
+create policy "who added it removes a limited doc" on public.trip_docs_limited for delete to authenticated
+  using (owner = auth.uid());
+
+create or replace function public.can_see_doc(d text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from trip_docs_limited
+    where id = d and is_member(trip_id) and (owner = auth.uid() or auth.uid() = any (viewers)));
+$$;
+
+-- Everyone on the trip reads its files, except a limited document's, which only its people do.
 drop policy if exists "trip members read trip files" on storage.objects;
 create policy "trip members read trip files" on storage.objects for select to authenticated
-  using (bucket_id = 'trip-files' and public.is_member((storage.foldername(name))[1]));
+  using (bucket_id = 'trip-files' and public.is_member((storage.foldername(name))[1])
+    and ((storage.foldername(name))[2] is distinct from 'limited' or public.can_see_doc((storage.foldername(name))[3])));
 drop policy if exists "trip members add trip files" on storage.objects;
 create policy "trip members add trip files" on storage.objects for insert to authenticated
   with check (bucket_id = 'trip-files' and public.is_member((storage.foldername(name))[1]));

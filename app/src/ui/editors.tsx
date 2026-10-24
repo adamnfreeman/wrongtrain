@@ -14,7 +14,8 @@ import { addDays, daysBetween, longDate, todayIn } from '../model/time';
 import { PACKS, packForZones } from '../phrases';
 import { Sharing } from './account';
 import { SayPicker } from './requests';
-import { TODO_TAGS } from '../model/todos';
+import { TODO_TAGS, checkDone, needs } from '../model/todos';
+import { Face } from './planItem';
 import { Check, Choice, DeleteButton, Field, Lines, PinPicker, Segs, Sheet, Swatches, Text, ZonePicker, guessZone, phoneZone, zoneLabel } from './form';
 
 export type Edit =
@@ -23,7 +24,7 @@ export type Edit =
   | { kind: 'leg'; id?: string; dayId?: string }
   | { kind: 'place'; id?: string; as?: PlaceKind; dayId?: string; destinationId?: string }
   | { kind: 'todo'; id?: string; group?: string }
-  | { kind: 'doc'; id?: string; for?: { kind: 'plan' | 'leg'; id: string } }
+  | { kind: 'doc'; id?: string; for?: { kind: 'plan' | 'leg' | 'place'; id: string } }
   | { kind: 'expense'; id?: string }
   | { kind: 'plan'; dayId: string; id: string };
 
@@ -191,7 +192,18 @@ export function PlaceEditor({ trip, id, as, dayId, destinationId, close }: Props
       <Segs label="Kind" value={p.kind} onChange={v => up({ kind: v })} options={KINDS.map(k => ({ value: k, label: KIND_LABEL[k] }))} />
       {trip.destinations.length > 0 && <Choice label="Destination" value={p.destinationId || ''} onChange={v => up({ destinationId: v || undefined })}
         options={[...trip.destinations.map(d => ({ value: d.id, label: d.name })), { value: '', label: 'Somewhere else' }]} />}
-      <Text label="Area or address" value={p.area || ''} onChange={v => up({ area: v || undefined })} placeholder="e.g. Near Nishiki Market" />
+      <Text label="Area" value={p.area || ''} onChange={v => up({ area: v || undefined })} placeholder="e.g. Near Nishiki Market" />
+      <Text label="Address" value={p.address || ''} onChange={v => up({ address: v || undefined })} placeholder="Street address, for a taxi or a map" />
+      <Text label="Phone" type="tel" value={p.phone || ''} onChange={v => up({ phone: v || undefined })} placeholder="e.g. +81 75 123 4567" />
+      {(p.kind === 'stay' || p.kind === 'food' || p.kind === 'event') && (
+        <Text label="Reservation" multiline value={p.booking || ''} onChange={v => up({ booking: v || undefined })} placeholder="Confirmation number, name it's under, what's included" />
+      )}
+      {p.kind === 'stay' && (
+        <div className="frow">
+          <Text label="Check in from" type="time" value={p.checkIn || ''} onChange={v => up({ checkIn: v || undefined })} />
+          <Text label="Check out by" type="time" value={p.checkOut || ''} onChange={v => up({ checkOut: v || undefined })} />
+        </div>
+      )}
       <Text label="Notes" multiline value={p.notes || ''} onChange={v => up({ notes: v || undefined })} placeholder="Why go, what to order, when it's quietest" />
       <PinPicker lat={p.lat} lng={p.lng} near={near} onChange={c => up(c)} />
       <div className="field">
@@ -246,7 +258,12 @@ export function TodoEditor({ trip, id, group, close }: Props & { id?: string; gr
   const [newGroup, setNewGroup] = useState('');
   const up = (x: Partial<Todo>) => setT({ ...t, ...x });
   const g = t.group === '__new' ? newGroup.trim() : t.group;
-  const commit = () => { save(trip, tr => saveTodo(tr, { ...t, group: g, text: t.text.trim() })); close(); };
+  const commit = () => {
+    const next: Todo = { ...t, group: g, text: t.text.trim(), who: t.who?.length ? t.who : undefined };
+    /* changing who it's for can finish it (or reopen it) */
+    if (needs(next, trip)) next.done = checkDone(next, trip);
+    save(trip, tr => saveTodo(tr, next)); close();
+  };
   return (
     <Sheet title={orig ? 'Edit to-do' : 'New to-do'} onCancel={close} onSave={commit} canSave={!!(t.text.trim() && g)}
       footer={orig && <DeleteButton label="Delete this to-do" confirmText={`Delete “${t.text}”?`} onDelete={() => { save(trip, tr => deleteTodo(tr, t.id)); close(); }} />}>
@@ -254,9 +271,23 @@ export function TodoEditor({ trip, id, group, close }: Props & { id?: string; gr
       <Choice label="List" value={t.group} onChange={v => up({ group: v })}
         options={[...trip.todoGroups.map(x => ({ value: x, label: x })), { value: '__new', label: 'New list…' }]} />
       {t.group === '__new' && <Text label="Name of the new list" value={newGroup} onChange={setNewGroup} placeholder="e.g. Packing" />}
-      <Choice label="Who" value={t.everyone ? 'all' : t.mine ? 'me' : 'group'}
-        onChange={v => up({ everyone: v === 'all' || undefined, mine: v === 'me' ? (getState().me || 'Me') : undefined })}
-        options={[{ value: 'group', label: 'For the group: anyone ticks it' }, { value: 'all', label: 'Everyone does it: each person ticks their own' }, { value: 'me', label: 'Just me: only I see it' }]} />
+      <Choice label="Who" value={t.everyone ? 'all' : t.mine ? 'me' : t.who ? 'some' : 'group'}
+        onChange={v => up({ everyone: v === 'all' || undefined, mine: v === 'me' ? (getState().me || 'Me') : undefined, who: v === 'some' ? (t.who || []) : undefined })}
+        options={[{ value: 'group', label: 'For the group: anyone ticks it' }, { value: 'all', label: 'Everyone does it: each person ticks their own' },
+          ...(trip.travelers.length > 1 ? [{ value: 'some', label: 'Some people: pick who, each ticks their own' }] : []), { value: 'me', label: 'Just me: only I see it' }]} />
+      {t.who && (
+        <div className="whopick">
+          {trip.travelers.map(n => {
+            const on = t.who!.some(w => w.trim().toLowerCase() === n.trim().toLowerCase());
+            return (
+              <button key={n} type="button" className={'face' + (on ? '' : ' waiting')} aria-pressed={on}
+                onClick={() => up({ who: on ? t.who!.filter(w => w.trim().toLowerCase() !== n.trim().toLowerCase()) : [...t.who!, n] })}>
+                <Face tripId={trip.id} name={n} size={44} /><span>{n}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
       <div className="field"><span className="flabel">Kind</span>
         <div className="chips" style={{ marginTop: 0 }}>{TODO_TAGS.map(x => (
           <button key={x.value} type="button" className={'chipbtn plain ttag-pick t-' + x.value} aria-pressed={t.tag === x.value} onClick={() => up({ tag: t.tag === x.value ? undefined : x.value })}>{x.label}</button>

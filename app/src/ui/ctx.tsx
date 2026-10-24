@@ -5,11 +5,12 @@ import type { Geo } from './geo';
 import type { Edit } from './editors';
 import { JAPAN } from '../edition';
 
-export const TABS = ['today', 'days', 'photos', 'notes', 'shop', 'map', 'wallet', 'trip', 'transit', 'places', 'phrases', 'prep', 'now'] as const;
-const ALL_MAIN = ['today', 'days', 'photos', 'map', 'places', 'transit', 'wallet', 'phrases', 'prep', 'trip', 'shop', 'notes'] as const;
+export const TABS = ['today', 'days', 'essentials', 'photos', 'notes', 'map', 'wallet', 'trip', 'transit', 'places', 'phrases', 'prep', 'now'] as const;
+/* Shopping (ui/shop.tsx) is hidden until Adam has worked on it: add 'shop' back here and in TABS */
+const ALL_MAIN = ['today', 'days', 'essentials', 'photos', 'map', 'places', 'transit', 'wallet', 'phrases', 'prep', 'trip', 'notes'] as const;
 /** The tabs on the bottom bar, in order. Swiping moves between them. The Japan edition has no
     Wallet or Photos: what it saves stays on each phone, and that trip's group shares through the sheet. */
-export const MAIN_TABS: readonly (typeof ALL_MAIN)[number][] = JAPAN ? ALL_MAIN.filter(t => t !== 'wallet' && t !== 'photos' && t !== 'shop') : ALL_MAIN;
+export const MAIN_TABS: readonly (typeof ALL_MAIN)[number][] = JAPAN ? ALL_MAIN.filter(t => t !== 'wallet' && t !== 'photos') : ALL_MAIN;
 export type Tab = (typeof TABS)[number];
 
 export interface UI {

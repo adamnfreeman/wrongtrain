@@ -23,7 +23,7 @@ function at(destinationId: string | undefined, kind: Place['kind'], id: string, 
 const H = (open: string, close: string) => ({ hours: { open, close } });
 
 /* Kyoto */
-at('kyo', 'stay', 's-kyo', 'Your Kyoto hotel (Kawaramachi)', 35.0030, 135.7695, { area: 'Shijo-Kawaramachi', notes: 'Sample stay in the middle of downtown Kyoto. Swap in your own hotel.' });
+at('kyo', 'stay', 's-kyo', 'Your Kyoto hotel (Kawaramachi)', 35.0030, 135.7695, { area: 'Shijo-Kawaramachi', address: 'Shijo-dori, Shimogyo-ku, Kyoto', phone: '+81 75-000-0000', booking: 'Confirmation WT-20481, under Alex\nTwo rooms, breakfast included', checkIn: '15:00', checkOut: '11:00', notes: 'Sample stay in the middle of downtown Kyoto. Swap in your own hotel.' });
 at('kyo', 'transit', 'kyoto-st', 'Kyoto Station', 34.985849, 135.7587667, { notes: 'JR, Kintetsu and subway lines, plus the main bus terminal out front.' });
 at('kyo', 'transit', 'yamato-kyo', 'Yamato Transport, Kyoto Station Center', 34.988014, 135.7533269, { ...H('08:00', '20:00'), notes: 'Luggage forwarding (takkyubin). Bags dropped by 10 AM arrive at an Osaka hotel the same evening.' });
 at('kyo', 'sight', 'fushimi', 'Fushimi Inari Taisha', 34.9676945, 135.7791876, { hours: '24h', notes: 'Thousands of red torii gates winding up Mount Inari. Free and always open. Before 8 AM you have the lower gates nearly to yourself; the full loop to the summit takes 2–3 hours.' });
@@ -52,7 +52,7 @@ at('nar', 'sight', 'todaiji', 'Tōdai-ji', 34.6889851, 135.8398158, { ...H('07:3
 at('nar', 'shop', 'higashimuki', 'Higashimuki Shopping Street', 34.6831902, 135.8287538, { notes: 'Covered arcade from the station toward the park. Watch the high-speed mochi pounding at Nakatanidou.' });
 
 /* Osaka */
-at('osa', 'stay', 's-osa', 'Your Osaka hotel (Shinsaibashi)', 34.6742, 135.5015, { area: 'Shinsaibashi', notes: 'Sample stay between Shinsaibashi and Dotonbori. Swap in your own hotel.' });
+at('osa', 'stay', 's-osa', 'Your Osaka hotel (Shinsaibashi)', 34.6742, 135.5015, { area: 'Shinsaibashi', address: 'Shinsaibashi-suji, Chuo-ku, Osaka', phone: '+81 6-0000-0000', booking: 'Confirmation WT-33910, under Sam', checkIn: '15:00', checkOut: '10:00', notes: 'Sample stay between Shinsaibashi and Dotonbori. Swap in your own hotel.' });
 at('osa', 'transit', 'namba', 'Osaka-Namba Station', 34.6657531, 135.5010362);
 at('osa', 'transit', 'shin-osaka', 'Shin-Osaka Station', 34.7334658, 135.5002547, { notes: 'Shinkansen station, 15 minutes north of Namba on the Midosuji subway line.' });
 at('osa', 'area', 'dotonbori', 'Dotonbori', 34.6686471, 135.5030983, { notes: 'Neon canal street of giant signs and street food: takoyaki, okonomiyaki, kushikatsu. Best after dark.' });
@@ -72,7 +72,7 @@ at('osa', 'food', 'mizuno', 'Mizuno', null, null, { area: 'Dotonbori', diet: 've
 at('osa', 'food', 'daruma', 'Kushikatsu Daruma', null, null, { area: 'Dotonbori', diet: 'veg-some', dietNote: 'Veggie skewers available', notes: 'Deep-fried skewers, and the famous rule: never double-dip in the shared sauce.' });
 
 /* Tokyo */
-at('tok', 'stay', 's-tok', 'Your Tokyo hotel (Nihonbashi)', 35.6855, 139.7790, { area: 'Nihonbashi', notes: 'Sample stay in quiet, central Nihonbashi. Swap in your own hotel.' });
+at('tok', 'stay', 's-tok', 'Your Tokyo hotel (Nihonbashi)', 35.6855, 139.7790, { area: 'Nihonbashi', address: 'Nihonbashi, Chuo-ku, Tokyo', phone: '+81 3-0000-0000', booking: 'Confirmation WT-77102, under Jordan\nLate check-out asked for', checkIn: '15:00', checkOut: '11:00', notes: 'Sample stay in quiet, central Nihonbashi. Swap in your own hotel.' });
 at('tok', 'transit', 'tokyo-st', 'Tokyo Station', 35.681236, 139.767125);
 at(undefined, 'transit', 'narita', 'Narita Airport', 35.770178, 140.3843215);
 at('tok', 'sight', 'sensoji', 'Sensō-ji, Asakusa', 35.7147651, 139.7966553, { hours: '24h', notes: 'Tokyo\'s oldest temple. The grounds are always open; the main hall from 6 AM. Draw an omikuji fortune for ¥100.' });
@@ -274,14 +274,14 @@ const legs: Omit<Leg, 'id'>[] = [
 
 const todos: Omit<Todo, 'id'>[] = [
   { group: 'Before the trip', text: 'Check passports', details: 'Valid for the whole trip, with blank pages. Some airlines want six months left.', when: 'Now', done: true },
-  { group: 'Before the trip', text: 'Register on Visit Japan Web', details: 'One registration per traveller; gives the QR codes for immigration and customs.', when: 'A week before', done: false, link: 'https://www.vjw.digital.go.jp/' },
+  { group: 'Before the trip', text: 'Register on Visit Japan Web', details: 'One registration per traveller; gives the QR codes for immigration and customs.', when: 'A week before', done: false, link: 'https://www.vjw.digital.go.jp/', everyone: true, checks: ['Sam', 'Riley'] },
   { group: 'Before the trip', text: 'Add an IC card to your phone', details: 'Suica, PASMO or ICOCA in Apple Wallet. Top it up with ¥5,000 to start.', when: 'Before you fly', done: false },
   { group: 'Before the trip', text: 'Set up an eSIM', details: 'Install before you leave so data works the moment you land.', when: 'Before you fly', done: false },
   { group: 'Before the trip', text: 'Book teamLab Biovortex', details: 'Timed tickets sell out on weekends.', when: 'Two weeks before', done: true },
   { group: 'Before the trip', text: 'Reserve shinkansen seats', details: 'Smart EX opens one month ahead. Ask for seat E for Mt. Fuji.', when: 'One month before', done: true },
   { group: 'Before the trip', text: 'Tell your bank you are travelling', when: 'A week before', done: false },
   { group: 'Before the trip', text: 'Download offline maps', details: 'Google Maps offline areas for Kyoto, Osaka and Tokyo, and the Japanese pack in Google Translate.', when: 'Before you fly', done: false },
-  { group: 'During the trip', text: 'Send big bags ahead to Osaka', details: 'Yamato counter at Kyoto Station by 10 AM.', when: 'Day 4', done: false },
+  { group: 'During the trip', text: 'Send big bags ahead to Osaka', details: 'Yamato counter at Kyoto Station by 10 AM.', when: 'Day 4', done: false, who: ['Alex', 'Jordan'], checks: ['Jordan'] },
   { group: 'During the trip', text: 'Book the Narita Express', when: 'By day 8', done: false },
   { group: 'During the trip', text: 'Get yen from a 7-Eleven ATM', details: 'Small shops, temples and food stalls are often cash only.', when: 'Day 1', done: false },
 ];

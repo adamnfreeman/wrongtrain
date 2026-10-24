@@ -32,4 +32,15 @@ describe('to-do kinds', () => {
     const t = tick(trip(), 'n', 'Jordan');
     expect(t.todos[2]).toMatchObject({ done: true, doneBy: 'Jordan' });
   });
+  it('an assigned to-do is done when each person it is for has ticked it', () => {
+    let t: Trip = { ...trip(), todos: [{ id: 'a', group: 'Before the trip', text: 'Passport photos', done: false, who: ['Alex', 'Sam'] }] };
+    t = tick(t, 'a', 'Alex');
+    expect(t.todos[0].done).toBe(false);
+    /* someone else can tick for Sam by tapping Sam's face */
+    t = tick(t, 'a', 'Jordan', 'Sam');
+    expect(t.todos[0].checks).toEqual(['Alex', 'Sam']);
+    expect(t.todos[0].done).toBe(true);
+    t = tick(t, 'a', 'Alex');
+    expect(t.todos[0].done).toBe(false);
+  });
 });

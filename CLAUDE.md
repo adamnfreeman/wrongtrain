@@ -185,6 +185,16 @@ on a Mac.
   `PLANNER_MODEL` (now `claude-haiku-5-5`) and `PLAN_TESTERS` secrets; see
   `app/supabase/functions/README.md`. **Before launch:** delete `PLANNER_MODEL` (back to the best model) and hide test mode.
 
+- Oct 24: **Essentials** tab after Days (`src/ui/essentials.tsx`): where you're staying (nights,
+  check-in and out, address, phone, reservation, booking files; places now have `address`, `phone`,
+  `booking`, `checkIn`, `checkOut`), flights and trains, reservations (booked plan items) and
+  emergency numbers by country, each one line until tapped. A small weather line on Today
+  (`src/ui/weather.tsx`, Open-Meteo, no key; the first day's forecast before the trip). To-dos can be
+  for some people (`who`), each ticks their own, with faces showing who has (tap a face to tick for
+  them; `needs` in `src/model/todos.ts`). Documents can be shared with only some people
+  (`trip_docs_limited` in schema.sql, files under `<trip>/limited/<doc>/`, `src/sync/limitedDocs.ts`;
+  the database hides them from everyone else). The Shopping tab is hidden (`ALL_MAIN` in `src/ui/ctx.tsx`).
+
 ## Commands (in `app/`)
 
 ```
@@ -314,13 +324,6 @@ Next:
    (Places category tiles, Something nearby moods, the planner's choices, stars and hearts) with a
    custom icon set in WrongTrain's style, like the bottom bar's line icons. With Andrea.
 
-70. **An Info tab for quick reference** (feedback, Oct 24): just the essentials in one place: each
-   hotel's address and phone, reservation numbers, key phone numbers, without opening each day.
-71. **Documents shared with only some people** (feedback, Oct 23): today a document is private (this
-   phone) or the whole trip's; let the person adding it pick who sees it (`trip.docs`, `wallet.tsx`).
-72. **Weather** (feedback, Oct 23): the forecast for each day's city, on Today and the Days pages.
-73. **Assign to-dos to someone** (feedback, Oct 23): a to-do can have a person (or a few) it's for,
-   with "Mine" to filter (`src/model/todos.ts`; personal and group-check to-dos exist already).
 74. **Sign in with Google, Facebook, Apple; invites by person, not codes** (feedback, Oct 23): sign in
    with a standard account, and the owner invites people (by email) and adds or removes them,
    instead of sharing trip codes. Apple needs the developer account (see 11); Google and Facebook
