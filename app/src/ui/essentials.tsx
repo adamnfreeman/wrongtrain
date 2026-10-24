@@ -164,7 +164,6 @@ export function Essentials() {
         <div className="ess-rest">
           <span>{missing === 1 ? 'One hotel or booking is' : `${missing} hotels and bookings are`} missing an address, phone or website.</span>
           <button className="chipbtn go" disabled={looking} onClick={findRest}>{looking ? 'Looking…' : 'Find the rest online'}</button>
-          <small>Uses one of the trip's AI uses.</small>
         </div>
       )}
       {!stays.length && !legs.length && !bookings.length && <Empty>Add where you're staying, your flights and trains, and booked plans; they'll gather here.</Empty>}

@@ -206,6 +206,10 @@ on a Mac.
   Passport reminders: on the iPhone, a local notification 3 hours before each booked flight ("Do you
   have your passport?"; `src/model/reminders.ts`, `src/sync/reminders.ts`,
   @capacitor/local-notifications; home time for a flight before the first city).
+- iPad (Oct 24, a first version for Andrea to adjust): the iOS app runs on iPhone and iPad
+  (`TARGETED_DEVICE_FAMILY = "1,2"`, all iPad orientations in Info.plist). From 760 px wide a sidebar
+  replaces the bottom bar (`.side` in App.tsx), pages widen, editors open as a centred panel, and from
+  1080 px Essentials, To do, Transit, Trip and Wallet flow into two columns (end of `src/index.css`).
 
 ## Commands (in `app/`)
 
@@ -341,6 +345,9 @@ Next:
    instead of sharing trip codes. Apple needs the developer account (see 11); Google and Facebook
    need their own app registrations and Supabase providers switched on.
 
+76. **Notes becomes Journal, with personal reviews** (Adam, Oct 24): rename the Notes tab to Journal. On a
+   hotel, restaurant or place you went, tap to give it a rating and write a review or a few words;
+   it's logged in your journal by itself (with the day and place).
 75. **Emails from a proper sender** (Adam, Oct 24): sign-in emails come from info@wrongtrain.lol, an
    alias sending through adam@thefreemans.io, so Gmail shows Adam's picture. Move to an email
    service (Resend or Postmark: DNS records at Namecheap, the key in Supabase's SMTP settings), which

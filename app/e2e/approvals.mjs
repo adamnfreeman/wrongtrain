@@ -61,7 +61,7 @@ await page.screenshot({ path: `${OUT}/a-1-sent.png` });
 await page.click('.tab:has-text(\"To do\")');
 check(await page.locator('#requests >> text=Waiting for approval').count() === 1, 'To do lists it under Waiting for approval');
 check(await page.locator('#requests >> text=waiting for signal').count() === 1, '... marked as waiting for signal');
-check(await page.locator('.tabn').count() === 0, 'no badge for someone who cannot approve');
+check(await page.locator('.tabs .tabn').count() === 0, 'no badge for someone who cannot approve');
 await page.screenshot({ path: `${OUT}/a-2-waiting.png` });
 
 /* additions go straight in */
@@ -126,7 +126,7 @@ await op.evaluate(([t, s]) => {
 }, [trip, session]);
 await op.reload();
 await op.waitForSelector('.tabn', { timeout: 10000 }).catch(() => {});
-check(await op.locator('.tabn').textContent().catch(() => '') === '1', 'the owner sees a badge on To do');
+check(await op.locator('.tabs .tabn').textContent().catch(() => '') === '1', 'the owner sees a badge on To do');
 await op.click('.tab:has-text(\"To do\")');
 check(await op.locator('#requests >> text=Waiting for your OK').count() === 1, '... and the request, waiting for her OK');
 check(await op.locator('#requests >> text=Rename the trip to “Lisboa”').count() === 1, '... in words');
@@ -137,7 +137,7 @@ check(decided && decided.approve === true && decided.base_version === 3, 'approv
 check(saved && saved.name === 'Lisboa' && saved.days.length === trip.days.length, '... sending the trip with the change made');
 const mine = await op.evaluate(() => JSON.parse(localStorage.getItem('wrongtrain')));
 check(mine.trips[0].name === 'Lisboa' && mine.sync[trip.id].version === 4 && !mine.sync[trip.id].dirty, '... and her phone has it, saved at the new version');
-check(await op.locator('.tabn').count() === 0, 'the badge goes once it is decided');
+check(await op.locator('.tabs .tabn').count() === 0, 'the badge goes once it is decided');
 await op.click('.tab:has-text("Trip")').then(() => op.click('.hubrows button:has-text("Trip settings")'));
 await op.locator('.sheet-wrap').last().waitFor();
 check(await op.locator('.sheet-wrap .sayopt').count() === 3 && await op.locator('.sheet-wrap .sayopt[aria-checked="true"]:has-text("near the hotels")').count() === 1, 'the owner can set the level people join with');

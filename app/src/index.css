@@ -706,3 +706,45 @@ details.ess[open] .ess-chev { transform: rotate(90deg) }
 hr.sep { border: 0; height: 4px; border-radius: 2px; background: var(--rule); margin: 28px 0 20px }
 .ess-rest { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 12px 0 4px; padding: 12px 14px; border: 1px solid var(--rule); border-radius: 12px; background: var(--card); font-size: 14px }
 .ess-rest small { width: 100%; color: var(--muted); font-size: 12.5px; margin-top: -4px }
+
+/* ---------- wide screens: iPad and computers ----------
+   A sidebar replaces the bottom bar, pages get wider, and list pages flow into two columns. The
+   pager still holds every page side by side; it just starts after the sidebar. */
+.side { display: none }
+@media (min-width: 760px) {
+  :root { --side: 216px }
+  .tabs, .tabpeek { display: none }
+  .side { display: flex; flex-direction: column; gap: 2px; position: fixed; top: 0; bottom: 0; left: 0; width: var(--side); z-index: 1000;
+    padding: calc(16px + env(safe-area-inset-top, 0px)) 10px calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--card);
+    border-right: 1px solid var(--rule); overflow-y: auto }
+  .side-brand { display: flex; align-items: center; gap: 10px; padding: 4px 10px 14px; font: 800 16px/1.2 var(--f-display); color: var(--ink) }
+  .side-brand img { width: 26px; height: 26px; border-radius: 7px; flex: none }
+  .sidetab { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border: 0; border-radius: 10px;
+    background: none; color: var(--muted); font: 600 15px var(--f-body); text-align: left; cursor: pointer }
+  .sidetab svg { width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round }
+  .sidetab:hover { color: var(--ink); background: var(--chip) }
+  .sidetab[aria-current="page"] { color: var(--ink); background: var(--chip) }
+  .sidetab[aria-current="page"] svg { color: var(--accent) }
+  .sidetab.tab-now { color: var(--accent) }
+  .sidetab .tabn { position: static; margin-left: auto }
+  .pager { left: var(--side) }
+  .statusbg { left: var(--side) }
+  .addfab { bottom: calc(24px + env(safe-area-inset-bottom, 0px)); right: 24px }
+  .pane > .wrap { max-width: 760px; padding-inline: 28px; padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px)) }
+  .ptr { left: calc(50% + var(--side) / 2) }
+  .map { height: min(70vh, 720px) }
+  .pgrid { grid-template-columns: repeat(4, 1fr) }
+  /* editors open as a centred panel rather than covering the whole screen */
+  .sheet-wrap { inset: 4vh max(16px, calc(50% - 360px)); border: 1px solid var(--rule); border-radius: 16px; box-shadow: 0 0 0 100vmax rgba(0,0,0,.55), 0 30px 80px rgba(0,0,0,.4); overflow: hidden }
+}
+/* landscape iPad and computers: list pages in two columns */
+@media (min-width: 1080px) {
+  .pane > .wrap { max-width: 1120px }
+  .pane[data-tab="essentials"] > .wrap, .pane[data-tab="prep"] > .wrap, .pane[data-tab="transit"] > .wrap,
+  .pane[data-tab="trip"] > .wrap, .pane[data-tab="wallet"] > .wrap { columns: 2; column-gap: 32px }
+  .pane[data-tab="essentials"] > .wrap > *, .pane[data-tab="prep"] > .wrap > *, .pane[data-tab="transit"] > .wrap > *,
+  .pane[data-tab="trip"] > .wrap > *, .pane[data-tab="wallet"] > .wrap > * { break-inside: avoid }
+  .pane > .wrap > .page-h, .pane > .wrap > .seg, .pane > .wrap > hr.sep, .pane > .wrap > .lede, .pane > .wrap > .note:first-of-type { column-span: all }
+  .pane[data-tab="days"] > .wrap, .pane[data-tab="today"] > .wrap, .pane[data-tab="now"] > .wrap { max-width: 860px }
+  .pgrid { grid-template-columns: repeat(6, 1fr) }
+}
