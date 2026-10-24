@@ -40,7 +40,6 @@ export function Phrases() {
   return (
     <>
       <h1 className="page-h">Phrases</h1>
-      <p className="lede">{pack.intro}</p>
       <Translator pack={pack} />
       <h2 className="sub-h">Phrases</h2>
       <div className="sbar"><div className="sin">
@@ -126,20 +125,19 @@ function Translator({ pack }: { pack: PhrasePack }) {
   const [caps, setCaps] = useState<AppleCaps | null>(null);
   useEffect(() => { void appleCaps().then(setCaps); }, []);
   const [out, setOut] = useState<{ from: string; to: string }[]>([]);
-  const [fromCamera, setFromCamera] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const lang = pack.name.replace(/ phrases?$/i, '');
   const here = !!caps?.translate, cam = !!caps?.scanner && here;
   const run = async (source: string, target: string) => {
-    setBusy(true); setMsg(''); setFromCamera(false);
+    setBusy(true); setMsg('');
     try { const t = await translateOnPhone([text.trim()], target, source); setOut([{ from: text.trim(), to: t[0] || '' }]); }
     catch (e) { setMsg((e as Error).message || "Couldn't translate that."); }
     setBusy(false);
   };
   const camera = async () => {
     setMsg('');
-    try { const r = await scanText([pack.lang, 'en']); if (r.pairs?.length) { setOut(r.pairs); setFromCamera(true); } }
+    try { const r = await scanText([pack.lang, 'en']); if (r.pairs?.length) { setOut(r.pairs); } }
     catch (e) { setMsg((e as Error).message || "Couldn't open the camera."); }
   };
   const cameraIcon = <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5h3l1.6-2.5h6.8L17 8.5h3v10.5H4z" /><circle cx="12" cy="13.5" r="3.4" /></svg>;
@@ -166,7 +164,6 @@ function Translator({ pack }: { pack: PhrasePack }) {
       {out.length > 0 && (
         <ul className="sheet transout">{out.map((o, i) => <li key={i}><div className="item-n">{o.to}</div><div className="when">{o.from}</div></li>)}</ul>
       )}
-      {fromCamera && <p className="fhint">A whole menu at once? <Ext href={`https://translate.google.com/?sl=${pack.lang}&tl=en&op=images`}>Google Translate's camera</Ext> does that better.</p>}
       {msg && <p className="geomsg bad">{msg}</p>}
     </section>
   );

@@ -10,6 +10,7 @@ import SwiftUI
 import AVFoundation
 import Capacitor
 import VisionKit
+import NaturalLanguage
 #if canImport(Translation)
 import Translation
 #endif
@@ -149,6 +150,7 @@ public class WrongTrainNativePlugin: CAPPlugin, CAPBridgedPlugin {
 final class ScanController: UIViewController, DataScannerViewControllerDelegate {
     private let scanner: DataScannerViewController
     private let target: String
+    private let fallback: String
     private let finish: ([[String: String]]) -> Void
     private var pairs: [[String: String]] = []
     private var done = false
@@ -163,6 +165,7 @@ final class ScanController: UIViewController, DataScannerViewControllerDelegate 
                                             recognizesMultipleItems: true, isHighFrameRateTrackingEnabled: false,
                                             isPinchToZoomEnabled: true, isGuidanceEnabled: true, isHighlightingEnabled: true)
         self.target = target
+        self.fallback = languages.first ?? "ja"
         self.finish = finish
         super.init(nibName: nil, bundle: nil)
     }
@@ -193,17 +196,28 @@ final class ScanController: UIViewController, DataScannerViewControllerDelegate 
         doneButton.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(doneButton)
 
+        /* the translation: a card at the bottom that grows with the text up to about half the
+           screen, then scrolls; Done stays above it, so there's always a way out */
         card.backgroundColor = UIColor(red: 0.09, green: 0.11, blue: 0.13, alpha: 0.96)
         card.layer.cornerRadius = 16
+        card.clipsToBounds = true
         card.isHidden = true
         card.translatesAutoresizingMaskIntoConstraints = false
-        toLabel.textColor = .white; toLabel.numberOfLines = 0; toLabel.font = .systemFont(ofSize: 21, weight: .bold)
-        fromLabel.textColor = UIColor(white: 0.7, alpha: 1); fromLabel.numberOfLines = 0; fromLabel.font = .systemFont(ofSize: 15)
+        toLabel.textColor = .white; toLabel.numberOfLines = 0; toLabel.font = .systemFont(ofSize: 17, weight: .semibold)
+        fromLabel.textColor = UIColor(white: 0.7, alpha: 1); fromLabel.numberOfLines = 0; fromLabel.font = .systemFont(ofSize: 13)
         let stack = UIStackView(arrangedSubviews: [toLabel, fromLabel])
-        stack.axis = .vertical; stack.spacing = 6; stack.translatesAutoresizingMaskIntoConstraints = false
-        card.addSubview(stack)
+        stack.axis = .vertical; stack.spacing = 4; stack.translatesAutoresizingMaskIntoConstraints = false
+        let scroll = UIScrollView()
+        scroll.translatesAutoresizingMaskIntoConstraints = false
+        scroll.alwaysBounceVertical = false
+        scroll.addSubview(stack)
+        card.addSubview(scroll)
         view.addSubview(card)
+        view.bringSubviewToFront(hint)
+        view.bringSubviewToFront(doneButton)
 
+        let fit = card.heightAnchor.constraint(equalTo: stack.heightAnchor, constant: 24)
+        fit.priority = .defaultHigh
         NSLayoutConstraint.activate([
             hint.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 12),
             hint.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
@@ -214,10 +228,18 @@ final class ScanController: UIViewController, DataScannerViewControllerDelegate 
             card.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             card.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             card.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
-            stack.topAnchor.constraint(equalTo: card.topAnchor, constant: 16),
-            stack.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -16),
-            stack.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 16),
-            stack.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -16),
+            card.heightAnchor.constraint(lessThanOrEqualTo: view.heightAnchor, multiplier: 0.45),
+            card.topAnchor.constraint(greaterThanOrEqualTo: hint.bottomAnchor, constant: 16),
+            fit,
+            scroll.topAnchor.constraint(equalTo: card.topAnchor, constant: 12),
+            scroll.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -12),
+            scroll.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 14),
+            scroll.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -14),
+            stack.topAnchor.constraint(equalTo: scroll.contentLayoutGuide.topAnchor),
+            stack.bottomAnchor.constraint(equalTo: scroll.contentLayoutGuide.bottomAnchor),
+            stack.leadingAnchor.constraint(equalTo: scroll.contentLayoutGuide.leadingAnchor),
+            stack.trailingAnchor.constraint(equalTo: scroll.contentLayoutGuide.trailingAnchor),
+            stack.widthAnchor.constraint(equalTo: scroll.frameLayoutGuide.widthAnchor),
         ])
     }
 
@@ -236,8 +258,17 @@ final class ScanController: UIViewController, DataScannerViewControllerDelegate 
         fromLabel.text = line
         guard #available(iOS 18.0, *) else { toLabel.text = "Translating needs iOS 18."; return }
         worker?.willMove(toParent: nil); worker?.view.removeFromSuperview(); worker?.removeFromParent()
-        /* no source language: each line's own is detected */
-        let config = TranslationSession.Configuration(source: nil, target: Locale.Language(identifier: target))
+        /* the translator needs to be told the line's language (it won't start without one): detected
+           here, since menus mix Japanese and English, else the trip's language */
+        let rec = NLLanguageRecognizer()
+        rec.processString(line)
+        let source = rec.dominantLanguage?.rawValue ?? fallback
+        if source.hasPrefix(target) || (source == "und" && line.allSatisfy { $0.isASCII }) {
+            toLabel.text = line
+            fromLabel.text = "Already in English"
+            return
+        }
+        let config = TranslationSession.Configuration(source: Locale.Language(identifier: source == "und" ? fallback : source), target: Locale.Language(identifier: target))
         let h = UIHostingController(rootView: TranslateHost(config: config, texts: [line]) { [weak self] out, err in
             DispatchQueue.main.async {
                 guard let self, self.fromLabel.text == line else { return }
