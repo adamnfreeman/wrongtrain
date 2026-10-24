@@ -326,6 +326,11 @@ Next:
    instead of sharing trip codes. Apple needs the developer account (see 11); Google and Facebook
    need their own app registrations and Supabase providers switched on.
 
+75. **Emails from a proper sender** (Adam, Oct 24): sign-in emails come from info@wrongtrain.lol, an
+   alias sending through adam@thefreemans.io, so Gmail shows Adam's picture. Move to an email
+   service (Resend or Postmark: DNS records at Namecheap, the key in Supabase's SMTP settings), which
+   also lifts Gmail's ~2,000 a day limit before launch. Or give info@ its own Workspace seat with the icon.
+
 ## Working together
 
 Two people work on this at once: Adam (adam@thefreemans.io, the technical side) and Andrea
