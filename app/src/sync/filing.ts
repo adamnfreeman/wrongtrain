@@ -9,6 +9,8 @@ import { getState, patchTrip } from '../model/store';
 import { addPart, hasPlanPart, planIsIn, planPart, prepareFiling, undoFiling, type Filed, type Filing } from '../model/filing';
 import { supabase } from './engine';
 import { findPins } from './maptiler';
+import { appleCaps, quickFileOnPhone } from './apple';
+import { QUICK_SYSTEM, needsClaude, quickFiling, quickPrompt } from '../model/quickFile';
 
 export type NoteFiling =
   | { state: 'busy' }
@@ -38,12 +40,22 @@ export async function fileNote(tripId: string, noteId: string): Promise<void> {
   const note = getState().trips.find(t => t.id === tripId)?.notes.find(n => n.id === noteId);
   if (!note || filings[noteId]?.state === 'busy') return;
   set(noteId, { state: 'busy' });
-  /* a screenshot has to be in the trip's storage before Claude can read it */
-  if (note.image) await sendWaiting();
-  const { data, error } = await supabase.functions.invoke<Filing & { left?: number }>('file-note', {
-    body: { trip_id: tripId, note: { text: note.text, author: note.author, ...(note.image ? { image: note.image.path } : {}) } },
-  });
-  if (error || !data) return set(noteId, { state: 'error', message: await errorText(error) });
+  /* a simple note (a plain task, one named place) is filed by the iPhone's own model when it has one:
+     free, with no signal; anything else, or if it isn't sure, goes to Claude */
+  let data: (Filing & { left?: number }) | null = null;
+  const tripNow = getState().trips.find(t => t.id === tripId);
+  if (tripNow && !note.image && !needsClaude(note.text) && (await appleCaps()).ai) {
+    try { data = quickFiling(tripNow, await quickFileOnPhone(QUICK_SYSTEM, quickPrompt(tripNow, note.text))); } catch { data = null; }
+  }
+  if (!data) {
+    /* a screenshot has to be in the trip's storage before Claude can read it */
+    if (note.image) await sendWaiting();
+    const r = await supabase.functions.invoke<Filing & { left?: number }>('file-note', {
+      body: { trip_id: tripId, note: { text: note.text, author: note.author, ...(note.image ? { image: note.image.path } : {}) } },
+    });
+    if (r.error || !r.data) return set(noteId, { state: 'error', message: await errorText(r.error) });
+    data = r.data;
+  }
 
   const trip = getState().trips.find(t => t.id === tripId);
   if (!trip?.notes.some(n => n.id === noteId)) return set(noteId, null);

@@ -1,15 +1,17 @@
 /* Looks around you for a mood (see supabase/functions/_shared/nearby.ts): real places from
-   OpenStreetMap, then Claude's five on a shared trip, or the five nearest otherwise. Your
-   location goes to OpenStreetMap only when you pick a mood; Claude sees the list of places. */
+   OpenStreetMap, then five chosen: by the iPhone's own model when it has one (free, on the phone),
+   else Claude's on a shared trip, else the five nearest. Your location goes to OpenStreetMap only
+   when you pick a mood; Claude sees the list of places. */
 import { getState } from '../model/store';
-import { candidatesFrom, overpassQuery, type Candidate, type Mood, type Pick } from '../../supabase/functions/_shared/nearby.ts';
+import { NEARBY_SYSTEM, candidatesFrom, cleanPicks, nearbyPrompt, overpassQuery, type Candidate, type Mood, type Pick } from '../../supabase/functions/_shared/nearby.ts';
+import { appleCaps, pickNearbyOnPhone } from './apple';
 import { supabase } from './engine';
 
 export interface Suggestion extends Candidate { why?: string }
 export interface Found {
   items: Suggestion[];
-  /** Who chose: Claude, or simply the nearest. */
-  by: 'claude' | 'nearest';
+  /** Who chose: Claude, the iPhone's own model, or simply the nearest. */
+  by: 'claude' | 'phone' | 'nearest';
   /** Why Claude did not choose, when it did not. */
   note?: string;
   left?: number;
@@ -44,13 +46,23 @@ export async function findNearby(tripId: string, mood: Mood, pos: { lat: number;
   const nearest = (note?: string): Found => ({ items: candidates.slice(0, 5), by: 'nearest', note });
   if (!candidates.length) return { items: [], by: 'nearest' };
 
+  const localTime = new Date().toLocaleString('en-GB', { weekday: 'short', hour: '2-digit', minute: '2-digit' });
+  /* the iPhone's own model, when it has one: free, and works with no signal */
+  if ((await appleCaps()).ai) {
+    try {
+      const picks = cleanPicks(await pickNearbyOnPhone(NEARBY_SYSTEM, nearbyPrompt(mood, localTime, candidates)), candidates);
+      const byId = new Map(candidates.map(c => [c.id, c]));
+      const items = picks.flatMap(p => (byId.has(p.id) ? [{ ...byId.get(p.id)!, why: p.why }] : []));
+      if (items.length) return { items, by: 'phone' };
+    } catch { /* falls through to Claude, or the nearest */ }
+  }
+
   const s = getState(), shared = !!s.sync[tripId];
   const { data: { session } } = await supabase.auth.getSession();
   if (s.trips.find(t => t.id === tripId)?.sample) return nearest('On your own shared trips, WrongTrain picks the best five and says why.');
   if (!shared) return nearest('Share this trip and WrongTrain picks the best five and says why.');
   if (!session) return nearest('Sign in and WrongTrain picks the best five and says why.');
 
-  const localTime = new Date().toLocaleString('en-GB', { weekday: 'short', hour: '2-digit', minute: '2-digit' });
   const { data, error } = await supabase.functions.invoke<{ picks: Pick[]; left?: number }>('suggest-nearby', {
     body: { trip_id: tripId, mood, local_time: localTime, candidates },
   });

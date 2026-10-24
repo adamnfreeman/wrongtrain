@@ -96,7 +96,7 @@ export function Nearby({ inline = false }: { inline?: boolean }) {
               );
             })}
           </ul>
-          <p className="geomsg">{found.by === 'claude' ? 'Picked for you from ' : 'From '}places on OpenStreetMap (© OpenStreetMap contributors). Check opening hours before you go.</p>
+          <p className="geomsg">{found.by !== 'nearest' ? 'Picked for you from ' : 'From '}places on OpenStreetMap (© OpenStreetMap contributors). Check opening hours before you go.</p>
         </>
       )}
     </section>

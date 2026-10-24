@@ -239,6 +239,13 @@ on a Mac.
   starting a trip (Plan a trip for me, Plan it myself, Start from the sample) needs an account, the
   sample doesn't. The code box offers the emailed code (`one-time-code`). Tests skip the sign-in step
   with `wt-test-open` in localStorage.
+- The iPhone's own abilities (Oct 24; `ios/App/App/WrongTrainNative.swift`, registered by
+  `WTBridgeViewController`; `src/sync/apple.ts`): the camera reads menus and signs (VisionKit, live
+  outlines; tap Translate or one line), Apple's Translation translates on the phone (Phrases:
+  "Translate a menu or sign" and the typed box; a language downloads once), and Apple's on-device model
+  (Foundation Models, iOS 26+ with Apple Intelligence) does small jobs for free: picking the five
+  nearby places, and filing a plain task or one named place (`src/model/quickFile.ts`; anything with a
+  day, time, booking or search goes to Claude). Elsewhere it falls back to Google Translate and Claude.
 
 ## Commands (in `app/`)
 

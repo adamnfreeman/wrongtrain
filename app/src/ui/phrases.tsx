@@ -7,6 +7,7 @@ import { loadClips, play, translateLink, type SayState } from '../phrases/speak'
 import { fold } from '../model/search';
 import { Empty, Ext } from './bits';
 import { useApp } from './ctx';
+import { appleCaps, scanText, translateOnPhone, type AppleCaps } from '../sync/apple';
 
 export function Phrases() {
   const { ix, ui, set } = useApp();
@@ -116,21 +117,64 @@ function PhraseItem({ pack, it, order }: { pack: PhrasePack; it: Phrase; order?:
   );
 }
 
-/** Translate anything not in the list: type it, and Google Translate opens with it, either way.
-    Free, and works with the phone's Google Translate app when it's installed. */
+/** Translate anything not in the list. On an iPhone that can, it's done on the phone (free, no
+    signal needed once the language is downloaded), and the camera reads menus and signs: tap
+    Translate, or one outlined line. Elsewhere, Google Translate opens with it, and its camera does
+    menus and signs. */
 function Translator({ pack }: { pack: PhrasePack }) {
   const [text, setText] = useState('');
+  const [caps, setCaps] = useState<AppleCaps | null>(null);
+  useEffect(() => { void appleCaps().then(setCaps); }, []);
+  const [out, setOut] = useState<{ from: string; to: string }[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
   const lang = pack.name.replace(/ phrases?$/i, '');
+  const here = !!caps?.translate;
+  const run = async (lines: string[], source: string, target: string) => {
+    setBusy(true); setMsg('');
+    try { const t = await translateOnPhone(lines, target, source); setOut(lines.map((from, i) => ({ from, to: t[i] || '' }))); }
+    catch (e) { setMsg((e as Error).message || "Couldn't translate that."); }
+    setBusy(false);
+  };
+  const camera = async () => {
+    setMsg('');
+    try {
+      const r = await scanText([pack.lang, 'en']);
+      if (!r.cancelled && r.lines.length) await run(r.lines, pack.lang, 'en');
+    } catch (e) { setMsg((e as Error).message || "Couldn't open the camera."); }
+  };
   return (
-    <details className="fold translator">
-      <summary>Translate something</summary>
-      <div style={{ padding: '0 14px 12px' }}>
-        <textarea className="search notebox" rows={3} value={text} onChange={e => setText(e.target.value)} placeholder="Type or paste anything" aria-label="Text to translate" />
-        <div className="chips">
-          <a className={'chipbtn go' + (text.trim() ? '' : ' off')} target="_blank" rel="noopener noreferrer" href={translateLink(text, 'en', pack.lang)}>English → {lang}</a>
-          <a className={'chipbtn' + (text.trim() ? '' : ' off')} target="_blank" rel="noopener noreferrer" href={translateLink(text, pack.lang, 'en')}>{lang} → English</a>
+    <>
+      {caps?.scanner && here && (
+        <button className="gobtn ghost camtrans" style={{ width: '100%' }} disabled={busy} onClick={() => void camera()}>
+          {busy ? 'Translating…' : `Translate a menu or sign (${lang})`}
+        </button>
+      )}
+      <details className="fold translator" open={out.length > 0 || undefined}>
+        <summary>Translate something</summary>
+        <div style={{ padding: '0 14px 12px' }}>
+          <textarea className="search notebox" rows={3} value={text} onChange={e => setText(e.target.value)} placeholder="Type or paste anything" aria-label="Text to translate" />
+          {here ? (
+            <div className="chips">
+              <button className="chipbtn go" disabled={!text.trim() || busy} onClick={() => void run([text.trim()], 'en', pack.lang)}>English → {lang}</button>
+              <button className="chipbtn" disabled={!text.trim() || busy} onClick={() => void run([text.trim()], pack.lang, 'en')}>{lang} → English</button>
+            </div>
+          ) : (
+            <div className="chips">
+              <a className={'chipbtn go' + (text.trim() ? '' : ' off')} target="_blank" rel="noopener noreferrer" href={translateLink(text, 'en', pack.lang)}>English → {lang}</a>
+              <a className={'chipbtn' + (text.trim() ? '' : ' off')} target="_blank" rel="noopener noreferrer" href={translateLink(text, pack.lang, 'en')}>{lang} → English</a>
+            </div>
+          )}
+          {out.length > 0 && (
+            <ul className="sheet transout">{out.map((o, i) => <li key={i}><div className="item-n">{o.to}</div><div className="when">{o.from}</div></li>)}</ul>
+          )}
+          {msg && <p className="geomsg bad">{msg}</p>}
+          {!caps?.scanner && (
+            <p className="fhint">Menus and signs: <Ext href={`https://translate.google.com/?sl=${pack.lang}&tl=en&op=images`}>Google Translate</Ext> reads a photo, and the camera in Apple's Translate app or Google Translate works offline once {lang} is downloaded.</p>
+          )}
+          {here && <p className="fhint">Translated on this phone. The first time, it may ask to download {lang}.</p>}
         </div>
-      </div>
-    </details>
+      </details>
+    </>
   );
 }

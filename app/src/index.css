@@ -786,3 +786,6 @@ button.wx { width: 100%; background: none; border: 0; padding: 0; text-align: le
 .signin-cta { display: grid; gap: 8px; margin-bottom: 6px }
 .signin-cta .gobtn { border-color: var(--accent); color: var(--accent) }
 .hint.signedin { margin: 0 0 4px; text-align: center }
+.camtrans { margin: 10px 0 0; border-color: var(--accent); color: var(--accent) }
+.transout { margin-top: 10px }
+.transout .item-n { font-weight: 700 }
