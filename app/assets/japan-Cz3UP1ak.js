@@ -1,1 +1,0 @@
-export{r as seedFromOldPage}from"./japan-C0GewMTa.js";
