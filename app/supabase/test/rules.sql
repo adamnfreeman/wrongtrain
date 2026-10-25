@@ -125,6 +125,8 @@ update trip_members set name = 'not you' where user_id <> auth.uid();
 select pg_temp.ok((select name from trip_members where user_id = '00000000-0000-0000-0000-00000000000a') = 'Ana', 'nobody can rename someone else');
 select pg_temp.ok((select name from trip_members where user_id = auth.uid()) = 'Benjamin', 'but you can rename yourself');
 
+-- the AI limits, as they are when switched on (they're off for now: ai_limits_on in schema.sql)
+create or replace function public.ai_limits_on() returns boolean language sql stable as $$ select true $$;
 -- counting Claude's filings (the file-note Edge Function, with the service key)
 select pg_temp.act('ben');
 select pg_temp.ok(pg_temp.fails($$select public.claim_ai_use('t1', auth.uid(), 'file-note')$$), 'the app cannot count a filing itself');
@@ -259,6 +261,17 @@ select pg_temp.ok((public.claim_plan('00000000-0000-0000-0000-00000000000a', 100
 select public.claim_plan_step(((select p from plans) ->> 'id')::uuid, '00000000-0000-0000-0000-00000000000a', 100, 50);
 select pg_temp.ok((select steps from ai_plans where id = ((select p from plans) ->> 'id')::uuid) = 1, 'a step counts against the plan, with its tokens');
 select pg_temp.ok(pg_temp.fails($$select public.claim_plan_step(((select p from plans) ->> 'id')::uuid, '00000000-0000-0000-0000-00000000000c', 0, 0)$$), 'nobody else can use someone''s plan');
+
+-- with the limits off, nobody is held back and nothing counts down, but uses are still counted
+create or replace function public.ai_limits_on() returns boolean language sql stable as $$ select false $$;
+insert into ai_uses (trip_id, user_id, kind) select 't1', '00000000-0000-0000-0000-00000000000b', 'file-note' from generate_series(1, 700);
+set role service_role;
+create temp table freeuse as select public.claim_ai_use('t1', '00000000-0000-0000-0000-00000000000b', 'file-note') as u;
+select pg_temp.ok((select u ->> 'id' from freeuse) is not null and (select u -> 'left' from freeuse) = 'null'::jsonb, 'limits off: a use goes through past every limit, with nothing left to count');
+select pg_temp.ok((public.claim_plan('00000000-0000-0000-0000-00000000000a') ->> 'id') is not null, '... and so does a plan, past five a month');
+reset role;
+select pg_temp.ok((select count(*) from ai_uses where user_id = '00000000-0000-0000-0000-00000000000b') = 701, '... still counted, for what the AI has cost');
+delete from ai_uses where user_id = '00000000-0000-0000-0000-00000000000b';
 
 -- the level people join with follows how the trip was set up
 select pg_temp.act('ana');

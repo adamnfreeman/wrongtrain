@@ -410,6 +410,14 @@ alter table public.ai_uses enable row level security;
 alter table public.trip_passes enable row level security;
 -- no policies: nobody reads or writes these from the app
 
+-- The AI limits below (per trip, per person a minute and a day, plans a month) are off for now
+-- (Adam, Oct 25: nobody testing should be held back). Uses and plans are still counted, for What
+-- the AI has cost; the monthly spend limit in the Anthropic console still caps the bill. To turn the
+-- limits back on, make this return true and run schema.sql again.
+create or replace function public.ai_limits_on() returns boolean
+language sql stable as $$ select false $$;
+revoke all on function public.ai_limits_on() from public, anon, authenticated;
+
 -- How many uses a trip gets: a free allowance, or a larger one with a pass (a ceiling on cost).
 create or replace function public.ai_allowance(t text) returns integer
 language sql stable security definer set search_path = public as $$
@@ -427,14 +435,17 @@ begin
   perform 1 from trips where id = t for update;  -- one claim at a time per trip
   -- per person too, across all their trips: a new trip must not mean 20 more free uses
   perform pg_advisory_xact_lock(hashtext(u::text));
-  if (select count(*) from ai_uses a where a.user_id = u and a.created_at > now() - interval '1 minute') >= 6 then
-    raise exception 'too many at once'; end if;
-  if (select count(*) from ai_uses a where a.user_id = u and a.created_at > now() - interval '1 day') >= 60 then
-    raise exception 'daily limit reached'; end if;
   select count(*) into used from ai_uses a where a.trip_id = t;
-  if used >= cap then raise exception 'allowance used up'; end if;
+  if ai_limits_on() then
+    if (select count(*) from ai_uses a where a.user_id = u and a.created_at > now() - interval '1 minute') >= 6 then
+      raise exception 'too many at once'; end if;
+    if (select count(*) from ai_uses a where a.user_id = u and a.created_at > now() - interval '1 day') >= 60 then
+      raise exception 'daily limit reached'; end if;
+    if used >= cap then raise exception 'allowance used up'; end if;
+  end if;
   insert into ai_uses (trip_id, user_id, kind) values (t, u, claim_ai_use.kind) returning id into r;
-  return jsonb_build_object('id', r, 'left', cap - used - 1);
+  -- with the limits off there's nothing to count down, so the app says nothing about uses left
+  return jsonb_build_object('id', r, 'left', case when ai_limits_on() then cap - used - 1 end);
 end $$;
 
 -- Gives a use back when the call to Claude failed.
@@ -471,9 +482,9 @@ declare u uuid := user_id; used integer; r uuid;
 begin
   perform pg_advisory_xact_lock(hashtext(u::text));  -- one claim at a time per person
   select count(*) into used from ai_plans p where p.user_id = u and p.created_at > now() - interval '30 days';
-  if used >= cap then raise exception 'plan allowance used up'; end if;
+  if ai_limits_on() and used >= cap then raise exception 'plan allowance used up'; end if;
   insert into ai_plans (user_id) values (u) returning id into r;
-  return jsonb_build_object('id', r, 'left', cap - used - 1);
+  return jsonb_build_object('id', r, 'left', case when ai_limits_on() then cap - used - 1 end);
 end $$;
 
 -- One more step of a plan (research or build for a stop), up to 40 per plan.

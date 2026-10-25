@@ -55,6 +55,9 @@ on a Mac.
   `patchTrip` (`src/model/filing.ts`, `src/sync/filing.ts`), so the trip rule applies. The
   Anthropic key is only a Supabase secret (`ANTHROPIC_API_KEY`), never in the app. Uses are
   counted per trip in `ai_uses` (20 free; `trip_passes` is there for the paid pass).
+  **The AI limits are off for now** (Oct 25, so testers aren't held back): `ai_limits_on()` in
+  schema.sql returns false, so nothing is refused (per trip, per person, plans a month) and the app
+  shows no uses left; uses are still counted. Before launch: make it return true and run schema.sql.
 - Sign-in is an emailed 8-digit code (Supabase's setting; the app says "a code"). The emails (sign-in, welcome,
   change email) are branded HTML made by `supabase/emails/emails.py`. They come from info@wrongtrain.lol
   (a Send mail as address on adam@thefreemans.io; wrongtrain.lol is a user alias domain, so
@@ -426,6 +429,15 @@ Next:
 83. **A problem statement and product goal** (Adam, Oct 24; for Andrea): write down, in a few lines,
    the problem WrongTrain solves for a group of friends and the goal the product is working toward
    (see VISION.md), to steer design decisions such as the tab cut (80).
+84. **Keep text to a minimum** (Adam, Oct 24): fewer words everywhere in the app; cut explanations,
+   hints and labels down to what's needed.
+85. **Rename "Where everyone is"** (Adam, Oct 24): a better name for it on the Map (`FriendFinder` in
+   `src/ui/map.tsx`).
+86. **Build a vibe** (Adam, Oct 24): in his words, "build a vibe"; to be talked through.
+87. **Accessibility** (Adam, Oct 24): high contrast, ADHD-friendly, but also just chill.
+88. **Colour-blind mode** (Adam, Oct 24): colours that work for colour-blind people (see 79).
+89. **Type A and Type B personality modes** (Adam, Oct 24): a mode for people who like everything
+   planned and one for people who'd rather go with the flow.
 
 ## Working together
 
