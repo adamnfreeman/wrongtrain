@@ -5,7 +5,8 @@ A group trip planner, heading for the iOS App Store. Made for millennials travel
 avoid family resorts and kids' places. It began as the Japan 2026 page at
 wrongtrain.lol, a single HTML file reading the trip from a Google Sheet.
 
-**Read `VISION.md` first**: who the app is for and what it should become.
+**Read `VISION.md` first**: who the app is for and what it should become. **`TECH.md`** explains
+how it's built: the parts, data, sync, AI functions, iOS, releasing, security and costs.
 
 ## Branches: be careful with `main`
 
