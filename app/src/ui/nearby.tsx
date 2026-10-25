@@ -12,7 +12,7 @@ import { findNearby, type Found, type Suggestion } from '../sync/nearby';
 import { Ext, SecH } from './bits';
 import { useApp } from './ctx';
 
-const KIND: Record<Mood, PlaceKind> = {
+export const KIND: Record<Mood, PlaceKind> = {
   food: 'food', coffee: 'coffee', drinks: 'food', sights: 'sight', culture: 'sight', offbeat: 'sight', music: 'event',
   adventure: 'sight', chill: 'area', spa: 'other', film: 'event', shopping: 'shop',
 };
@@ -20,7 +20,7 @@ const KIND: Record<Mood, PlaceKind> = {
 /** Something nearby. Nothing is looked up until a mood is picked. inline: under "Where to next?"
     on Today, without its own heading. */
 /* an icon for each mood, so the chips read at a glance */
-const MOOD_ICON: Record<string, string> = { food: '🍜', coffee: '☕', drinks: '🍸', sights: '📸', culture: '🏛️', offbeat: '🦄', music: '🎸', adventure: '🧗', chill: '🌳', spa: '💆', film: '🎬', shopping: '🛍️' };
+export const MOOD_ICON: Record<string, string> = { food: '🍜', coffee: '☕', drinks: '🍸', sights: '📸', culture: '🏛️', offbeat: '🦄', music: '🎸', adventure: '🧗', chill: '🌳', spa: '💆', film: '🎬', shopping: '🛍️' };
 
 export function Nearby({ inline = false }: { inline?: boolean }) {
   const { ix, now, geo } = useApp();

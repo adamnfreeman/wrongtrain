@@ -46,8 +46,15 @@ Deno.serve(async req => {
   const { data: row } = await asUser.from('trips').select('data').eq('id', tripId).maybeSingle();
   if (!row) return reply(403, { error: 'trip', message: 'You are not on this trip.' });
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
-  const { data: members } = await admin.from('trip_members').select('user_id, name').eq('trip_id', tripId);
-  const sender = (members || []).find(m => m.user_id === who.user.id)?.name || '';
+  const { data: members } = await admin.from('trip_members').select('user_id, name, role').eq('trip_id', tripId);
+  const me = (members || []).find(m => m.user_id === who.user.id);
+  const sender = me?.name || '';
+  /* viewers look and leave notes; reminding people is for the rest */
+  if (kind === 'remind' && me?.role === 'viewer') return reply(403, { error: 'role', message: 'Viewers can’t send reminders.' });
+  /* at most 20 pushes an hour from one person, whatever they're about, so nobody can flood the group */
+  const hour = new Date(Date.now() - 60 * 60_000).toISOString();
+  const { count: mine } = await admin.from('push_sent').select('id', { count: 'exact', head: true }).eq('sender', who.user.id).gte('created_at', hour);
+  if ((mine || 0) >= 20) return reply(429, { error: 'busy', message: 'That’s a lot of reminders. Try again later.' });
 
   /* who it's for */
   const trip = row.data as { travelers?: string[]; todos?: { id: string; text: string }[] };

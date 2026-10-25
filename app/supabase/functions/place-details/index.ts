@@ -59,7 +59,9 @@ Deno.serve(async req => {
     if (/too many at once/i.test(useErr.message)) return reply(429, { error: 'busy', message: 'That was a lot at once. Try again in a minute.' });
     if (/daily limit/i.test(useErr.message)) return reply(429, { error: 'daily', message: "You've used WrongTrain's AI a lot today. Try again tomorrow." });
     if (/allowance used up/i.test(useErr.message)) return reply(402, { error: 'allowance', message: 'This trip has used its free AI.' });
-    return reply(500, { error: 'server', message: useErr.message });
+    /* the database's own words stay in the error log, not in the app */
+    await admin.from('function_errors').insert({ fn: 'place-details', message: useErr.message.slice(0, 4000) }).then(() => {}, () => {});
+    return reply(500, { error: 'server', message: 'Something went wrong. Try again in a minute.' });
   }
   if (!useId) { ({ id: useId, left } = use as { id: string; left: number }); claimed = true; }
 

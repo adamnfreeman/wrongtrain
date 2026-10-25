@@ -122,9 +122,12 @@ Deno.serve(async req => {
     if (body.step === 'outline') {
       const key = await cacheKey(['outline', answers]);
       const { data: plan, error } = await admin.rpc('claim_plan', { user_id: who.user.id, cap });
-      if (error) return /allowance/.test(error.message)
-        ? reply(402, { error: 'allowance', message: 'You have used this month’s free plans. You can still plan a trip by hand.' })
-        : reply(500, { error: 'server', message: error.message });
+      if (error) {
+        if (/allowance/.test(error.message)) return reply(402, { error: 'allowance', message: 'You have used this month’s free plans. You can still plan a trip by hand.' });
+        if (/daily limit/.test(error.message)) return reply(429, { error: 'daily', message: "You've planned a lot of trips today. Try again tomorrow." });
+        await admin.from('function_errors').insert({ fn: 'plan-trip', step: 'outline', message: error.message.slice(0, 4000) }).then(() => {}, () => {});
+        return reply(500, { error: 'server', message: 'Something went wrong. Try again in a minute.' });
+      }
       const { id, left } = plan as { id: string; left: number };
       try {
         const hit = await cached(key) as Outline | undefined;
@@ -154,11 +157,18 @@ Deno.serve(async req => {
       return reply(200, { ...(hit as object), cached: true });
     }
 
+    /* the step is claimed before Claude is asked: only on your own plan, and only 40 of them (asking
+       first let anyone run Claude with a made-up plan id); its tokens are added once it's done */
+    if (body.step !== 'research' && body.step !== 'build') return reply(400, { error: 'input', message: 'Unknown step.' });
+    const { error: stepErr } = await admin.rpc('claim_plan_step', { plan_id: body.plan_id, user_id: who.user.id, input_tokens: 0, output_tokens: 0 });
+    if (stepErr) return reply(402, { error: 'allowance', message: 'This plan has done all it can. Start a new one.' });
+    const tokens = (usage: { input_tokens: number; output_tokens: number }) =>
+      admin.rpc('add_plan_tokens', { plan_id: body.plan_id, user_id: who.user.id, input_tokens: usage.input_tokens, output_tokens: usage.output_tokens }).then(() => {}, () => {});
+
     if (body.step === 'research') {
       const { notes, usage } = await research(researchPrompt(ask1));
+      await tokens(usage);
       if (notes.length < 200) throw new Error(`too little found (${notes.length} characters)`);
-      const { error } = await admin.rpc('claim_plan_step', { plan_id: body.plan_id, user_id: who.user.id, input_tokens: usage.input_tokens, output_tokens: usage.output_tokens });
-      if (error) return reply(402, { error: 'allowance', message: 'This plan has done all it can. Start a new one.' });
       await keep(key, 'research', { notes });
       return reply(200, { notes });
     }
@@ -167,8 +177,7 @@ Deno.serve(async req => {
       const notes = String(body.notes || '').slice(0, 40000);
       if (!notes) return reply(400, { error: 'input', message: 'The research notes are missing.' });
       const { out, usage } = await ask<StopPlan>(BUILD_SYSTEM, buildPrompt(ask1, notes), STOP_SCHEMA, 'low');
-      const { error } = await admin.rpc('claim_plan_step', { plan_id: body.plan_id, user_id: who.user.id, input_tokens: usage.input_tokens, output_tokens: usage.output_tokens });
-      if (error) return reply(402, { error: 'allowance', message: 'This plan has done all it can. Start a new one.' });
+      await tokens(usage);
       const stop = cleanStopPlan(out, stopDates(outline, index).dates);
       await keep(key, 'build', { stop });
       return reply(200, { stop });

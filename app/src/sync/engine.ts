@@ -383,6 +383,8 @@ export async function verifyEmailChange(email: string, code: string) {
 
 export async function signOut() {
   unlisten();
+  /* while still signed in: the database only lets you drop your own phone */
+  await import('./push').then(m => m.stopPush()).catch(() => {});
   await supabase.auth.signOut();
 }
 
@@ -393,6 +395,7 @@ export async function deleteAccount() {
   unlisten();
   const s = getState();
   setSynced(s.trips.filter(t => !s.sync[t.id]), {}, s.sync[s.activeId || ''] ? null : s.activeId);
+  await import('./push').then(m => m.stopPush()).catch(() => {});
   await supabase.auth.signOut();
 }
 
@@ -511,6 +514,9 @@ export function errText(e: unknown): string {
   if (/failed to fetch|network/i.test(m)) return 'No connection. Try again when you have signal.';
   if (/already decided/i.test(m)) return 'Someone already decided that one.';
   if (/only the owner/i.test(m)) return 'Only the trip owner can do that.';
+  if (/only organizers can invite/i.test(m)) return "Ask the trip's owner or an organizer for a code.";
+  if (/removed from this trip/i.test(m)) return 'That code was made before you were taken off this trip. Ask the owner for a new one.';
+  if (/trip too large/i.test(m)) return 'This trip has grown too big to save. Take some pictures out of it.';
   return m;
 }
 

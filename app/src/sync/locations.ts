@@ -1,4 +1,4 @@
-/* Where everyone is: the friend finder. Sharing is a choice, made per trip and for a set time (an
+/* Who's where? (it was "Where everyone is"): the friend finder. Sharing is a choice, made per trip and for a set time (an
    hour, the rest of the day, the whole trip); while it lasts and the app is open, your position is
    sent every minute or so, or when you've moved, to trip_locations (schema.sql), where only the
    people on that trip can see it, and only until the time you picked. Stopping removes it. */
@@ -57,7 +57,9 @@ export async function sendSpot(tripId: string, pos: { lat: number; lng: number; 
 /* ---------- everyone else ---------- */
 
 /** People on the trip who are sharing where they are, refreshed every 30 seconds while shown. */
-export function useFriendSpots(tripId: string, on: boolean): FriendSpot[] {
+/** Friends sharing where they are. Every 30 seconds while the Map is open; otherwise every 3 minutes,
+    enough for the "started sharing" banner without asking the server all day. */
+export function useFriendSpots(tripId: string, on: boolean, looking = true): FriendSpot[] {
   const sample = !!getState().trips.find(t => t.id === tripId)?.sample;
   const { session } = useSync();
   const shared = !!getState().sync[tripId];
@@ -81,9 +83,9 @@ export function useFriendSpots(tripId: string, on: boolean): FriendSpot[] {
       noticeSharers(tripId, others);
     };
     void load();
-    const t = window.setInterval(() => { if (!document.hidden) void load(); }, 30_000);
+    const t = window.setInterval(() => { if (!document.hidden) void load(); }, looking ? 30_000 : 180_000);
     return () => { live = false; clearInterval(t); };
-  }, [tripId, on, shared, session]);
+  }, [tripId, on, shared, session, looking]);
   return made || spots;
 }
 

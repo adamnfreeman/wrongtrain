@@ -250,7 +250,7 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
   const addKind = ui.tab === 'wallet' ? (walletSeg === 'docs' ? 'doc' : 'expense') : addOn(ui.tab);
   const signedIn = useSync().session;
   /* push notifications (reminders, someone sharing where they are): asked for once you're signed in */
-  useEffect(() => { if (signedIn && !trip.sample) void startPush(t => go(t as Tab)); }, [!!signedIn]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (signedIn && !trip.sample) void startPush(t => go(t as Tab)); }, [!!signedIn, trip.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const close = useCallback(() => edit(null), []);
   /* Today needs it during the trip, and for "Something nearby" at any time */
   /* while you share where you are with the group, location stays on as you move between pages */
@@ -273,7 +273,8 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
 
   /* the thing that matters right now, if anything: checked every half minute during the trip */
   const [tick, setTick] = useState(0);
-  useEffect(() => { const t = window.setInterval(() => setTick(x => x + 1), 30_000); return () => clearInterval(t); }, []);
+  /* not while the app is in the background: every page would redraw for nobody */
+  useEffect(() => { const t = window.setInterval(() => { if (!document.hidden) setTick(x => x + 1); }, 30_000); return () => clearInterval(t); }, []);
   const rn = useMemo(() => {
     if (!now.cur) return { m: null, next: null };
     const c = liveCtx(ix, now.cur, geo.pos), m = rightNow(ix, c);

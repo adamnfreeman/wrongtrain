@@ -166,6 +166,7 @@ create or replace function public.share_trip(trip_id text, trip_data jsonb, memb
 returns bigint language plpgsql security definer set search_path = public as $$
 begin
   if auth.uid() is null then raise exception 'not signed in'; end if;
+  if octet_length(trip_data::text) > 5000000 then raise exception 'trip too large'; end if;
   insert into trips (id, owner, data, version, updated_by) values (trip_id, auth.uid(), trip_data, 1, auth.uid());
   insert into trip_members (trip_id, user_id, name, role) values (trip_id, auth.uid(), coalesce(member_name, ''), 'owner');
   return 1;
@@ -179,6 +180,8 @@ returns bigint language plpgsql security definer set search_path = public as $$
 declare v bigint; cur trips%rowtype; m text := my_role(trip_id);
 begin
   if m is null then raise exception 'not on this trip'; end if;
+  -- the biggest real trip is about 0.2 MB; a huge one would weigh on every phone on the trip
+  if octet_length(trip_data::text) > 5000000 then raise exception 'trip too large'; end if;
   select * into cur from trips t where t.id = trip_id for update;
   if cur.version <> base_version then return -1; end if;
   if change_needs_approval(cur.data, trip_data, cur.rule, m) then raise exception 'needs approval'; end if;
@@ -294,6 +297,7 @@ returns text language plpgsql security definer set search_path = public as $$
 declare c text; letters text := 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; i int;
 begin
   if not is_member(trip_id) then raise exception 'not on this trip'; end if;
+  if my_role(trip_id) not in ('owner', 'organizer', 'editor') then raise exception 'only organizers can invite'; end if;
   loop
     c := '';
     for i in 1..8 loop c := c || substr(letters, 1 + floor(random() * length(letters))::int, 1); end loop;
@@ -305,15 +309,28 @@ begin
   end loop;
 end $$;
 
+-- People the owner took off a trip. A code made before then no longer lets them back in (a code
+-- they kept, or one someone else made); a new code made afterwards does, if the owner wants them back.
+create table if not exists public.trip_removed (
+  trip_id     text not null references public.trips (id) on delete cascade,
+  user_id     uuid not null references auth.users (id) on delete cascade,
+  removed_at  timestamptz not null default now(),
+  primary key (trip_id, user_id)
+);
+alter table public.trip_removed enable row level security;
+-- no policies: only the functions here read and write it
+
 -- Joins the trip an invite code belongs to and returns its id.
 create or replace function public.join_trip(invite_code text, member_name text)
 returns text language plpgsql security definer set search_path = public as $$
-declare t text;
+declare t text; made timestamptz;
 begin
   if auth.uid() is null then raise exception 'not signed in'; end if;
-  select i.trip_id into t from invites i
+  select i.trip_id, i.created_at into t, made from invites i
     where i.code = upper(replace(invite_code, ' ', '')) and i.expires_at > now();
   if t is null then raise exception 'invite not found or expired'; end if;
+  if exists (select 1 from trip_removed r where r.trip_id = t and r.user_id = auth.uid() and r.removed_at > made) then
+    raise exception 'removed from this trip'; end if;
   -- newcomers get the level the trip was set up with
   insert into trip_members (trip_id, user_id, name, role)
     values (t, auth.uid(), coalesce(member_name, ''),
@@ -353,6 +370,10 @@ begin
   if (select owner from trips where id = t) is distinct from auth.uid() then raise exception 'only the owner can do that'; end if;
   if member = auth.uid() then raise exception 'use leave_trip'; end if;
   delete from trip_members m where m.trip_id = t and m.user_id = member;
+  -- their codes stop working, and older codes no longer let them back in
+  delete from invites i where i.trip_id = t and i.created_by = member;
+  insert into trip_removed (trip_id, user_id) values (t, member)
+    on conflict (trip_id, user_id) do update set removed_at = now();
 end $$;
 
 -- Deletes your account (Apple requires apps to offer this). You leave every trip first, so
@@ -411,6 +432,7 @@ alter table public.trip_passes enable row level security;
 -- no policies: nobody reads or writes these from the app
 
 -- The AI limits below (per trip, per person a minute and a day, plans a month) are off for now
+-- (all but a safety net of 300 uses and 20 plans a day per person, which stays on)
 -- (Adam, Oct 25: nobody testing should be held back). Uses and plans are still counted, for What
 -- the AI has cost; the monthly spend limit in the Anthropic console still caps the bill. To turn the
 -- limits back on, make this return true and run schema.sql again.
@@ -436,6 +458,10 @@ begin
   -- per person too, across all their trips: a new trip must not mean 20 more free uses
   perform pg_advisory_xact_lock(hashtext(u::text));
   select count(*) into used from ai_uses a where a.trip_id = t;
+  -- a safety net that stays on with the limits off: no real person gets near it, but a bug or
+  -- someone scripting it can't run up the bill unseen
+  if (select count(*) from ai_uses a where a.user_id = u and a.created_at > now() - interval '1 day') >= 300 then
+    raise exception 'daily limit reached'; end if;
   if ai_limits_on() then
     if (select count(*) from ai_uses a where a.user_id = u and a.created_at > now() - interval '1 minute') >= 6 then
       raise exception 'too many at once'; end if;
@@ -483,6 +509,9 @@ begin
   perform pg_advisory_xact_lock(hashtext(u::text));  -- one claim at a time per person
   select count(*) into used from ai_plans p where p.user_id = u and p.created_at > now() - interval '30 days';
   if ai_limits_on() and used >= cap then raise exception 'plan allowance used up'; end if;
+  -- the safety net, as for other AI uses: 20 plans a day
+  if (select count(*) from ai_plans p where p.user_id = u and p.created_at > now() - interval '1 day') >= 20 then
+    raise exception 'daily limit reached'; end if;
   insert into ai_plans (user_id) values (u) returning id into r;
   return jsonb_build_object('id', r, 'left', case when ai_limits_on() then cap - used - 1 end);
 end $$;
@@ -495,6 +524,15 @@ begin
     where p.id = plan_id and p.user_id = claim_plan_step.user_id and p.steps < 40;
   if not found then raise exception 'plan not found or used up'; end if;
 end $$;
+
+-- A step's tokens, added once Claude has answered (the step itself is claimed before asking).
+create or replace function public.add_plan_tokens(plan_id uuid, user_id uuid, input_tokens bigint, output_tokens bigint)
+returns void language sql security definer set search_path = public as $$
+  update ai_plans p set input_tokens = p.input_tokens + add_plan_tokens.input_tokens, output_tokens = p.output_tokens + add_plan_tokens.output_tokens
+    where p.id = plan_id and p.user_id = add_plan_tokens.user_id;
+$$;
+revoke all on function public.add_plan_tokens(uuid, uuid, bigint, bigint) from public, anon, authenticated;
+grant execute on function public.add_plan_tokens(uuid, uuid, bigint, bigint) to service_role;
 
 create or replace function public.refund_plan(plan_id uuid)
 returns void language sql security definer set search_path = public as $$
@@ -828,5 +866,6 @@ create table if not exists public.push_sent (
   created_at  timestamptz not null default now()
 );
 create index if not exists push_sent_recent on public.push_sent (trip_id, kind, ref, created_at);
+create index if not exists push_sent_sender on public.push_sent (sender, created_at);
 alter table public.push_sent enable row level security;
 

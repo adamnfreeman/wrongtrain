@@ -62,7 +62,8 @@ function toggleFavPhoto(id: string) {
 /* ---------- the Photos page ---------- */
 
 export function PhotosPage() {
-  const { ix, edit } = useApp();
+  const { ix, edit, ui } = useApp();
+  const here = ui.tab === 'photos';
   const t = ix.trip;
   const shared = !!useStore().sync[t.id];
   const { session } = useSync();
@@ -71,12 +72,13 @@ export function PhotosPage() {
   const [by, setBy] = useState<'day' | 'person' | 'fav'>('day');
   const fav = useFavPhotos();
   const [open, setOpen] = useState<{ list: Photo[]; at: number } | null>(null);
-  /* keep it fresh while the page is open */
+  /* keep it fresh while the page is open: only while it's the page you're on (every page stays
+     loaded, and this was asking the server every 30 seconds from all of them) */
   useEffect(() => {
-    if (sample || !shared) return;
+    if (sample || !shared || !here) return;
     const tick = window.setInterval(() => { if (!document.hidden) void refresh(t.id); }, 30_000);
     return () => clearInterval(tick);
-  }, [t.id, shared, sample]);
+  }, [t.id, shared, sample, here]);
   const groups = useMemo(() => {
     if (by === 'fav') {
       const ps = list.filter(p => fav.includes(p.id));

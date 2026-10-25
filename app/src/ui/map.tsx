@@ -32,7 +32,7 @@ export function MapView() {
 
   const shown = (p: Place) => p.lat != null && p.lng != null && !ui.hide[pinGroup(p).key] && (ui.dest === 'all' || p.destinationId === ui.dest);
   const pins = ix.trip.places.filter(shown);
-  const spots = useFriendSpots(ix.trip.id, !JAPAN);
+  const spots = useFriendSpots(ix.trip.id, !JAPAN, ui.tab === 'map');
   const people = useTripPeople(ix.trip.id);
   const friends = useRef<L.Marker[]>([]);
   const near = useMemo(() => (geo.on && geo.pos
@@ -156,7 +156,7 @@ function FriendFinder({ spots, people, onShow }: { spots: FriendSpot[]; people: 
   const last = ix.trip.days.at(-1)?.date;
   return (
     <section className="blk" id="friends">
-      <h3>Where everyone is</h3>
+      <h3>Who's where?</h3>
       {ix.trip.sample ? <>
           <p className="fhint" style={{ marginTop: 0 }}>In the sample, Sam and Jordan are made up, sharing where they are for the day. On your own trips, share where you are for as long as you choose; only people on the trip see it.</p>
           {spots.length > 0 && <FriendList spots={spots} people={people} onShow={onShow} />}

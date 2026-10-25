@@ -47,8 +47,17 @@ async function whereCity(ix: TripIndex, destId?: string): Promise<{ lat: number;
 }
 
 function useWeather(ix: TripIndex, day: Day | undefined, live: boolean): Wx | null {
-  const key = day ? `wx-${ix.trip.id}-${day.date}` : '';
+  /* the unit is in the key, so switching °C and °F doesn't show the old numbers */
+  const key = day ? `wx-${ix.trip.id}-${day.date}${F ? '-f' : ''}` : '';
   const [wx, setWx] = useState<Wx | null>(() => (key ? pref<Wx | null>(key, null) : null));
+  /* looks again every half hour while the app stays open, and on coming back to it */
+  const [round, setRound] = useState(0);
+  useEffect(() => {
+    const again = () => { if (!document.hidden) setRound(r => r + 1); };
+    const t = setInterval(again, 30 * 60_000);
+    document.addEventListener('visibilitychange', again);
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', again); };
+  }, []);
   useEffect(() => {
     if (!day) return;
     setWx(pref<Wx | null>(key, null));
@@ -72,7 +81,7 @@ function useWeather(ix: TripIndex, day: Day | undefined, live: boolean): Wx | nu
       if (on) setWx(next);
     })().catch(() => { /* no weather today: the line just doesn't show */ });
     return () => { on = false; };
-  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [key, round]); // eslint-disable-line react-hooks/exhaustive-deps
   return wx;
 }
 

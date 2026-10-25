@@ -86,7 +86,7 @@ on a Mac.
   page opens by itself once per thing, with the time in huge type, when to leave (travel from
   where you are), the service, seats and details, and big Show ticket and Directions buttons.
   Not for the sample trip (it would come and go with the clock).
-- Where everyone is (Map → "Where everyone is", `src/sync/locations.ts`, `FriendFinder` in
+- Who's where? (Map → "Who's where?", was "Where everyone is"; `src/sync/locations.ts`, `FriendFinder` in
   `src/ui/map.tsx`): on a shared trip, each person may share where they are for a time they pick
   (1 hour, 4 hours, rest of today, whole trip); while it lasts and the app is open, location stays
   on and is sent every minute or after 30 m (`trip_locations`, written only through
@@ -144,6 +144,16 @@ on a Mac.
   (`ThingRow`) that open it. Today is the hub (Oct 24): How much time, then Coming up (each opens its
   card) with Tonight's hotel, Waiting on you (to-dos that are yours), What's nearby, the day's plan;
   before the trip, Getting there (day one's travel and first night).
+- Oct 25, before the trip: "Change of plans?" on Today during the trip (`ChangePlans` in
+  `src/ui/changePlans.tsx`): pick what to skip from what's left today, a mood and near you or near the
+  hotel, and one tap swaps a nearby place in (about 15 minutes plus the walk from now), with Undo.
+  The Right now badge pulses bigger and brighter (colour-blind friendly). Security: the planner claims
+  a step before asking Claude (`add_plan_tokens` adds the tokens after); only owners, organizers and
+  editors make invite codes; taking someone off a trip cancels their codes and older codes no longer
+  let them back (`trip_removed`); trips over 5 MB aren't saved; pushes are limited to 20 an hour per
+  sender and viewers can't Remind; database errors stay in `function_errors`. A safety net stays on
+  with the AI limits off: 300 AI uses and 20 plans a day per person. Photos and Who's where? poll only
+  while their page is open (friends every 3 minutes otherwise), and nothing ticks in the background.
 - Add to itinerary (Places; `PlaceSheet` in `src/ui/addToPlan.tsx`, `fitPlace` in `src/model/fit.ts`):
   tap a place (or its Add to itinerary) for the three days it fits best (its city, still to come,
   open that weekday, not already on it, least full) with a time around what's planned and inside its
@@ -409,8 +419,6 @@ Next:
    is a planning aid and isn't responsible for trips that go wrong: missed trains or flights, wrong
    times or details, AI suggestions, bookings. The website's terms (`site/terms.html`) have a start.
 
-79. **A more vibrant Right now pulse** (Adam, Oct 24): the yellow badge's pulse on the Right now tab
-   (`.tab.tab-now`, `@keyframes nowpulse` in `src/index.css`) should be stronger and easier to notice.
 
 80. **Condense the app; Today as the hub** (Adam, Oct 24): too many tabs and too much to dig for. Today
    should hold more of what Essentials and Places have, and everything on it should be tappable for
@@ -419,10 +427,6 @@ Next:
    plan, nearby, weather), Map and Places as one tab, Essentials folded into Today, Days and Wallet,
    and the rest under Trip. With Andrea. Done Oct 24: Today as the hub and one details card for
    everything; still to do: Map and Places as one tab, Essentials folded in, the tab cut.
-81. **Change plans on the fly** (Adam, Oct 24): an easy way, during the trip, to swap what's planned
-   when the group's mood changes, e.g. shopping in one neighbourhood is on the plan but everyone
-   wants something chill near the hotel. Suggest alternatives nearby (Something nearby, the trip's
-   own places) and swap them into today's plan, moving or dropping what was there.
 82. **Share a finished trip** (Adam, Oct 24): after a trip, share it so other people can use it and the
    ideas in it (places, the plan, tips), e.g. a public read-only link or a copy someone can start
    their own trip from, without the private things (bookings, wallet, money, notes).
@@ -431,13 +435,13 @@ Next:
    (see VISION.md), to steer design decisions such as the tab cut (80).
 84. **Keep text to a minimum** (Adam, Oct 24): fewer words everywhere in the app; cut explanations,
    hints and labels down to what's needed.
-85. **Rename "Where everyone is"** (Adam, Oct 24): a better name for it on the Map (`FriendFinder` in
-   `src/ui/map.tsx`).
 86. **Build a vibe** (Adam, Oct 24): in his words, "build a vibe"; to be talked through.
 87. **Accessibility** (Adam, Oct 24): high contrast, ADHD-friendly, but also just chill.
 88. **Colour-blind mode** (Adam, Oct 24): colours that work for colour-blind people (see 79).
 89. **Type A and Type B personality modes** (Adam, Oct 24): a mode for people who like everything
    planned and one for people who'd rather go with the flow.
+90. **Carry-on checker** (Adam, Oct 25): check that your carry-on bags are within the size and weight
+   limits of the airline you're flying (from the trip's booked flights).
 
 ## Working together
 

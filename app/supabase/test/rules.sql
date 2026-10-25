@@ -343,3 +343,26 @@ select public.join_trip((select c from code10), 'Ben');
 select pg_temp.ok((select data -> 'travelers' from trips where id = 't10') = '["Ana", "Ben"]'::jsonb, 'joining puts Ben on Who''s going');
 select public.join_trip((select c from code10), 'Ben');
 select pg_temp.ok((select jsonb_array_length(data -> 'travelers') from trips where id = 't10') = 2, '... once');
+
+-- taken off a trip: the codes they made go, and older codes don't let them back in
+select pg_temp.act('ben');
+create temp table code12 as select public.create_invite('t10') as c;
+grant select on code12 to authenticated;
+select pg_temp.act('ana');
+select public.remove_member('t10', '00000000-0000-0000-0000-00000000000b');
+select pg_temp.ok((select count(*) from public.list_invites('t10')) = 1, 'taking Ben off cancels the code he made');
+select pg_temp.act('ben');
+select pg_temp.ok(pg_temp.fails($$select public.join_trip((select c from code10), 'Ben')$$), '... and an older code no longer lets him back in');
+select pg_temp.act('ana');
+create temp table code13 as select public.create_invite('t10') as c;
+grant select on code13 to authenticated;
+select pg_temp.act('ben');
+select pg_temp.ok(public.join_trip((select c from code13), 'Ben') = 't10', '... but a new code from the owner does');
+-- viewers don't make codes
+select pg_temp.act('ana');
+select public.set_member_role('t10', '00000000-0000-0000-0000-00000000000b', 'viewer');
+select pg_temp.act('ben');
+select pg_temp.ok(pg_temp.fails($$select public.create_invite('t10')$$), 'a viewer cannot make an invite code');
+-- a trip can't grow without end
+select pg_temp.act('ana');
+select pg_temp.ok(pg_temp.fails($$select public.save_trip('t10', jsonb_build_object('name', repeat('x', 5000001)), (select version from trips where id = 't10'))$$), 'a trip over 5 MB is not saved');

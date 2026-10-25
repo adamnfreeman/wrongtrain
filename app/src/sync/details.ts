@@ -79,13 +79,14 @@ export async function fillDetails(trip: Trip, places: Place[], bookings: { d: Da
   if (!want.length) return;
   const { data: s } = await supabase.auth.getSession();
   if (!s.session) return;
-  want.forEach(w => tried.add(w.id.replace(/^plan:/, '')));
   let useId: string | undefined;
   for (let i = 0; i < want.length; i += 3) {
     const group = want.slice(i, i + 3);
     onStep?.(i, want.length);
     const { data, error } = await supabase.functions.invoke<{ details: Found[]; use_id?: string }>('place-details', { body: { trip_id: trip.id, places: group, use_id: useId } });
-    if (error || !data?.details) return;
+    /* only what was looked up counts as tried, so after a failure the button can try again */
+    if (error || !data?.details) throw new Error('Could not look them up right now. Try again in a minute.');
+    group.forEach(w => tried.add(w.id.replace(/^plan:/, '')));
     useId = data.use_id || useId;
     apply(trip.id, group.map(w => w.id), data.details);
   }

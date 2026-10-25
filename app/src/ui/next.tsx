@@ -7,6 +7,8 @@ import { dirLink, fmtDist, mapsLink, metres, pinGroup, travel, KIND_LABEL } from
 import { fmtDur, fmtHM, fmtT, longDate } from '../model/time';
 import { needs, remindsMe, stillToDo, visibleTodos } from '../model/todos';
 import { ThingRow } from './details';
+import { ChangePlans } from './changePlans';
+import { JAPAN } from '../edition';
 import { TodoItem, tapped } from './day';
 import { Ext, Pill, SecH, Txt, pinColor } from './bits';
 import { useApp } from './ctx';
@@ -22,6 +24,7 @@ function useMinute() {
 
 export function NextCard() {
   const { ix, now, ui, set, geo, go, me } = useApp();
+  const [changing, setChanging] = useState(false);
   useMinute();
   let c: Ctx | null = null;
   if (now.phase === 'during' && now.cur) c = liveCtx(ix, now.cur, geo.on ? geo.pos : null);
@@ -99,6 +102,10 @@ export function NextCard() {
           </ul>
         </>
       )}
+      {c.live && !JAPAN && (
+        <div className="chips"><button type="button" className="chipbtn go" onClick={() => setChanging(true)}>Change of plans?</button></div>
+      )}
+      {changing && <ChangePlans d={c.d} close={() => setChanging(false)} />}
       {c.live && waiting.length > 0 && (
         <>
           <h3 className="sub-h">Waiting on you</h3>

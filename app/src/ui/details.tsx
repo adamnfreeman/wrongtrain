@@ -129,7 +129,9 @@ function PlanCard({ d, p, close }: { d: Day; p: PlanItem; close: () => void }) {
   const place = p.placeId ? ix.place.get(p.placeId) : undefined;
   const when = p.time ? (p.timeKind === 'by' ? 'By ' : '') + fmtHM(p.time) + (p.end ? `–${fmtHM(p.end)}` : '') : '';
   /* the place's name, else the text's first sentence; the whole text then sits under it */
-  const first = p.text.split(/\n|(?<=[.!?])\s/)[0].trim();
+  /* no lookbehind in this pattern: Safari before 16.4 can't read one, and the whole app would fail */
+  const line1 = p.text.split('\n')[0], end = line1.match(/^.*?[.!?](?=\s)/);
+  const first = (end ? end[0] : line1).trim();
   const title = place?.name || (first.length <= 70 ? first : first.slice(0, 67).trimEnd() + '…');
   const go = (f: () => void) => () => { close(); f(); };
   return (
