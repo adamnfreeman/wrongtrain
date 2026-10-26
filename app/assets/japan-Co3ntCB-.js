@@ -1,1 +1,0 @@
-export{r as seedFromOldPage}from"./japan-Sdi67RuB.js";
