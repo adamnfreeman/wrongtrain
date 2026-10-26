@@ -6,7 +6,7 @@ import { useState } from 'react';
 import type { Day, Place, PlanItem, Trip } from '../model/types';
 import { patchTrip } from '../model/store';
 import { savePlanItem } from '../model/edit';
-import { dirLink, fmtDist, newId, travel, tzOf } from '../model/trip';
+import { clockZone, dirLink, fmtDist, newId, travel } from '../model/trip';
 import { fmtDur, fmtHM, hm, minutesIn } from '../model/time';
 import { MOODS, type Mood } from '../../supabase/functions/_shared/nearby.ts';
 import { findNearby, type Found, type Suggestion } from '../sync/nearby';
@@ -21,7 +21,7 @@ const toHM = (m: number) => `${pad(Math.floor(m / 60) % 24)}:${pad(m % 60)}`;
 export function ChangePlans({ d, close }: { d: Day; close: () => void }) {
   const { ix, geo } = useApp();
   const t = ix.trip;
-  const min = minutesIn(tzOf(ix, d));
+  const min = minutesIn(clockZone(ix, d));
   /* what's still ahead today: untimed things, and anything from half an hour ago on */
   const left = d.plan.filter(i => { const a = hm(i.time); return a == null || a >= min - 30; });
   const [skip, setSkip] = useState<string[]>([]);

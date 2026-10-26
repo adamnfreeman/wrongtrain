@@ -27,6 +27,10 @@ export interface Trip {
   /** Who's going to each plan item, by plan item id: names from travelers. No entry means
       everyone. Kept apart from the days so saying "I'm out" is free for anyone on the trip. */
   going?: Record<ID, string[]>;
+  /** Each person's tastes, by name (asked when they join; ui/tastes.tsx): what they eat and what
+      they're into, so picks suit the person asking and nobody gets someone else's diet.
+      Free for anyone, like going. */
+  tastes?: Record<string, Tastes>;
   guides: Guide[];
   /** Phrase pack to show on the Phrases tab, by language code ("ja"). */
   phrasePack?: string;
@@ -171,6 +175,10 @@ export interface Place {
   dayIds?: ID[];
   /** Map or website link; a maps search is built from the name when unset. */
   link?: string;
+  /** The place's own website, when `link` is a map link (the Japan sheet's hotels have those). */
+  website?: string;
+  /** When the website was looked up online (once; sync/details.ts). */
+  siteAt?: string;
   closed?: boolean;
 }
 
@@ -277,4 +285,14 @@ export interface Settlement {
   amount: number;
   at: string;
   via?: 'venmo' | 'cash' | 'other';
+}
+
+/** One person's tastes on a trip. */
+export interface Tastes {
+  /** Food needs: "Vegetarian", "Gluten-free" (DIETS in supabase/functions/_shared/planner.ts). None means none. */
+  diets: string[];
+  /** What they're into: "Food", "Nightlife" (STYLES there). */
+  likes: string[];
+  /** Anything else, in their words: "no seafood", "love jazz bars". */
+  notes?: string;
 }

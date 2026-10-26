@@ -85,22 +85,28 @@ export function PlanItemEditor({ trip, dayId, id, close }: { trip: Trip; dayId: 
         <Text label="Ends" type="time" value={end} onChange={setEnd} />
       </div>
       <Check label="Booked: be on time for this" checked={fixed} onChange={setFixed} />
-      {trip.travelers.length > 1 && (
-        <Field label="Who's going">
-          <div className="whopick">
-            {trip.travelers.map(n => {
-              const on = who.some(w => same(w, n));
-              return (
-                <button key={n} type="button" className={'face' + (on ? '' : ' waiting')} aria-pressed={on}
-                  onClick={() => setWho(on ? who.filter(w => !same(w, n)) : [...who, n])}>
-                  <Face tripId={trip.id} name={n} size={44} /><span>{n}</span>
-                </button>
-              );
-            })}
-          </div>
-        </Field>
-      )}
+      <WhoPick trip={trip} who={who} setWho={setWho} />
       <DeleteButton label="Take it off the plan" confirmText={`Take "${item.text}" off the plan?`} onDelete={() => { patchTrip(trip.id, t => deletePlanItem(t, dayId, id)); close(); }} />
     </Sheet>
+  );
+}
+
+/** Faces to tap for who's going to a plan item or a ride. Hidden on a trip of one. */
+export function WhoPick({ trip, who, setWho }: { trip: Trip; who: string[]; setWho: (w: string[]) => void }) {
+  if (trip.travelers.length < 2) return null;
+  return (
+    <Field label="Who's going">
+      <div className="whopick">
+        {trip.travelers.map(n => {
+          const on = who.some(w => same(w, n));
+          return (
+            <button key={n} type="button" className={'face' + (on ? '' : ' waiting')} aria-pressed={on}
+              onClick={() => setWho(on ? who.filter(w => !same(w, n)) : [...who, n])}>
+              <Face tripId={trip.id} name={n} size={44} /><span>{n}</span>
+            </button>
+          );
+        })}
+      </div>
+    </Field>
   );
 }

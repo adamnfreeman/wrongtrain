@@ -17,6 +17,7 @@ import { useGeo } from './ui/geo';
 import { Days, Places, Prep, Today } from './ui/views';
 import { MapView, ShareNotice } from './ui/map';
 import { RemindNotice } from './ui/remind';
+import { NewDocNotice } from './ui/newDocs';
 import { startPush } from './sync/push';
 import { DocEditor, ExpenseEditor, Wallet } from './ui/wallet';
 import { Phrases } from './ui/phrases';
@@ -41,6 +42,8 @@ import { MyNotes } from './ui/mynotes';
 import { PhotosPage } from './ui/photos';
 import { offCentre, useDock } from './ui/dock';
 import { useRef } from 'react';
+import { TastesSheet } from './ui/tastes';
+import { eatsVeg, tastesOf } from './model/tastes';
 
 /* Swipes the pager quickly across to a tapped tab, however far: the browser's own smooth scroll
    glides slowly over long distances and is cut short by scroll snapping on iOS. Snapping is off
@@ -230,7 +233,8 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
     tab: 'today', day: (now.cur || trip.days[0])?.id || '', seg: 'food',
     /* one city at a time: the one you're in, else the first (lists of every city were too much) */
     dest: (now.cur?.destinationId && !now.cur.travel ? now.cur.destinationId : (now.cur || trip.days[0])?.destinationId) || trip.destinations[0]?.id || 'all',
-    veg: pref('veg', false), hide: {}, sim: { day: '', min: 840 }, pcat: pref<string[]>('fav-phrases', []).length ? '★ Favourites' : 'All', pq: '', q: '',
+    /* the veg filter starts on for people who said they're vegetarian or vegan, off for everyone else */
+    veg: pref('veg', eatsVeg(tastesOf(trip, me))), hide: {}, sim: { day: '', min: 840 }, pcat: pref<string[]>('fav-phrases', []).length ? '★ Favourites' : 'All', pq: '', q: '',
     ...fromHash(ids),
   }));
   const set = useCallback((p: Partial<UI>) => {
@@ -244,6 +248,17 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
   }, []);
   const [editing, edit] = useState<Edit | null>(null);
   const [showing, show] = useState<ThingRef | null>(null);
+  /* someone on a shared trip who hasn't said what they like is asked once (on joining, or the first
+     open after this came in); Trip → What I like changes it later */
+  useEffect(() => {
+    if (JAPAN || trip.sample || !me || !getState().sync[trip.id] || tastesOf(trip, me)) return;
+    /* not in the browser tests, where it would cover what they tap */
+    if (navigator.webdriver) return;
+    const key = `tastes-asked-${trip.id}`;
+    if (pref(key, false)) return;
+    const t = window.setTimeout(() => { setPref(key, true); edit(e => e || { kind: 'tastes' }); }, 1500);
+    return () => clearTimeout(t);
+  }, [trip.id, me]); // eslint-disable-line react-hooks/exhaustive-deps
   const [adding, setAdding] = useState(false);
   const photoPick = useRef<HTMLInputElement>(null);
   const walletSeg = useWalletSeg();
@@ -277,9 +292,9 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
   useEffect(() => { const t = window.setInterval(() => { if (!document.hidden) setTick(x => x + 1); }, 30_000); return () => clearInterval(t); }, []);
   const rn = useMemo(() => {
     if (!now.cur) return { m: null, next: null };
-    const c = liveCtx(ix, now.cur, geo.pos), m = rightNow(ix, c);
-    return { m, next: m ? after(ix, c, m) : null };
-  }, [ix, now.cur, geo.pos, tick]); // eslint-disable-line react-hooks/exhaustive-deps
+    const c = liveCtx(ix, now.cur, geo.pos), m = rightNow(ix, c, me);
+    return { m, next: m ? after(ix, c, m, me) : null };
+  }, [ix, now.cur, geo.pos, tick, me]); // eslint-disable-line react-hooks/exhaustive-deps
   /* it opens by itself once for each thing; when the thing is over, back to Today */
   useEffect(() => {
     const id = rn.m?.id;
@@ -436,6 +451,7 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
         {!JAPAN && editing?.kind === 'place' && <PlaceEditor trip={trip} id={editing.id} as={editing.as} dayId={editing.dayId} destinationId={editing.destinationId} close={close} />}
         {!JAPAN && editing?.kind === 'todo' && <TodoEditor trip={trip} id={editing.id} group={editing.group} close={close} />}
         {!JAPAN && editing?.kind === 'doc' && <DocEditor trip={trip} id={editing.id} forRef={editing.for} title={editing.title} as={editing.as} close={close} />}
+        {!JAPAN && editing?.kind === 'tastes' && <TastesSheet trip={trip} me={me} close={close} />}
         {!JAPAN && editing?.kind === 'expense' && <ExpenseEditor trip={trip} id={editing.id} close={close} />}
       </div>
       {/* the main way in: on every page but Right now, out of the way of any open editor */}
@@ -459,6 +475,7 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
       {adding && <AddAnything kind={(addOn(ui.tab) as AddKind) || 'any'} close={() => setAdding(false)} />}
       {!JAPAN && <ShareNotice />}
       {!JAPAN && <RemindNotice />}
+      {!JAPAN && <NewDocNotice />}
       <div className="statusbg" aria-hidden="true" />
       <div className="ptr" ref={pullLabel} role="status" aria-live="polite" />
       <div className="tabpeek" ref={peek} aria-hidden="true" />

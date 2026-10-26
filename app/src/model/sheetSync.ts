@@ -29,7 +29,7 @@ export function updateFromSheet(local: Trip, sheet: Trip, lastSheet?: Trip | nul
   /* the sheet knows nothing of the app's own parts: carry them over, so they don't read as removed */
   const remote = { ...sheet } as unknown as O;
   for (const [k, v] of Object.entries(local)) if (!(k in remote) || remote[k] === undefined) remote[k] = v;
-  for (const k of ['docs', 'expenses', 'settlements', 'venmo', 'going', 'currency', 'phrasePack'] as const) if ((local as unknown as O)[k] !== undefined) remote[k] = (local as unknown as O)[k];
+  for (const k of ['docs', 'expenses', 'settlements', 'venmo', 'going', 'tastes', 'currency', 'phrasePack'] as const) if ((local as unknown as O)[k] !== undefined) remote[k] = (local as unknown as O)[k];
   const base = lastSheet ? ({ ...remote, ...lastSheet } as unknown as Trip) : (shared(local, sheet) as Trip);
   return { ...merge3(base, local, remote as unknown as Trip), id: local.id, createdAt: local.createdAt };
 }

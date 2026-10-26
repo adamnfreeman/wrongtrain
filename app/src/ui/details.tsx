@@ -6,10 +6,10 @@
 import type { ReactNode } from 'react';
 import type { Day, Leg, Place, PlanItem, ThingRef } from '../model/types';
 import { addDays, fmtHM, longDate, shortDate } from '../model/time';
-import { KIND_LABEL, cityOf, dirLink, lineOf, lineOfDest, mapsLink } from '../model/trip';
+import { KIND_LABEL, type TripIndex, cityOf, dirLink, lineOf, lineOfDest, mapsLink, siteOf } from '../model/trip';
 import { JAPAN } from '../edition';
 import { DocLinks } from './wallet';
-import { Sheet } from './form';
+import { Popup } from './form';
 import { Ext, Pill, Txt, line } from './bits';
 import { WhoGoing } from './planItem';
 import { AddToItinerary } from './addToPlan';
@@ -24,6 +24,11 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 }
 
 /** The big buttons: what you'd do next with this thing. */
+/** No website known yet: a web search for the place's own site, which is nearly always the top
+    result (better than sending people to a map when they asked for the website). */
+const siteSearch = (ix: TripIndex, p: Place) =>
+  'https://www.google.com/search?q=' + encodeURIComponent([p.name, p.destinationId && ix.dest.get(p.destinationId)?.name, 'official site'].filter(Boolean).join(' '));
+
 function Acts({ p }: { p?: Place }) {
   const { ix } = useApp();
   if (!p || p.closed) return null;
@@ -31,7 +36,7 @@ function Acts({ p }: { p?: Place }) {
     <div className="dc-acts">
       <Ext href={p.lat != null ? dirLink(p, 'transit') : mapsLink(ix, p)}>Directions</Ext>
       {p.phone && <a href={tel(p.phone)}>Call</a>}
-      {p.link && !/google\.[a-z.]+\/maps|maps\.app\.goo/.test(p.link) && <Ext href={p.link}>Website</Ext>}
+      {(siteOf(p) || (p.kind !== 'area' && p.kind !== 'transit')) && <Ext href={siteOf(p) || siteSearch(ix, p)}>Website</Ext>}
     </div>
   );
 }
@@ -45,7 +50,7 @@ function PlaceRows({ p }: { p: Place }) {
       {(p.address || p.area) && <Row label="Address"><Ext href={mapsLink(ix, p)}>{p.address || p.area}</Ext></Row>}
       {p.phone && <Row label="Phone"><a href={tel(p.phone)}>{p.phone}</a></Row>}
       {hours && <Row label="Hours">{hours}{p.closedDays?.length ? `, closed ${p.closedDays.map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d]).join(', ')}` : ''}</Row>}
-      {p.link && <Row label="Website"><Ext href={p.link}>{site(p.link)}</Ext></Row>}
+      {siteOf(p) && <Row label="Website"><Ext href={siteOf(p)!}>{site(siteOf(p)!)}</Ext></Row>}
       {p.booking && <Row label="Reservation"><span className="pre">{p.booking}</span></Row>}
       {p.dietNote && <Row label="Food">{p.dietNote}</Row>}
     </>
@@ -88,9 +93,9 @@ function PlaceCard({ p, close }: { p: Place; close: () => void }) {
       <Found p={p} />
       <DocLinks kind="place" id={p.id} />
       {p.kind !== 'stay' && !JAPAN && !p.closed && <AddToItinerary p={p} close={close} />}
-      <div className="meta dc-foot">
-        <button className="linkbtn" onClick={go(() => edit({ kind: 'place', id: p.id }))}>{stay && !(p.phone || p.booking || p.address) ? 'Add address, phone, reservation' : 'Edit'}</button>
-        <button className="linkbtn" onClick={go(() => edit({ kind: 'doc', for: { kind: 'place', id: p.id } }))}>+ Booking</button>
+      <div className="dc-btns">
+        <button type="button" className="bigbtn" onClick={go(() => edit({ kind: 'place', id: p.id }))}>{stay && !(p.phone || p.booking || p.address) ? 'Add details' : 'Edit'}</button>
+        <button type="button" className="bigbtn" onClick={go(() => edit({ kind: 'doc', for: { kind: 'place', id: p.id } }))}>Add a booking</button>
       </div>
     </>
   );
@@ -116,9 +121,9 @@ function LegCard({ l, close }: { l: Leg; close: () => void }) {
         {l.details && <Row label="Details"><span className="pre">{l.details}</span></Row>}
       </div>
       <DocLinks kind="leg" id={l.id} />
-      <div className="meta dc-foot">
-        <button className="linkbtn" onClick={go(() => edit({ kind: 'leg', id: l.id }))}>Edit</button>
-        <button className="linkbtn" onClick={go(() => edit({ kind: 'doc', for: { kind: 'leg', id: l.id } }))}>+ Ticket</button>
+      <div className="dc-btns">
+        <button type="button" className="bigbtn" onClick={go(() => edit({ kind: 'leg', id: l.id }))}>Edit</button>
+        <button type="button" className="bigbtn" onClick={go(() => edit({ kind: 'doc', for: { kind: 'leg', id: l.id } }))}>Add a ticket</button>
       </div>
     </>
   );
@@ -149,9 +154,9 @@ function PlanCard({ d, p, close }: { d: Day; p: PlanItem; close: () => void }) {
       <Found p={place} />
       <DocLinks kind="plan" id={p.id} />
       {!JAPAN && <WhoGoing trip={ix.trip} item={p} />}
-      <div className="meta dc-foot">
-        <button className="linkbtn" onClick={go(() => edit({ kind: 'plan', dayId: d.id, id: p.id }))}>Edit</button>
-        <button className="linkbtn" onClick={go(() => edit({ kind: 'doc', for: { kind: 'plan', id: p.id } }))}>+ Ticket</button>
+      <div className="dc-btns">
+        <button type="button" className="bigbtn" onClick={go(() => edit({ kind: 'plan', dayId: d.id, id: p.id }))}>Edit</button>
+        <button type="button" className="bigbtn" onClick={go(() => edit({ kind: 'doc', for: { kind: 'plan', id: p.id } }))}>Add a ticket</button>
       </div>
     </>
   );
@@ -172,7 +177,7 @@ export function DetailsCard({ thing, close }: { thing: ThingRef; close: () => vo
   }
   /* gone (deleted on another phone while open): nothing to show */
   if (!body) return null;
-  return <Sheet title={label} onCancel={close} cancelLabel="Close"><div className="dcard">{body}</div></Sheet>;
+  return <Popup title={label} close={close}><div className="dcard">{body}</div></Popup>;
 }
 
 /** A one-line row that opens a thing's card: Essentials, Coming up and Tonight on Today. */

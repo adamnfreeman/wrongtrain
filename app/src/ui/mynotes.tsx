@@ -1,6 +1,6 @@
 /* The Notes tab, the last one: your own notes for the trip, kept on this phone only (group notes
    are on the To do tab), and below them comments about the app for Adam (sync/feedback.ts). */
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { pref, setPref } from '../model/store';
 import { useSync } from '../sync/engine';
 import { myFeedback, sendFeedback, type Feedback, type FeedbackKind } from '../sync/feedback';
@@ -32,6 +32,12 @@ function AppComments() {
   const { session } = useSync();
   const [kind, setKind] = useState<FeedbackKind>('broken');
   const [draft, setDraft] = useState('');
+  /* a screenshot of the problem: from Photos, or a file */
+  const [shot, setShot] = useState<File | null>(null);
+  const shotUrl = useMemo(() => (shot ? URL.createObjectURL(shot) : ''), [shot]);
+  useEffect(() => () => { if (shotUrl) URL.revokeObjectURL(shotUrl); }, [shotUrl]);
+  const pick = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ text: string; bad: boolean } | null>(null);
   const [sent, setSent] = useState<Feedback[]>([]);
   useEffect(() => { if (session) void myFeedback().then(setSent).catch(() => {}); }, [session]);
@@ -44,13 +50,15 @@ function AppComments() {
     return (
       <li key={f.id} className={'todo' + (d ? ' done' : '')}>
         <button className="box" role="checkbox" aria-checked={d} aria-label={(d ? 'Reopen: ' : 'Done: ') + f.text} onClick={() => tick(f.id)}>{d ? '✓' : ''}</button>
-        <div><div className="kick">{KINDS.find(x => x.k === f.kind)?.label} · {stamp(f.created_at)}</div><p className="item-d">{f.text}</p></div>
+        <div><div className="kick">{KINDS.find(x => x.k === f.kind)?.label} · {stamp(f.created_at)}</div><p className="item-d">{f.text}</p>{f.image && <p className="note" style={{ margin: 0 }}>With a screenshot</p>}</div>
       </li>
     );
   };
   const send = async () => {
-    try { await sendFeedback(kind, draft); setDraft(''); setMsg({ text: 'Sent. Thank you!', bad: false }); setSent(await myFeedback()); }
+    setBusy(true);
+    try { await sendFeedback(kind, draft, shot); setDraft(''); setShot(null); setMsg({ text: 'Sent. Thank you!', bad: false }); setSent(await myFeedback()); }
     catch (e) { setMsg({ text: (e as Error).message, bad: true }); }
+    setBusy(false);
   };
   return (
     <section className="sec" style={{ marginTop: 28 }}>
@@ -62,7 +70,17 @@ function AppComments() {
         </div>
         <textarea className="search notebox" rows={4} maxLength={2000} value={draft} onChange={e => setDraft(e.target.value)}
           placeholder={kind === 'broken' ? 'What happened, and what were you doing?' : kind === 'idea' ? 'What would make WrongTrain better?' : 'What should be different?'} aria-label="Your comment" />
-        <div className="chips"><button type="button" className="chipbtn go" disabled={!draft.trim()} onClick={() => void send()}>Send to Adam</button></div>
+        {shotUrl && (
+          <div className="fb-shot">
+            <img src={shotUrl} alt="Your screenshot" />
+            <button type="button" className="linkbtn" onClick={() => setShot(null)}>Remove</button>
+          </div>
+        )}
+        <input ref={pick} type="file" accept="image/*" hidden onChange={e => { setShot(e.target.files?.[0] || null); e.target.value = ''; }} />
+        <div className="chips">
+          <button type="button" className="chipbtn" onClick={() => pick.current?.click()}>{shot ? 'Change screenshot' : 'Add a screenshot'}</button>
+          <button type="button" className="chipbtn go" disabled={!draft.trim() || busy} onClick={() => void send()}>{busy ? 'Sending…' : 'Send to Adam'}</button>
+        </div>
         {msg && <p className={'geomsg' + (msg.bad ? ' bad' : '')} role="status">{msg.text}</p>}
         {sent.length > 0 && <>
           <h3 className="sub-h">What you've sent</h3>

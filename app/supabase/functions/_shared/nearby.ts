@@ -111,13 +111,16 @@ Pick the five best places for the mood, best first. They are adults travelling w
 
 For each, write "why" as one short sentence (under 20 words) in plain words: what it is and why it suits right now. Do not invent facts that are not in the list: no ratings, prices, dishes or history you were not given. If fewer than five fit, return fewer.
 
+Fit the person asking: if they eat vegetarian, vegan, halal or the like, pick places that serve it (and say so); if they said nothing about food, assume they eat anything and don't steer them to vegetarian places. What they're into can break a tie.
+
 Use only ids from the list.`;
 
 /** The message for Claude: mood, time and the candidates, kept short. */
-export function nearbyPrompt(mood: Mood, localTime: string, candidates: Candidate[]): string {
+export function nearbyPrompt(mood: Mood, localTime: string, candidates: Candidate[], tastes = ''): string {
   const m = MOODS.find(x => x.key === mood)!, label = `${m.label} (${m.hint})`;
   const lines = candidates.slice(0, 40).map(c => [c.id, c.name, c.what, `${c.dist} m`, c.hours ? `hours: ${c.hours}` : ''].filter(Boolean).join(' | '));
-  return `Mood: ${label}\nLocal time: ${localTime}\n\nPlaces (id | name | what | distance | hours):\n${lines.join('\n')}`;
+  const about = tastes.trim().slice(0, 300);
+  return `Mood: ${label}\nLocal time: ${localTime}\nThe person asking: ${about || 'said nothing about their tastes; assume no food needs'}\n\nPlaces (id | name | what | distance | hours):\n${lines.join('\n')}`;
 }
 
 /** Keeps only picks that name a candidate, at most five, each once. */

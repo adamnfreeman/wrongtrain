@@ -1,6 +1,6 @@
 /* suggest-nearby: Claude picks five places near you for a mood.
 
-   The app sends { trip_id, mood, local_time, candidates } with the signed-in person's token. The
+   The app sends { trip_id, mood, local_time, candidates, tastes } with the signed-in person's token. The
    candidates are real places from OpenStreetMap that the app looked up around the phone (see
    _shared/nearby.ts). This function checks the person is on the trip, counts the use against the
    trip's allowance (as file-note does), and returns Claude's picks: ids from the list, each with
@@ -44,11 +44,11 @@ Deno.serve(async req => {
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   if (!Deno.env.get('ANTHROPIC_API_KEY')) return reply(503, { error: 'setup', message: 'Suggestions are not set up yet.' });
 
-  let body: { trip_id?: string; mood?: string; local_time?: string; candidates?: unknown };
+  let body: { trip_id?: string; mood?: string; local_time?: string; candidates?: unknown; tastes?: string };
   try { body = await req.json(); } catch { return reply(400, { error: 'input', message: 'Not JSON.' }); }
   const tripId = String(body.trip_id || ''), mood = body.mood, candidates = readCandidates(body.candidates);
   if (!tripId || !isMood(mood) || !candidates.length) return reply(400, { error: 'input', message: 'A trip, a mood and some places are needed.' });
-  const localTime = String(body.local_time || '').slice(0, 40);
+  const localTime = String(body.local_time || '').slice(0, 40), tastes = String(body.tastes || '').slice(0, 300);
 
   /* as the caller: their access rules decide whether they are on the trip */
   const asUser = createClient(url, publicKey, { global: { headers: { Authorization: auth } }, auth: { persistSession: false } });
@@ -77,7 +77,7 @@ Deno.serve(async req => {
       /* a quick choice from a short list */
       output_config: { effort: 'low', format: { type: 'json_schema', schema: PICKS_SCHEMA } },
       system: NEARBY_SYSTEM,
-      messages: [{ role: 'user', content: nearbyPrompt(mood, localTime, candidates) }],
+      messages: [{ role: 'user', content: nearbyPrompt(mood, localTime, candidates, tastes) }],
     });
     if (msg.stop_reason === 'refusal' || msg.stop_reason === 'max_tokens') throw new Error(`stopped: ${msg.stop_reason}`);
     const out = msg.content.find(b => b.type === 'text');

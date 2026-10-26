@@ -147,3 +147,19 @@ describe('parseCoords', () => {
     expect(parseCoords(s)).toBeNull();
   });
 });
+
+describe('savePlanItem on the same day', () => {
+  it('keeps an item with no time where it was', async () => {
+    const { savePlanItem } = await import('./edit');
+    const t = {
+      days: [{ id: 'd1', plan: [{ id: 'a', text: 'Coffee' }, { id: 'b', text: 'Temple', time: '10:00' }, { id: 'c', text: 'Dinner', time: '19:00' }] }],
+    } as unknown as import('./types').Trip;
+    const out = savePlanItem(t, 'd1', { id: 'a', text: 'Coffee with Andrea' }, 'd1');
+    expect(out.days[0].plan.map(p => p.id)).toEqual(['a', 'b', 'c']);
+    expect(out.days[0].plan[0].text).toBe('Coffee with Andrea');
+  });
+  it('orders times by the clock, not the text', async () => {
+    const { sortPlan } = await import('./edit');
+    expect(sortPlan([{ id: 'x', text: '', time: '13:00' }, { id: 'y', text: '', time: '9:00' }]).map(p => p.id)).toEqual(['y', 'x']);
+  });
+});

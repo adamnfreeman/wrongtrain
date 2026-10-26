@@ -62,7 +62,7 @@ const dpane = page.locator('.pane[data-tab="days"]');
 const where = () => page.evaluate(() => Object.fromEntries(JSON.parse(localStorage.getItem('wrongtrain')).trips.find(t => t.sample).days.flatMap((d, i) => d.plan.map(p => [p.id, i]))));
 const before = await where();
 await dpane.locator('.plan .planitem').first().click();
-const card = page.locator('.sheet-wrap .dcard');
+const card = page.locator('.pop .dcard');
 await card.waitFor();
 check(await card.locator('.dc-t').count() === 1, 'tapping a plan item opens its details card');
 await card.getByRole('button', { name: 'Edit' }).click();

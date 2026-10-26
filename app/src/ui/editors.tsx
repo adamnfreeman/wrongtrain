@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react';
 import type { DocKind, Day, Destination, Leg, LegMode, LegStatus, Place, PlaceKind, PlanItem, Todo, Trip } from '../model/types';
 import {
   copyTrip, deleteDay, deleteDestination, deleteLeg, deletePlace, deleteTodo, destinationUse, insertDay, newId, newTrip,
-  nextColor, saveDestination, saveLeg, savePlace, saveTodo, setStart, sortPlan, updateDay, type Stop,
+  nextColor, saveDestination, saveLeg, savePlace, saveTodo, setGoing, setStart, sortPlan, updateDay, type Stop,
 } from '../model/edit';
 import { addTrip, deleteTrip, getState, patchTrip } from '../model/store';
 import { useStore } from '../model/store';
@@ -15,7 +15,7 @@ import { addDays, daysBetween, longDate, todayIn } from '../model/time';
 import { PACKS, packForZones } from '../phrases';
 import { Sharing } from './account';
 import { TODO_TAGS, checkDone, needs } from '../model/todos';
-import { Face } from './planItem';
+import { Face, WhoPick } from './planItem';
 import { Check, Choice, DeleteButton, Field, Lines, PinPicker, Segs, Sheet, Swatches, Text, ZonePicker, guessZone, phoneZone, zoneLabel } from './form';
 
 export type Edit =
@@ -26,7 +26,8 @@ export type Edit =
   | { kind: 'todo'; id?: string; group?: string }
   | { kind: 'doc'; id?: string; for?: { kind: 'plan' | 'leg' | 'place'; id: string }; title?: string; as?: DocKind }
   | { kind: 'expense'; id?: string }
-  | { kind: 'plan'; dayId: string; id: string };
+  | { kind: 'plan'; dayId: string; id: string }
+  | { kind: 'tastes' };
 
 interface Props { trip: Trip; close: () => void; onDayChange?: (id: string) => void }
 
@@ -134,7 +135,13 @@ export function LegEditor({ trip, id, dayId, close }: Props & { id?: string; day
   const stations = trip.places.filter(p => p.lat != null);
   const ix = useMemo(() => indexTrip(trip), [trip]);
   const ok = l.from.trim() && l.to.trim();
-  const commit = () => { save(trip, t => saveLeg(t, { ...l, from: l.from.trim(), to: l.to.trim(), statusText: undefined })); close(); };
+  const [who, setWho] = useState<string[]>(trip.going?.[l.id] ?? trip.travelers);
+  const commit = () => {
+    save(trip, t => saveLeg(t, { ...l, from: l.from.trim(), to: l.to.trim(), statusText: undefined }));
+    /* who's on it, so Right now opens only for them (the same list as plan items, by the leg's id) */
+    if (trip.travelers.length > 1) patchTrip(trip.id, t => setGoing(t, l.id, who));
+    close();
+  };
   return (
     <Sheet title={orig ? 'Edit leg' : 'New leg'} onCancel={close} onSave={commit} canSave={!!ok}
       footer={orig && <DeleteButton label="Delete this leg" confirmText={`Delete ${l.from} → ${l.to}?`} onDelete={() => { save(trip, t => deleteLeg(t, l.id)); close(); }} />}>
@@ -156,6 +163,7 @@ export function LegEditor({ trip, id, dayId, close }: Props & { id?: string; day
       <Segs label="Booking" value={l.status} onChange={v => up({ status: v })} options={STATUSES} />
       <Text label="Tickets" value={l.tickets || ''} onChange={v => up({ tickets: v || undefined })} placeholder="e.g. Smart EX app, or buy at the station" />
       <Text label="Details" multiline value={l.details || ''} onChange={v => up({ details: v || undefined })} placeholder="Booking references, platforms, anything else" />
+      <WhoPick trip={trip} who={who} setWho={setWho} />
     </Sheet>
   );
 }

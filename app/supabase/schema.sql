@@ -134,7 +134,7 @@ declare k text; free text[]; r text;
 begin
   if member_role in ('owner', 'organizer', 'editor') then return false; end if;
   r := case when member_role = 'contributor' then 'approve' else 'all' end;
-  free := case when r = 'all' then array['notes', 'going'] else array['notes', 'todos', 'todoGroups', 'places', 'docs', 'expenses', 'settlements', 'venmo', 'going'] end;
+  free := case when r = 'all' then array['notes', 'going', 'tastes'] else array['notes', 'todos', 'todoGroups', 'places', 'docs', 'expenses', 'settlements', 'venmo', 'going', 'tastes'] end;
   -- anything outside the free parts changed
   for k in select jsonb_object_keys(old_data) union select jsonb_object_keys(new_data) loop
     if k = 'updatedAt' or k = any(free) then continue; end if;
@@ -756,6 +756,17 @@ create policy "send feedback" on public.app_feedback for insert to authenticated
 drop policy if exists "see your own feedback" on public.app_feedback;
 create policy "see your own feedback" on public.app_feedback for select to authenticated using (user_id = auth.uid());
 revoke update, delete on public.app_feedback from anon, authenticated;
+-- a screenshot with a comment (Oct 25): its path in the private feedback bucket, "<user id>/<file>"
+alter table public.app_feedback add column if not exists image text check (image is null or char_length(image) <= 200);
+insert into storage.buckets (id, name, public, file_size_limit)
+  values ('feedback', 'feedback', false, 8388608)
+  on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit;
+drop policy if exists "send a feedback screenshot" on storage.objects;
+create policy "send a feedback screenshot" on storage.objects for insert to authenticated
+  with check (bucket_id = 'feedback' and (storage.foldername(name))[1] = auth.uid()::text);
+drop policy if exists "see your own feedback screenshots" on storage.objects;
+create policy "see your own feedback screenshots" on storage.objects for select to authenticated
+  using (bucket_id = 'feedback' and (storage.foldername(name))[1] = auth.uid()::text);
 
 -- ---------- where everyone is (friend finder) ----------
 --

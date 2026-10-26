@@ -106,6 +106,7 @@ What you can do:
 - Find a real place: when the note asks for a kind of place or service without naming one ("get botox and a facial", "a good sushi place near the hotel") and nothing on the trip fits, don't invent one. Set search to a web search that would find a well-reviewed one near where the group will be when it fits (that day's city and the stay's area), such as "botox and facial medical spa near Shinjuku, Tokyo", leave changes empty and done false. You will then be given what the search found, in <found>.
 - With <found>: add the best match as a place (its kind, destination, area, and its link), and when the note is something to do, also a plan item on the day it fits best (the right city, a day with free time, a sensible hour; not fixed). Say in the reply which one you chose and for which day. Leave search empty.
 - Otherwise leave search empty.
+- Food needs belong to people, not the trip: follow the note author's own tastes, and for something the whole group shares, pick what suits everyone listed. Don't make a place vegetarian (or anything else) just because someone on the trip is.
 
 Leave the note open (done false, no changes) only when you truly can't tell what it means or where it goes, or it is a question for the group rather than something to file. For a chain or a place with no city given, pick the sensible destination and day and say so in the reply.
 
@@ -129,6 +130,8 @@ interface TripLike {
   places?: { id: string; name: string; kind: string; destinationId?: string; area?: string; wishlist?: boolean; dayIds?: string[] }[];
   todoGroups?: string[];
   todos?: { group: string; text: string; done?: boolean }[];
+  /** Each person's tastes, by name (food needs, what they're into). */
+  tastes?: Record<string, { diets?: string[]; likes?: string[]; notes?: string }>;
 }
 
 const cut = (s: string | undefined, n: number) => (s && s.length > n ? s.slice(0, n - 1) + '…' : s || undefined);
@@ -160,6 +163,9 @@ export function compactTrip(t: TripLike, ownerName = '') {
     })),
     todoGroups: t.todoGroups || [],
     todos: (t.todos || []).filter(x => !x.done).slice(0, 150).map(x => `${x.group}: ${cut(x.text, 80)}`),
+    tastes: Object.entries(t.tastes || {}).slice(0, 30).map(([name, x]) => ({
+      name: cut(name, 40)!, food: (x.diets || []).slice(0, 8).join(', ') || 'anything', into: (x.likes || []).slice(0, 10).join(', '), other: cut(x.notes, 200),
+    })),
   };
 }
 
@@ -183,6 +189,7 @@ export function tripText(c: ReturnType<typeof compactTrip>): string {
   for (const [dest, ps] of byDest) out.push(`${dest}:`, ...ps.map(p => '  ' + row(p.id, p.name, p.kind, p.area, p.wishlist, p.days?.join(' '))));
   out.push('', `To-do groups: ${c.todoGroups.join(', ')}`);
   if (c.todos.length) out.push('Open to-dos:', ...c.todos.map(t => '  ' + t));
+  if (c.tastes.length) out.push('', "Each person's tastes (name | eats | into | other); anyone not listed said nothing:", ...c.tastes.map(x => '  ' + row(x.name, x.food, x.into, x.other)));
   return out.join('\n');
 }
 

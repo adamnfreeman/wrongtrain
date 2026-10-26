@@ -33,6 +33,26 @@ export function Sheet({ title, onCancel, onSave, saveLabel = 'Save', cancelLabel
   );
 }
 
+/** A card that pops up over the page you're on, which dims behind it; tap outside or × to close.
+    For looking at something (the details card); editing still opens a full Sheet. */
+export function Popup({ title, close, children }: { title: string; close: () => void; children: ReactNode }) {
+  useEffect(() => {
+    document.body.classList.add('sheet-open');
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+    window.addEventListener('keydown', key);
+    return () => { document.body.classList.remove('sheet-open'); window.removeEventListener('keydown', key); };
+  }, [close]);
+  return createPortal(
+    <div className="pop-scrim" onClick={e => { if (e.target === e.currentTarget) close(); }}>
+      <div className="pop" role="dialog" aria-modal="true" aria-label={title}>
+        <button type="button" className="pop-x" aria-label="Close" onClick={close}>×</button>
+        {children}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 export function Field({ label, hint, children, id }: { label: string; hint?: ReactNode; children: ReactNode; id?: string }) {
   return (
     <div className="field">

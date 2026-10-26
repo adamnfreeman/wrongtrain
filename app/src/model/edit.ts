@@ -5,7 +5,7 @@
    so inserting or deleting a day re-dates everything after it. */
 import type { Day, Destination, Guide, Leg, LineColor, Place, PlanItem, Todo, Trip } from './types';
 import { LINE_COLORS } from './types';
-import { addDays } from './time';
+import { addDays, hm } from './time';
 import { newId } from './trip';
 
 const stampNow = () => new Date().toISOString();
@@ -101,7 +101,9 @@ export const updateDay = (trip: Trip, id: string, f: (d: Day) => Day): Trip =>
 
 /** Plan items with a time, in time order; untimed items keep their place after the one before them. */
 export function sortPlan(items: PlanItem[]): PlanItem[] {
-  const timed = items.filter(i => i.time).sort((a, b) => a.time!.localeCompare(b.time!));
+  /* by minutes, not text: "9:00" sorts before "13:00" */
+  const at = (i: PlanItem) => hm(i.time) ?? 9999;
+  const timed = items.filter(i => i.time).sort((a, b) => at(a) - at(b));
   const out: PlanItem[] = [];
   let ti = 0;
   items.forEach(i => { out.push(i.time ? timed[ti++] : i); });
@@ -201,8 +203,10 @@ export function savePlanItem(t: Trip, fromDay: string, item: PlanItem, toDay: st
     ...t,
     days: t.days.map(d => {
       let plan = d.plan;
-      if (d.id === fromDay) plan = plan.filter(p => p.id !== item.id);
-      if (d.id === toDay) plan = sortPlan([...plan.filter(p => p.id !== item.id), item]);
+      /* the same day: change it where it is, so an item with no time (morning coffee) keeps its spot */
+      if (d.id === fromDay && d.id === toDay) plan = sortPlan(plan.some(p => p.id === item.id) ? plan.map(p => (p.id === item.id ? item : p)) : [...plan, item]);
+      else if (d.id === fromDay) plan = plan.filter(p => p.id !== item.id);
+      else if (d.id === toDay) plan = sortPlan([...plan.filter(p => p.id !== item.id), item]);
       return plan === d.plan ? d : { ...d, plan };
     }),
     updatedAt: stampNow(),

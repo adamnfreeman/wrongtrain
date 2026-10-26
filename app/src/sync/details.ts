@@ -6,7 +6,7 @@
    one made from what was found. Shared trips only (the function checks you're on the trip). */
 import type { Day, Place, PlanItem, Trip } from '../model/types';
 import { getState, patchTrip } from '../model/store';
-import { newId } from '../model/trip';
+import { isMapLink, newId, siteOf } from '../model/trip';
 import { supabase } from './engine';
 import { streetAddress } from './maptiler';
 import { verdict } from '../model/rules';
@@ -17,7 +17,7 @@ const tried = new Set<string>();
 const OVERPASS = 'https://overpass-api.de/api/interpreter';
 
 /** Not looked up from the free sources yet: a pinned place missing an address, phone or website. */
-export const needsFree = (p: Place) => !p.freeAt && p.lat != null && p.lng != null && (!p.address || !p.phone || !p.link);
+export const needsFree = (p: Place) => !p.freeAt && p.lat != null && p.lng != null && (!p.address || !p.phone || !siteOf(p));
 
 /** The free first pass, done by itself when Essentials opens: OpenStreetMap near each place's pin
     for address, phone and website, then MapTiler for an address OSM didn't have. Claude (below)
@@ -47,7 +47,7 @@ export async function fillFree(trip: Trip, places: Place[]): Promise<void> {
       const add: Partial<Place> = {};
       if (f.address && !p.address) add.address = f.address;
       if (f.phone && !p.phone) add.phone = f.phone;
-      if (f.website && !p.link) add.link = f.website;
+      if (f.website && !isMapLink(f.website) && !siteOf(p)) add[p.link ? 'website' : 'link'] = f.website;
       return { ...p, ...add, freeAt: at, ...(Object.keys(add).length ? { foundOnline: true } : {}) };
     }),
   });
@@ -59,7 +59,9 @@ export async function fillFree(trip: Trip, places: Place[]): Promise<void> {
 
 
 export const needsDetails = (p: Place) =>
-  !p.detailsAt && (!p.address || !p.phone || !p.link || (p.kind === 'stay' && (!p.checkIn || !p.checkOut)));
+  (!p.detailsAt && (!p.address || !p.phone || !siteOf(p) || (p.kind === 'stay' && (!p.checkIn || !p.checkOut))))
+  /* looked up before a map link stopped counting as the website: one more look, for the website */
+  || (!siteOf(p) && !p.siteAt && !!p.link);
 export const bookingNeedsPlace = (p: PlanItem) => p.fixed && !p.placeId && !p.detailsAt && p.text.trim().length > 3;
 
 /** Looks up what's missing, three at a time (a big request took over a minute and the phone stopped
@@ -103,10 +105,10 @@ function apply(tripId: string, ids: string[], details: Found[]) {
       const add: Partial<Place> = {};
       if (f?.address && !p.address) add.address = f.address;
       if (f?.phone && !p.phone) add.phone = f.phone;
-      if (f?.website && !p.link) add.link = f.website;
+      if (f?.website && !isMapLink(f.website) && !siteOf(p)) add[p.link ? 'website' : 'link'] = f.website;
       if (p.kind === 'stay' && f?.checkIn && !p.checkIn) add.checkIn = f.checkIn;
       if (p.kind === 'stay' && f?.checkOut && !p.checkOut) add.checkOut = f.checkOut;
-      return { ...p, ...add, detailsAt: at, ...(Object.keys(add).length ? { foundOnline: true } : {}) };
+      return { ...p, ...add, detailsAt: at, siteAt: at, ...(Object.keys(add).length ? { foundOnline: true } : {}) };
     };
     const days = t.days.map(d => ({
       ...d,
