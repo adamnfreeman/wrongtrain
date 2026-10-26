@@ -61,3 +61,26 @@ describe('right now', () => {
     expect(after(ix, c, rightNow(ix, c)!)?.id).toBe('plan:bk');
   });
 });
+
+describe('right now is only for the people on it', () => {
+  it("someone else's ride or booking doesn't open yours", () => {
+    const t = { ...base(), travelers: ['Adam', 'Andrea', 'Drew'], going: { tr: ['Adam', 'Andrea'], bk: ['Drew'] } };
+    const ix = indexTrip(t);
+    expect(momentsOn(ix, t.days[3], ctx(t, 0), 'Drew').map(m => m.id)).toEqual(['plan:bk', 'leg:fl']);
+    expect(momentsOn(ix, t.days[3], ctx(t, 0), 'andrea').map(m => m.id)).toEqual(['leg:tr', 'leg:fl']);
+    expect(rightNow(ix, ctx(t, 9 * 60 + 10), 'Drew')).toBeNull();
+  });
+});
+
+describe('which day is today', () => {
+  it("goes by the phone's own date, not the destination's: Sunday evening at home isn't Monday in Tokyo", async () => {
+    const { whereNow } = await import('./trip');
+    const t = { ...base(), sample: false };
+    t.days = t.days.map((d, i) => ({ ...d, date: `2026-10-${26 + i}` }));
+    const ix = indexTrip(t);
+    /* 7 pm on Oct 25 in New York is already Oct 26 in Tokyo */
+    const at = new Date('2026-10-25T23:00:00Z');
+    expect(whereNow(ix, at, 'America/New_York')).toMatchObject({ cur: null, phase: 'before', togo: 1 });
+    expect(whereNow(ix, at, 'Asia/Tokyo').cur?.date).toBe('2026-10-26');
+  });
+});

@@ -205,7 +205,10 @@ export function LegItem({ l }: { l: Leg }) {
       {l.tickets && <><span className="lbl">Tickets</span><Txt text={l.tickets} className="item-d" /></>}
       {l.details && <><span className="lbl">Details</span><Txt text={l.details} className="item-d" /></>}
       <DocLinks kind="leg" id={l.id} />
-      <div className="meta"><button className="linkbtn" onClick={() => edit({ kind: 'leg', id: l.id })}>Edit</button><button className="linkbtn" onClick={() => edit({ kind: 'doc', for: { kind: 'leg', id: l.id } })}>+ Ticket</button></div>
+      <div className="dc-btns">
+        <button type="button" className="bigbtn" onClick={() => edit({ kind: 'leg', id: l.id })}>Edit</button>
+        <button type="button" className="bigbtn" onClick={() => edit({ kind: 'doc', for: { kind: 'leg', id: l.id } })}>Add a ticket</button>
+      </div>
     </li>
   );
 }

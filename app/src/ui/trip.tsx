@@ -18,13 +18,14 @@ import { SecH } from './bits';
 import { JAPAN } from '../edition';
 import { Languages } from './languages';
 import { saveTripCopy } from '../sync/files';
+import { tastesLine, tastesOf } from '../model/tastes';
 import { SHEET_URL, loadTrip, savedCreds, saveCreds, type Creds } from '../sheet/live';
 
 /** Sections that open from Trip rather than the bottom bar (none now: every section has a tab). */
 export const UNDER_TRIP: Tab[] = [];
 
 export function TripHub() {
-  const { ix, ui, set, go, edit } = useApp();
+  const { ix, ui, set, go, edit, me } = useApp();
   const [fromSheet, setFromSheet] = useState(false);
   const t = ix.trip, shared = !!useStore().sync[t.id];
   const days = t.days;
@@ -46,6 +47,7 @@ export function TripHub() {
           <li><button onClick={() => go('prep')}><b>Leave a group note</b><span>Ask for something to be added; it's filed into the trip</span></button></li>
           <li><a href={SHEET_URL} target="_blank" rel="noopener"><b>Open the Google Sheet</b><span>Where the plan is changed</span></a></li>
         </ul> : <ul className="hubrows">
+          {(shared || t.travelers.length > 1) && !t.sample && <li><button onClick={() => edit({ kind: 'tastes' })}><b>What I like</b><span>{tastesLine(tastesOf(t, me)) || 'Your food needs and what you\'re into, so picks suit you'}</span></button></li>}
           <li><button onClick={() => edit({ kind: 'trip' })}><b>Trip settings</b><span>Name, dates, destinations, {shared ? 'who can change the plan' : 'sharing'}</span></button></li>
           {t.id === TRIP_ID && <li><button onClick={() => setFromSheet(true)}><b>Update from the Google Sheet</b><span>Bring in what friends added to the Japan sheet; what was added here stays</span></button></li>}
           <li><button onClick={() => void saveTripCopy(t)}><b>Saved on this phone</b><span>{shared ? 'Changes reach everyone when there\'s signal; the trip, tickets and documents' : 'The trip, tickets and documents'} work with no signal. Tap to save a copy as a file too.</span></button></li>

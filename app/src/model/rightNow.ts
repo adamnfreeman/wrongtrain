@@ -39,8 +39,18 @@ const LEAD = { flight: 150, ride: 10, event: 10 } as const;
 
 const pinned = (p?: Place | null) => (p && p.lat != null && p.lng != null ? p : null);
 
-/** Everything on a day that can be a "right now", in time order. */
-export function momentsOn(ix: TripIndex, d: Day, ctx: Pick<Ctx, 'pos' | 'min'>): Moment[] {
+const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+
+/** Whether you're on a plan item or a ride: Who's going (trip.going, by id) lists you, or nobody is
+    listed (everyone). With no name known, everyone's things count. */
+export const yours = (ix: TripIndex, id: string, me?: string) => {
+  const going = ix.trip.going?.[id];
+  return !me || !going || going.some(n => same(n, me));
+};
+
+/** Everything on a day that can be a "right now" for you, in time order. Someone else's Uber
+    doesn't open yours. */
+export function momentsOn(ix: TripIndex, d: Day, ctx: Pick<Ctx, 'pos' | 'min'>, me?: string): Moment[] {
   const out: Moment[] = [];
   const reach = (place: Place | null) => {
     const p = pinned(place);
@@ -53,14 +63,14 @@ export function momentsOn(ix: TripIndex, d: Day, ctx: Pick<Ctx, 'pos' | 'min'>):
     out.push({ ...m, lead, trip, leaveBy: m.at - lead - (trip?.min ?? 0), inMin: m.at - ctx.min });
   };
   for (const l of ix.trip.legs) {
-    if (l.dayId !== d.id || l.status !== 'booked') continue;
+    if (l.dayId !== d.id || l.status !== 'booked' || !yours(ix, l.id, me)) continue;
     const at = hm(l.depart); if (at == null) continue;
     add({ id: `leg:${l.id}`, kind: l.mode === 'flight' ? 'flight' : 'ride', dayId: d.id, at, title: `${l.from} → ${l.to}`, leg: l,
       place: (l.fromPlaceId && ix.place.get(l.fromPlaceId)) || null });
   }
   for (const p of d.plan) {
     const at = hm(p.time);
-    if (!p.fixed || at == null || p.timeKind === 'by') continue;
+    if (!p.fixed || at == null || p.timeKind === 'by' || !yours(ix, p.id, me)) continue;
     const place = (p.placeId && ix.place.get(p.placeId)) || null;
     add({ id: `plan:${p.id}`, kind: 'event', dayId: d.id, at, title: place?.name || p.text.split(/[.:—]/)[0].trim(), item: p, place });
   }
@@ -71,11 +81,11 @@ export function momentsOn(ix: TripIndex, d: Day, ctx: Pick<Ctx, 'pos' | 'min'>):
 export const isOpen = (m: Moment, min: number) => min >= m.leaveBy - OPEN[m.kind] && min <= m.at + CLOSE[m.kind];
 
 /** The thing that matters right now on this day, or null. The earliest open window wins. */
-export function rightNow(ix: TripIndex, ctx: Ctx): Moment | null {
-  return momentsOn(ix, ctx.d, ctx).find(m => isOpen(m, ctx.min)) || null;
+export function rightNow(ix: TripIndex, ctx: Ctx, me?: string): Moment | null {
+  return momentsOn(ix, ctx.d, ctx, me).find(m => isOpen(m, ctx.min)) || null;
 }
 
 /** What comes after it today, for a small "then" line. */
-export function after(ix: TripIndex, ctx: Ctx, m: Moment): Moment | null {
-  return momentsOn(ix, ctx.d, ctx).find(x => x.at > m.at) || null;
+export function after(ix: TripIndex, ctx: Ctx, m: Moment, me?: string): Moment | null {
+  return momentsOn(ix, ctx.d, ctx, me).find(x => x.at > m.at) || null;
 }

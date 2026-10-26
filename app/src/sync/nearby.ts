@@ -5,6 +5,7 @@
 import { getState } from '../model/store';
 import { NEARBY_SYSTEM, candidatesFrom, cleanPicks, nearbyPrompt, overpassQuery, type Candidate, type Mood, type Pick } from '../../supabase/functions/_shared/nearby.ts';
 import { appleCaps, pickNearbyOnPhone } from './apple';
+import { tastesLine, tastesOf } from '../model/tastes';
 import { supabase } from './engine';
 
 export interface Suggestion extends Candidate { why?: string }
@@ -47,10 +48,13 @@ export async function findNearby(tripId: string, mood: Mood, pos: { lat: number;
   if (!candidates.length) return { items: [], by: 'nearest' };
 
   const localTime = new Date().toLocaleString('en-GB', { weekday: 'short', hour: '2-digit', minute: '2-digit' });
+  /* the asker's own tastes (Trip → What I like), so one person's diet isn't everyone's */
+  const st = getState(), trip = st.trips.find(t => t.id === tripId);
+  const tastes = trip ? tastesLine(tastesOf(trip, st.me)) : '';
   /* the iPhone's own model, when it has one: free, and works with no signal */
   if ((await appleCaps()).ai) {
     try {
-      const picks = cleanPicks(await pickNearbyOnPhone(NEARBY_SYSTEM, nearbyPrompt(mood, localTime, candidates)), candidates);
+      const picks = cleanPicks(await pickNearbyOnPhone(NEARBY_SYSTEM, nearbyPrompt(mood, localTime, candidates, tastes)), candidates);
       const byId = new Map(candidates.map(c => [c.id, c]));
       const items = picks.flatMap(p => (byId.has(p.id) ? [{ ...byId.get(p.id)!, why: p.why }] : []));
       if (items.length) return { items, by: 'phone' };
@@ -64,7 +68,7 @@ export async function findNearby(tripId: string, mood: Mood, pos: { lat: number;
   if (!session) return nearest('Sign in and WrongTrain picks the best five and says why.');
 
   const { data, error } = await supabase.functions.invoke<{ picks: Pick[]; left?: number }>('suggest-nearby', {
-    body: { trip_id: tripId, mood, local_time: localTime, candidates },
+    body: { trip_id: tripId, mood, local_time: localTime, candidates, tastes },
   });
   if (error || !data?.picks?.length) return nearest(await whyNot(error));
   const byId = new Map(candidates.map(c => [c.id, c]));

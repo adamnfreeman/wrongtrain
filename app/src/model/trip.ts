@@ -53,14 +53,21 @@ export function stayLine(ix: TripIndex, day: Day): string {
 export type Phase = 'before' | 'during' | 'after';
 export interface Now { cur: Day | null; phase: Phase; togo: number }
 
-/** Where are we? Each day counts as "today" by the clock of its own destination. */
-export function whereNow(ix: TripIndex, at = new Date()): Now {
+/** The clock that says what day and time it is: the phone's own, except on the sample, which
+    pretends you're there (its days follow Japan's date; store.ts keepSampleCurrent). */
+export const clockZone = (ix: TripIndex, day?: Day) => (ix.trip.sample ? tzOf(ix, day) : Intl.DateTimeFormat().resolvedOptions().timeZone);
+
+/** Where are we? Today is the phone's own date. A phone takes the local time zone when it lands, so
+    this is the destination's date once you're there; going by the destination's clock instead made
+    the first day start a day early for people still at home (Monday in Tokyo on Sunday evening). */
+export function whereNow(ix: TripIndex, at = new Date(), zone = clockZone(ix)): Now {
   const days = ix.trip.days;
   if (!days.length) return { cur: null, phase: 'before', togo: 0 };
-  const cur = days.find(d => todayIn(tzOf(ix, d), at) === d.date) || null;
+  const today = todayIn(zone, at);
+  const cur = days.find(d => d.date === today) || null;
   const first = days[0], last = days[days.length - 1];
-  const togo = daysBetween(todayIn(Intl.DateTimeFormat().resolvedOptions().timeZone, at), first.date);
-  const phase: Phase = cur ? 'during' : todayIn(tzOf(ix, last), at) > last.date ? 'after' : 'before';
+  const togo = daysBetween(today, first.date);
+  const phase: Phase = cur ? 'during' : today > last.date ? 'after' : 'before';
   return { cur, phase, togo };
 }
 
@@ -96,8 +103,14 @@ export const pinGroup = (p: Place) => (p.wishlist ? WISH : PIN_GROUPS.find(g => 
 const WISH = { key: 'wish', label: 'Wishlist', kinds: [] as PlaceKind[], color: '--l-violet' };
 export const ALL_PIN_GROUPS = [...PIN_GROUPS.slice(0, 5), WISH, PIN_GROUPS[5]];
 
+/** A Google or Apple Maps link, as opposed to a website. */
+export const isMapLink = (u: string) => /google\.[a-z.]+\/maps|maps\.google\.|maps\.app\.goo|goo\.gl\/maps|maps\.apple\.com/i.test(u);
+
+/** The place's own website: never a map link. */
+export const siteOf = (p: Place) => p.website || (p.link && !isMapLink(p.link) ? p.link : undefined);
+
 export function mapsLink(ix: TripIndex, p: Place): string {
-  if (p.link) return p.link;
+  if (p.link && isMapLink(p.link)) return p.link;
   const q = p.lat != null && p.lng != null ? `${p.lat},${p.lng}` : [p.name, p.area, p.destinationId && ix.dest.get(p.destinationId)?.name].filter(Boolean).join(', ');
   return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q);
 }

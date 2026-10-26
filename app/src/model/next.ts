@@ -6,7 +6,7 @@
    is on today's list. */
 import type { Day, Place, ThingRef } from './types';
 import { fmtT, hm, minutesIn, weekday } from './time';
-import { type TripIndex, metres, travel, tzOf, pinGroup } from './trip';
+import { type TripIndex, clockZone, metres, travel, pinGroup } from './trip';
 
 export interface Anchor {
   at: number | null;
@@ -58,7 +58,9 @@ export function pretendAt(ix: TripIndex, d: Day, min: number): Place | null {
 }
 
 export function liveCtx(ix: TripIndex, d: Day, geo: { lat: number; lng: number } | null): Ctx {
-  const min = minutesIn(tzOf(ix, d));
+  /* the phone's clock, like today's date (whereNow): on the day you fly out you're still on home
+     time, and the departure is written in it */
+  const min = minutesIn(clockZone(ix, d));
   if (geo) return { d, min, pos: geo, live: true, from: null };
   /* the sample trip has nobody actually there, so it stands you at that day's stay */
   const from = ix.trip.sample ? pretendAt(ix, d, min) : null;
