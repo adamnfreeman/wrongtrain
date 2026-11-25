@@ -145,6 +145,9 @@ on a Mac.
   (`ThingRow`) that open it. Today is the hub (Oct 24): How much time, then Coming up (each opens its
   card) with Tonight's hotel, Waiting on you (to-dos that are yours), What's nearby, the day's plan;
   before the trip, Getting there (day one's travel and first night).
+- Nov 24, later: each trip opens on the tab it had open last (pref `last-tab-<trip id>`; a trip opened
+  for the first time starts on Today), and the launch screen goes as soon as the app has drawn
+  (`SPLASH_MS = 0` in `src/native.ts`; it stayed at least 1.8 s before).
 - Nov 24, from Adam's trip comments: how early to be at the airport depends on the flight
   (`src/model/airport.ts`: 2½ hours international, 1½ domestic, or the leg's own "Be at the airport";
   legs also take a terminal and gate); Right now knows when you're already there (by location: "You're

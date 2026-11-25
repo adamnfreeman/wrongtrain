@@ -225,18 +225,27 @@ function fromHash(ids: Set<string>): Partial<UI> {
   return {};
 }
 
+/** The tab this trip had open last time; a trip opened for the first time starts on Today. */
+const lastTab = (tripId: string): Tab => {
+  const t = pref<string>('last-tab-' + tripId, 'today');
+  return (MAIN_TABS as readonly string[]).includes(t) ? (t as Tab) : 'today';
+};
+
 function TripApp({ trip, me }: { trip: Trip; me: string }) {
   const ix = useMemo(() => indexTrip(trip), [trip]);
   const now = whereNow(ix);
   const ids = useMemo(() => new Set(trip.days.map(d => d.id)), [trip.days]);
   const [ui, setUi] = useState<UI>(() => ({
-    tab: 'today', day: (now.cur || trip.days[0])?.id || '', seg: 'food',
+    /* back where you were: the tab you had open last time (Adam: swiping back to the currency
+       converter every time was too much); Right now opens by itself when it's needed */
+    tab: lastTab(trip.id), day: (now.cur || trip.days[0])?.id || '', seg: 'food',
     /* one city at a time: the one you're in, else the first (lists of every city were too much) */
     dest: (now.cur?.destinationId && !now.cur.travel ? now.cur.destinationId : (now.cur || trip.days[0])?.destinationId) || trip.destinations[0]?.id || 'all',
     /* the veg filter starts on for people who said they're vegetarian or vegan, off for everyone else */
     veg: pref('veg', eatsVeg(tastesOf(trip, me))), hide: {}, sim: { day: '', min: 840 }, pcat: pref<string[]>('fav-phrases', []).length ? '★ Favourites' : 'All', pq: '', q: '',
     ...fromHash(ids),
   }));
+  useEffect(() => { if (ui.tab !== 'now') setPref('last-tab-' + trip.id, ui.tab); }, [ui.tab, trip.id]);
   const set = useCallback((p: Partial<UI>) => {
     if ('veg' in p) setPref('veg', p.veg);
     setUi(u => ({ ...u, ...p }));

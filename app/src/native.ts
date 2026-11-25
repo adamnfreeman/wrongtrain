@@ -38,8 +38,10 @@ export function backupSoon() {
   }, 500);
 }
 
-/** How long the launch logo shows at least, from when the app starts. */
-const SPLASH_MS = 1800;
+/** How long the launch logo shows at least, from when the app starts: none. It goes as soon as the
+    app has drawn (Apple: the launch screen is for starting up, not for branding; it showed for
+    over two seconds and felt slow). iOS still shows it while the app starts, which is the logo's moment. */
+const SPLASH_MS = 0;
 
 /** Native set-up: status bar text that follows light and dark mode, and the launch screen hidden once the app has drawn. */
 export async function startNative(onResume: () => void) {
@@ -53,8 +55,8 @@ export async function startNative(onResume: () => void) {
   /* The plugin ignores hide() until its own launch fade-in has finished, and still reports success,
      so a call this early can be dropped and leave the launch screen up for good. Ask again a few
      times; once it is gone, further calls do nothing.
-     The logo stays up for at least SPLASH_MS from launch, so it is seen rather than flashed. */
-  const hide = () => { void SplashScreen.hide({ fadeOutDuration: 300 }); };
+     Gone as soon as the app has drawn (SPLASH_MS). */
+  const hide = () => { void SplashScreen.hide({ fadeOutDuration: 150 }); };
   const since = performance.now();
   for (const ms of [0, 500, 1500, 3000]) setTimeout(hide, Math.max(0, SPLASH_MS - since) + ms);
   /* coming back to the app: catch up shared trips (the web page does this on visibilitychange) */
