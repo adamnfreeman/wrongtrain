@@ -2,6 +2,7 @@
 // whatever you type becomes a group note (filed into the trip on shared trips; see filing.mjs).
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
+import { openTab } from './_nav.mjs';
 
 const DIST = process.argv[2];
 const wait = ms => new Promise(r => setTimeout(r, ms));
@@ -22,9 +23,9 @@ await page.click('text=Explore a sample trip');
 await page.waitForSelector('.tabs');
 await wait(500);
 check(await page.locator('.addfab').isVisible(), 'the Add button shows on Today');
-await page.tap('.tabs-in .tab[data-tab="phrases"]'); await wait(900);
+await openTab(page, 'Phrases'); await wait(900);
 check(!(await page.locator('.addfab').isVisible()), '... but not on Phrases, where there is nothing to add');
-await page.tap('.tabs-in .tab[data-tab="days"]'); await wait(900);
+await openTab(page, 'Days'); await wait(900);
 check(/Add/.test(await page.locator('.addfab').textContent()), '... and is back on Days');
 await page.locator('.addfab').click();
 const sheet = page.locator('.sheet-wrap[aria-label="Add to the plan"]');
@@ -41,8 +42,8 @@ await sheet.getByRole('button', { name: 'Done' }).click();
 check(await page.locator('.addfab').isVisible(), 'Done closes the box');
 
 /* Phrases: star one and it heads a Favourites section */
-await page.tap('.tabs-in .tab[data-tab="phrases"]'); await wait(900);
-const ph = page.locator('.pane[data-tab="phrases"]');
+await openTab(page, 'Phrases'); await wait(900);
+const ph = page.locator('.toolbody');
 await ph.locator('.pstar').first().click();
 check(await ph.locator('.catstrip button:has-text("Favourites")').count() === 1, 'starring a phrase adds a Favourites category');
 check(await ph.locator('#phraselist h3').first().textContent() === '★ Favourites', '... shown first');
@@ -57,8 +58,8 @@ check(a2 === b1 && b2 === a1, 'favourites can be moved up and down');
 /* Days: tap a plan item to edit it, move it to a better day, and say you're out (as Alex) */
 await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('wrongtrain')); s.me = 'Alex'; localStorage.setItem('wrongtrain', JSON.stringify(s)); });
 await page.reload(); await page.waitForSelector('.tabs');
-await page.tap('.tabs-in .tab[data-tab="days"]'); await wait(900);
-const dpane = page.locator('.pane[data-tab="days"]');
+await openTab(page, 'Days'); await wait(900);
+const dpane = page.locator('.subpage[data-sub="days"]');
 const where = () => page.evaluate(() => Object.fromEntries(JSON.parse(localStorage.getItem('wrongtrain')).trips.find(t => t.sample).days.flatMap((d, i) => d.plan.map(p => [p.id, i]))));
 const before = await where();
 await dpane.locator('.plan .planitem').first().click();
@@ -77,8 +78,8 @@ await dpane.locator('.gobtn-s').first().click();
 check(await page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('wrongtrain')).trips.find(t => t.sample).going || {}).length === 1), "I'm out marks you out of that item only");
 
 /* Notes: the last tab, kept on this phone */
-await page.tap('.tabs-in .tab[data-tab="notes"]'); await wait(900);
-await page.locator('.pane[data-tab="notes"] textarea').fill('Buy omiyage for the office');
+await openTab(page, 'Notes'); await wait(900);
+await page.locator('.subpage[data-sub="notes"] textarea').fill('Buy omiyage for the office');
 await wait(500);
 check(await page.evaluate(() => Object.keys(localStorage).some(k => k.startsWith('wt-pref-mynotes-') && localStorage.getItem(k).includes('omiyage'))), 'Notes are saved on the phone as you type');
 

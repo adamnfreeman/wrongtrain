@@ -62,8 +62,8 @@ function toggleFavPhoto(id: string) {
 /* ---------- the Photos page ---------- */
 
 export function PhotosPage() {
-  const { ix, edit, ui } = useApp();
-  const here = ui.tab === 'photos';
+  const { ix, edit, here: page } = useApp();
+  const here = page === 'photos';
   const t = ix.trip;
   const shared = !!useStore().sync[t.id];
   const { session } = useSync();

@@ -1,6 +1,7 @@
 // Drive the WrongTrain build: welcome → sample → every tab, in light and dark, phone-sized.
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
+import { openTab } from './_nav.mjs';
 
 const DIST = process.argv[2], OUT = process.argv[3];
 const wait = ms => new Promise(r => setTimeout(r, ms));
@@ -23,10 +24,8 @@ for (const scheme of ['light', 'dark']) {
   /* the app opens dark; the light pass sets Appearance to follow the phone */
   if (scheme === 'light') { await page.evaluate(() => localStorage.setItem('wt-pref-theme', '"auto"')); await page.reload(); }
   await page.waitForSelector('text=Explore a sample trip');
-  /* the bottom bar has Today, Days, Map, Wallet and Trip; the rest open from Trip */
-  const open = async name => {
-    return page.click(`.tab:has-text("${name}")`);
-  };
+  /* five tabs: Today, Plan, Map, Wallet, Group; the rest are pages inside them (e2e/_nav.mjs) */
+  const open = name => openTab(page, name);
   if (scheme === 'light') await page.screenshot({ path: `${OUT}/0-welcome.png` });
   await page.click('text=Explore a sample trip');
   await page.waitForSelector('.dayhead h1');
@@ -39,7 +38,7 @@ for (const scheme of ['light', 'dark']) {
   check(!!big, `${scheme}: "How much time do I have?" says "${big}"`);
   if (scheme === 'light') await page.screenshot({ path: `${OUT}/1-today.png`, fullPage: true });
 
-  for (const [tab, sel, name] of [['Days', '.dslider', '2-days'], ['Wallet', '.seg', '2b-wallet'], ['Trip', '.hub-h', '2c-trip'], ['Essentials', '.page-h', '3-essentials'], ['Places', '.cattiles', '4-places'], ['Map', '.map', '5-map'], ['Phrases', '.phrase', '6-phrases'], ['To do', '#gnotes', '7-todo']]) {
+  for (const [tab, sel, name] of [['Days', '.dslider', '2-days'], ['Wallet', '.seg', '2b-wallet'], ['Trip', '.hub-h', '2c-trip'], ['Essentials', '.esslist', '3-essentials'], ['Places', '.cattiles', '4-places'], ['Map', '.map', '5-map'], ['Phrases', '.phrase', '6-phrases'], ['To do', '#gnotes', '7-todo']]) {
     await open(tab);
     await page.waitForSelector(sel, { timeout: 5000 });
     await wait(300);
@@ -81,24 +80,13 @@ for (const scheme of ['light', 'dark']) {
     /* drag the sheet one page along, as a finger would, and let it settle */
     const drag = by => page.evaluate(b => { const g = document.querySelector('.pager'); g.scrollTo({ left: g.scrollLeft + b * g.clientWidth }); }, by);
     await drag(1); await wait(600);
-    check(await page.locator('.tab[aria-current="page"]:has-text("Essentials")').count() === 1, 'dragging the sheet left from Days lands on the next page, Essentials');
+    check(await page.locator('.tab[aria-current="page"]:has-text("Map")').count() === 1, 'dragging the sheet left from Plan lands on the next tab, Map');
     await drag(-2); await wait(600);
     check(await page.locator('.tab[aria-current="page"]:has-text("Today")').count() === 1, '... and dragging it back lands on Today');
-    /* dragging the bottom bar takes the sheet with it, and wherever it stops is the open page */
-    await wait(500);
-    /* the sample has a Right now page before Today, so count from wherever Today is */
-    const from = await page.evaluate(() => { const g = document.querySelector('.pager'); return Math.round(g.scrollLeft / g.clientWidth); });
-    await page.evaluate(() => {
-      const row = document.querySelector('.tabs-in');
-      row.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, touches: [new Touch({ identifier: 2, target: row, clientX: 200, clientY: 800 })] }));
-      row.scrollLeft += 68 * 3;
-    });
-    await wait(150);
-    const sheetAt = await page.evaluate(() => { const g = document.querySelector('.pager'); return Math.round(g.scrollLeft / g.clientWidth * 10) / 10; });
-    check(sheetAt === from + 3, `the sheet follows the bar as it is dragged (page ${sheetAt}, from ${from})`);
-    await page.evaluate(() => { const row = document.querySelector('.tabs-in'); row.dispatchEvent(new TouchEvent('touchend', { bubbles: true, touches: [], changedTouches: [new Touch({ identifier: 2, target: row, clientX: 20, clientY: 800 })] })); });
-    await wait(700);
-    check(await page.locator('.tab[aria-current="page"]:has-text("Photos")').count() === 1, '... and where it stops, three along, Photos is open');
+    /* five tabs fit side by side: tapping one opens it, wherever you are */
+    await page.click('.tabs-in .tab[data-tab="trip"]'); await wait(700);
+    check(await page.locator('.tab[aria-current="page"]:has-text("Group")').count() === 1, 'tapping Group opens it');
+    check(await page.locator('.pane[data-tab="trip"] .subtabs button[aria-selected="true"]').count() === 1, '... with its pages at the top');
     await open('Places');
     await page.click('#view >> text=Veg-friendly only');
     const nonVeg = await page.locator('#results .pill:has-text("Not veg")').count();

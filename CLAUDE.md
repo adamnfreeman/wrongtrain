@@ -145,6 +145,13 @@ on a Mac.
   (`ThingRow`) that open it. Today is the hub (Oct 24): How much time, then Coming up (each opens its
   card) with Tonight's hotel, Waiting on you (to-dos that are yours), What's nearby, the day's plan;
   before the trip, Getting there (day one's travel and first night).
+- **Five tabs** (Nov 24, branch `five-tabs`, for Adam and Andrea to try before it goes to everyone):
+  Today, Plan, Map, Wallet, Group, side by side in a bar that no longer slides (`MAIN_TABS`, `SUBS`
+  in `src/ui/ctx.tsx`). The old tabs are pages inside them, picked at the top (`src/ui/sections.tsx`):
+  Plan holds Days and Bookings (Essentials), Map holds the map and Places, Group holds Trip, To do,
+  Photos and Notes. Today has a tools row: Convert, Phrases, Emergency, each opening over the page
+  (`ToolSheet`). `go('essentials')` and the like still work (`openPage` in App.tsx); `here` in the
+  context is the page you're looking at. Tests open pages with `openTab` (`e2e/_nav.mjs`).
 - Nov 24, later: each trip opens on the tab it had open last (pref `last-tab-<trip id>`; a trip opened
   for the first time starts on Today), and the launch screen goes as soon as the app has drawn
   (`SPLASH_MS = 0` in `src/native.ts`; it stayed at least 1.8 s before).

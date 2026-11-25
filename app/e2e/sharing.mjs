@@ -2,6 +2,7 @@
 // sheet takes an email, the join sheet opens from the welcome screen and from an invite link.
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
+import { openTab } from './_nav.mjs';
 
 const DIST = process.argv[2], OUT = process.argv[3];
 const wait = ms => new Promise(r => setTimeout(r, ms));
@@ -32,7 +33,7 @@ await page.click('.sheet-wrap >> text=Done');
 await page.click('text=Plan it myself');
 await sheet.getByLabel('Stop 1').fill('Lisbon');
 await sheet.getByText('Create').click();
-await page.click('.tab:has-text("Trip")').then(() => page.click('.hubrows button:has-text("Trip settings")'));
+await openTab(page, 'Trip').then(() => page.click('.hubrows button:has-text("Trip settings")'));
 check(await page.locator('text=Only on this phone right now').count() === 1, 'settings says the trip is only on this phone');
 await page.locator('.sheet-wrap >> text=Share with the group').click();
 await page.waitForSelector('.sheet-wrap >> text=Sign in to share this trip');
@@ -53,7 +54,7 @@ await page.goto('http://localhost:8092/');
 await page.evaluate(() => localStorage.clear());
 await page.goto('http://localhost:8092/');
 await page.click('text=Explore a sample trip');
-await page.click('.tab:has-text("Trip")').then(() => page.click('.hubrows button:has-text("Trip settings")'));
+await openTab(page, 'Trip').then(() => page.click('.hubrows button:has-text("Trip settings")'));
 check(await page.locator('text=start your own copy of it').count() === 1, 'the sample points you to making a copy before sharing');
 
 /* an invite link opens the join sheet with the code filled in */

@@ -2,6 +2,7 @@
 // photo (and takes it back), adds and removes a comment, and sits above the bottom bar.
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
+import { openTab } from './_nav.mjs';
 
 const DIST = process.argv[2];
 const wait = ms => new Promise(r => setTimeout(r, ms));
@@ -20,10 +21,10 @@ page.on('pageerror', e => errors.push(e.message));
 await page.goto('http://localhost:8088/');
 await page.click('text=Explore a sample trip');
 await page.waitForSelector('.tabs');
-await page.tap('.tabs-in .tab[data-tab="photos"]');
+await openTab(page, 'Photos');
 await wait(1000);
-const pane = page.locator('.pane[data-tab="photos"]');
-check(await page.locator('.pane[aria-hidden="false"]').getAttribute('data-tab') === 'photos', 'the Photos tab opens its page');
+const pane = page.locator('.subpage[data-sub="photos"]');
+check(await page.locator('.pane[aria-hidden="false"]').getAttribute('data-tab') === 'trip' && await pane.isVisible(), 'Photos opens inside Group');
 check(await pane.locator('.pthumb').count() === 4, 'all the sample photos show');
 check(await pane.locator('.phearts').count() > 0, '... with their hearts');
 await pane.locator('text=By person').click();

@@ -4,6 +4,7 @@
 // whose free allowance is used up, and a viewer, who cannot file.
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
+import { openTab } from './_nav.mjs';
 
 const DIST = process.argv[2], OUT = process.argv[3];
 const wait = ms => new Promise(r => setTimeout(r, ms));
@@ -61,7 +62,7 @@ const signInAs = async who => {
   }, [trip, session, who]);
   await page.reload();
   await page.waitForSelector('.tabs');
-  await page.click('.tab:has-text(\"To do\")');
+  await openTab(page, 'To do');
 };
 const fileAnswer = {
   changes: [

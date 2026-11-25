@@ -2,6 +2,7 @@
 // and you share your own position for a time you pick, then stop. The server is played here.
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
+import { openTab } from './_nav.mjs';
 
 const DIST = process.argv[2], OUT = process.argv[3];
 const wait = ms => new Promise(r => setTimeout(r, ms));
@@ -53,7 +54,7 @@ await page.evaluate(([t, s]) => {
 }, [trip, session]);
 await page.reload();
 await page.waitForSelector('.tabs');
-await page.click('.tab:has-text("Map")');
+await openTab(page, 'Map');
 await page.waitForSelector('#friends >> text=Cat');
 check(await page.locator('#friends >> text=2 min ago').count() === 1, 'a friend who is sharing shows in the list, with when');
 check(await page.locator('.leaflet-marker-icon.friend').count() === 1, '... and on the map');

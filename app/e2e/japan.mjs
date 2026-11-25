@@ -5,6 +5,7 @@
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { openTab } from './_nav.mjs';
 
 const DIST = process.argv[2], OUT = process.argv[3];
 const RAW = JSON.parse(readFileSync(process.env.RAW || 'e2e/fixtures/japan-sheet.json', 'utf8'));
@@ -54,7 +55,7 @@ check(true, 'signs in and opens the trip');
 check(await page.locator('.tab:has-text("Wallet")').count() === 0, 'no Wallet tab');
 if (OUT) await page.screenshot({ path: `${OUT}/japan-today.png` });
 
-await page.click('.tab:has-text("Days")');
+await openTab(page, 'Days');
 await page.waitForTimeout(500);
 check(await page.locator('#view .dayhead h1, #view .board h1').count() > 0 && /plan/i.test(await page.locator('#view').textContent()), "the sheet's days show on Days");
 await page.locator('#view button:has-text("Edit")').first().click();
@@ -63,7 +64,7 @@ check(true, 'Edit says the plan is changed in the sheet');
 await page.click('.sheet-wrap >> text=Close');
 if (OUT) await page.screenshot({ path: `${OUT}/japan-days.png` });
 
-await page.click('.tab:has-text("To do")');
+await openTab(page, 'To do');
 const box = page.locator('#view [aria-label^="Tick off:"]').first();
 const what = (await box.getAttribute('aria-label')).replace('Tick off: ', '');
 await box.click();
@@ -97,7 +98,7 @@ offline = true; await ctx.setOffline(true);
 await page.reload();
 await page.waitForSelector('.tab:has-text("Today")', { timeout: 15000 }).catch(() => {});
 check(await page.locator('.tab:has-text("Today")').count() === 1, 'opens with no signal after one visit');
-await page.click('.tab:has-text("Days")');
+await openTab(page, 'Days');
 check(/plan/i.test(await page.locator('#view').textContent()), 'and shows the days with no signal');
 offline = false; await ctx.setOffline(false);
 

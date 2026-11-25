@@ -3,6 +3,7 @@
 // until there is signal; as a viewer, only notes go in.
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
+import { openTab } from './_nav.mjs';
 
 const DIST = process.argv[2], OUT = process.argv[3];
 const wait = ms => new Promise(r => setTimeout(r, ms));
@@ -42,7 +43,7 @@ await page.waitForSelector('.tabs');
 await shareAs('contributor');
 
 /* a contributor's rename becomes a request */
-await page.click('.tab:has-text("Trip")').then(() => page.click('.hubrows button:has-text("Trip settings")'));
+await openTab(page, 'Trip').then(() => page.click('.hubrows button:has-text("Trip settings")'));
 await sheet.waitFor();
 check(await sheet.locator('text=Your level').count() === 1 && await sheet.locator('text=Can add ideas').count() > 0, 'settings say what your level lets you do');
 await sheet.getByLabel('Trip name').fill('Ben’s trip');
@@ -59,7 +60,7 @@ await wait(300);
 await page.screenshot({ path: `${OUT}/a-1-sent.png` });
 
 /* it shows on the To do tab, and can be withdrawn */
-await page.click('.tab:has-text(\"To do\")');
+await openTab(page, 'To do');
 check(await page.locator('#requests >> text=Waiting for approval').count() === 1, 'To do lists it under Waiting for approval');
 check(await page.locator('#requests >> text=waiting for signal').count() === 1, '... marked as waiting for signal');
 check(await page.locator('.tabs .tabn').count() === 0, 'no badge for someone who cannot approve');
@@ -79,7 +80,7 @@ check((await page.evaluate(() => localStorage.getItem('wt-outbox'))) === '[]', '
 
 /* a viewer only leaves notes */
 await shareAs('viewer');
-await page.click('.tab:has-text("Trip")').then(() => page.click('.hubrows button:has-text("Trip settings")'));
+await openTab(page, 'Trip').then(() => page.click('.hubrows button:has-text("Trip settings")'));
 await sheet.waitFor();
 check(await sheet.locator('text=They see everything and leave notes').count() === 1 && await sheet.locator('text=Look and leave notes').count() > 0, 'settings tell a viewer what they can do');
 await sheet.getByLabel('Trip name').fill('Mine now');
@@ -88,7 +89,7 @@ await page.waitForSelector('.toast.bad');
 check(/leave notes/.test(await page.textContent('.toast')), 'a viewer’s change is refused, with a reason');
 check((await stored()).trips[0].name === 'Lisbon', '... and nothing changes');
 check((await page.evaluate(() => localStorage.getItem('wt-outbox') || '[]')) === '[]', '... and no request is made');
-await page.click('.tab:has-text(\"To do\")');
+await openTab(page, 'To do');
 await page.fill('#gnote', 'Can we go to Sintra?');
 await page.click('text=Add note');
 check((await stored()).trips[0].notes.some(n => n.text === 'Can we go to Sintra?'), 'a viewer can still leave a note');
@@ -129,7 +130,7 @@ await op.evaluate(([t, s]) => {
 await op.reload();
 await op.waitForSelector('.tabn', { timeout: 10000 }).catch(() => {});
 check(await op.locator('.tabs .tabn').textContent().catch(() => '') === '1', 'the owner sees a badge on To do');
-await op.click('.tab:has-text(\"To do\")');
+await openTab(op, 'To do');
 check(await op.locator('#requests >> text=Waiting for your OK').count() === 1, '... and the request, waiting for her OK');
 check(await op.locator('#requests >> text=Rename the trip to “Lisboa”').count() === 1, '... in words');
 await op.locator('#requests').screenshot({ path: `${OUT}/a-3-owner.png` });
@@ -140,7 +141,7 @@ check(saved && saved.name === 'Lisboa' && saved.days.length === trip.days.length
 const mine = await op.evaluate(() => JSON.parse(localStorage.getItem('wrongtrain')));
 check(mine.trips[0].name === 'Lisboa' && mine.sync[trip.id].version === 4 && !mine.sync[trip.id].dirty, '... and her phone has it, saved at the new version');
 check(await op.locator('.tabs .tabn').count() === 0, 'the badge goes once it is decided');
-await op.click('.tab:has-text("Trip")').then(() => op.click('.hubrows button:has-text("Trip settings")'));
+await openTab(op, 'Trip').then(() => op.click('.hubrows button:has-text("Trip settings")'));
 await op.locator('.sheet-wrap').last().waitFor();
 check(await op.locator('.sheet-wrap .sayopt').count() === 3 && await op.locator('.sheet-wrap .sayopt[aria-checked="true"]:has-text("near the hotels")').count() === 1, 'the owner can set the level people join with');
 await op.locator('.sheet-wrap').last().screenshot({ path: `${OUT}/a-4-settings.png` });

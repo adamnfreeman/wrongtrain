@@ -114,9 +114,18 @@ On `main`:
   - `edit`: opens an editor sheet;
   - `show`: opens a thing's details card.
 
-**Tabs** (`MAIN_TABS` in `ui/ctx.tsx`): Today, Days, Essentials, Photos, Map, Places, Wallet,
-Phrases, To do, Trip, Notes, plus **Right now**, which appears only while something is about to
-happen. Shopping is built but hidden.
+**Tabs** (`MAIN_TABS` and `SUBS` in `ui/ctx.tsx`; five since Nov 24, on the `five-tabs` branch):
+Today, Plan, Map, Wallet and Group, plus **Right now**, which appears only while something is
+about to happen. The other pages sit inside a tab, picked at the top of the page (`ui/sections.tsx`):
+
+| Tab | Pages inside it |
+|---|---|
+| Plan | Days, Bookings (Essentials) |
+| Map | Map, Places |
+| Group | Trip, To do, Photos, Notes |
+
+Today has a tools row (Convert, Phrases, Emergency) that opens each over the page. Shopping is
+built but hidden.
 
 **Screens worth knowing:**
 

@@ -22,7 +22,7 @@ const FAR = 300000;
 const esc = (s: string) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
 export function MapView() {
-  const { ix, ui, set, geo } = useApp();
+  const { ix, ui, set, geo, here } = useApp();
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const me = useRef<{ dot: L.Marker; ring: L.Circle } | null>(null);
@@ -32,7 +32,7 @@ export function MapView() {
 
   const shown = (p: Place) => p.lat != null && p.lng != null && !ui.hide[pinGroup(p).key] && (ui.dest === 'all' || p.destinationId === ui.dest);
   const pins = ix.trip.places.filter(shown);
-  const spots = useFriendSpots(ix.trip.id, !JAPAN, ui.tab === 'map');
+  const spots = useFriendSpots(ix.trip.id, !JAPAN, here === 'map');
   const people = useTripPeople(ix.trip.id);
   const friends = useRef<L.Marker[]>([]);
   const near = useMemo(() => (geo.on && geo.pos

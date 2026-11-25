@@ -2,6 +2,7 @@
 // outline (cities and nights, adjustable), filling in each city, and the trip it makes.
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
+import { openTab } from './_nav.mjs';
 
 const DIST = process.argv[2], OUT = process.argv[3];
 const wait = ms => new Promise(r => setTimeout(r, ms));
@@ -119,7 +120,7 @@ check(!(await page.evaluate(() => localStorage.getItem('wt-plan-draft'))), 'the 
   const done = stopFor(['2027-04-01', '2027-04-02', '2027-04-03'], 'Osaka');
   await page.evaluate(([o, d]) => localStorage.setItem('wt-plan-draft', JSON.stringify({ answers: { where: 'Japan', mustSee: '', start: '', whenNote: '', days: 13, travelers: [{ name: 'Adam', from: '' }], budget: 3, styles: [], vibes: [], pace: 'balanced', dayStyle: 'mix', diets: [], notes: '' }, planId: 'plan1', outline: o, stops: [d, null, null] })), [outline, done]);
   steps.length = 0;
-  await page.click('.tab:has-text("Trip")'); await page.click('.pane[data-tab="trip"] .acctbtn').then(() => page.click('.hubrows button:has-text(\"All trips\")'));
+  await openTab(page, 'Trip'); await page.click('.pane[data-tab="trip"] .acctbtn').then(() => page.click('.hubrows button:has-text(\"All trips\")'));
   await page.click('text=Plan a trip for me');
   await sheet.locator('.pill:has-text("Done")').nth(2).waitFor({ timeout: 15000 }).catch(() => {});
   check(steps.includes('research1') && steps.includes('research2') && !steps.includes('research0'), 'reopened partway, it fills in only the cities still to do');

@@ -1,6 +1,7 @@
 /* Today, Days, Places and To do. */
 import { Weather } from './weather';
 import { Clocks } from './clocks';
+import { Tools } from './sections';
 import { useRef, useState } from 'react';
 import type { FileRef } from '../model/types';
 import { keep, shrink, useFileUrl } from '../sync/files';
@@ -36,6 +37,7 @@ export function Today() {
         <Board d={now.cur} compact />
         <Weather ix={ix} day={now.cur} live />
         <Clocks ix={ix} />
+        <Tools />
         <NextCard />
         <DayBody d={now.cur} />
       </>
@@ -69,6 +71,7 @@ export function Today() {
       </header>
       {now.phase === 'before' && <Weather ix={ix} day={days[0]} live={false} />}
       {now.phase === 'before' && <Clocks ix={ix} />}
+      <Tools />
       {now.phase === 'before' && firstUp.length > 0 && (
         <section className="sec">
           <SecH title="Getting there" />

@@ -896,3 +896,18 @@ button.wx { width: 100%; background: none; border: 0; padding: 0; text-align: le
 /* the time elsewhere, on Today */
 .clocks { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: -2px 0 12px; font-size: 13.5px; color: var(--muted) }
 .clocks b { color: var(--ink); font-weight: 700 }
+
+/* Five tabs (Nov 24). The bar no longer slides: five fit side by side, like any iPhone app. */
+.tabs-in.fixed { overflow: hidden; scroll-snap-type: none; padding-inline: 0; justify-content: space-around; max-width: 640px; margin-inline: auto }
+.tabs-in.fixed .tab { flex: 1 1 0; width: auto; transform: none; will-change: auto }
+.tabs-in.fixed .tab[aria-current="page"]::before { left: 30%; right: 30% }
+/* the pages inside a tab, picked at the top; clear of the account button in the corner */
+.subtabs { margin: 2px 56px 16px 0 }
+.subpage > .page-h:first-child { display: none }
+/* Today's tools: one tap to what you reach for in a hurry */
+.tools { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 8px; margin: 4px 0 18px }
+.tool { appearance: none; border: 1px solid var(--rule); background: var(--card); color: var(--ink); border-radius: 14px; padding: 12px 6px 10px;
+  display: grid; justify-items: center; gap: 6px; font: 600 13px var(--f-body); cursor: pointer }
+.tool svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round }
+.tool:active { background: var(--rule) }
+.toolbody { padding-top: 4px }

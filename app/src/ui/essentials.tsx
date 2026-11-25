@@ -136,17 +136,26 @@ export function Essentials() {
       {countries.length > 0 && (
         <section className="sec">
           <SecH title="Emergency numbers" />
-          <ul className="sheet esslist">
-            {countries.map(cc => (
-              <li key={cc} className="sos">
-                {countries.length > 1 && <div className="kick">{COUNTRY(cc)}</div>}
-                <div className="sos-row">{sos(cc).map(([what, n]) => <a key={what} className="chipbtn" href={tel(n)}>{what} <b>{n}</b></a>)}</div>
-              </li>
-            ))}
-          </ul>
-          <p className="note">112 also works from most mobile phones abroad.</p>
+          <Emergency countries={countries} />
         </section>
       )}
+    </>
+  );
+}
+
+/** The emergency numbers where the trip goes: on Bookings, and the Emergency tool on Today. */
+export function Emergency({ countries }: { countries: string[] }) {
+  return (
+    <>
+      <ul className="sheet esslist">
+        {countries.map(cc => (
+          <li key={cc} className="sos">
+            {countries.length > 1 && <div className="kick">{COUNTRY(cc)}</div>}
+            <div className="sos-row">{sos(cc).map(([what, n]) => <a key={what} className="chipbtn" href={tel(n)}>{what} <b>{n}</b></a>)}</div>
+          </li>
+        ))}
+      </ul>
+      <p className="note">112 also works from most mobile phones abroad.</p>
     </>
   );
 }

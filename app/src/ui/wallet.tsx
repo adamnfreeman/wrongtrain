@@ -355,7 +355,7 @@ const nice = (n: number) => (n >= 100 ? Math.round(n / 50) * 50 || 1 : n >= 10 ?
 
 /** Two amounts, both ways, big enough to read at a till; type either to convert. The rate is kept
     on the phone, so it works with no signal once it has been fetched. */
-function Converter({ trip, home }: { trip: Trip; home: string }) {
+export function Converter({ trip, home }: { trip: Trip; home: string }) {
   const local = trip.destinations.map(d => COUNTRY_CURRENCY[d.country]).find(c => c && c !== home) || '';
   const key = `rate-${local}-${home}`;
   const [kept, setKept] = useState(() => pref<{ r: number; at: string } | null>(key, null));

@@ -3,6 +3,7 @@
 // exchange rates and the server stood in.
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
+import { openTab } from './_nav.mjs';
 
 const DIST = process.argv[2], OUT = process.argv[3];
 const wait = ms => new Promise(r => setTimeout(r, ms));
@@ -55,7 +56,7 @@ check(await page.locator('.pill:has-text("Private")').count() === 1, '... and ma
 await page.screenshot({ path: `${OUT}/w-1-docs.png` });
 
 /* money: who is going, and who I am */
-await page.click('.tab:has-text("Trip")').then(() => page.click('.hubrows button:has-text("Trip settings")'));
+await openTab(page, 'Trip').then(() => page.click('.hubrows button:has-text("Trip settings")'));
 await sheet.getByLabel("Who's going").fill('Adam, Ben, Cat');
 await sheet.getByText('Save', { exact: true }).click();
 await page.click('#view .acctbtn'); await page.getByLabel('Your name, for notes and ticks').fill('Adam'); await page.click('.sheet-wrap >> text=Done');
@@ -122,11 +123,11 @@ check(await page.locator('.paidlist li.paid:has-text("You →") .stamp').count()
     localStorage.setItem('wt-auth', JSON.stringify(s));
   }, [trip, session]);
   await p2.reload();
-  await p2.click('.tab:has-text("Photos")');
-  const ph = '.pane[data-tab="photos"]';
+  await openTab(p2, 'Photos');
+  const ph = '.subpage[data-sub="photos"]';
   await p2.waitForSelector('.addfab:has-text("Add photos")');
   await p2.locator('input.photopick').setInputFiles([{ name: 'a.png', mimeType: 'image/png', buffer: PNG }, { name: 'b.png', mimeType: 'image/png', buffer: PNG }]);
-  await p2.waitForFunction(() => document.querySelectorAll('.pane[data-tab="photos"] .pthumb img').length === 2, null, { timeout: 10000 }).catch(() => {});
+  await p2.waitForFunction(() => document.querySelectorAll('.subpage[data-sub="photos"] .pthumb img').length === 2, null, { timeout: 10000 }).catch(() => {});
   check(await p2.locator(ph + ' .pthumb').count() === 2, 'two photos show on the Photos page');
   await p2.waitForFunction(() => !document.querySelector('.pwait'), null, { timeout: 10000 }).catch(() => {});
   check(uploads.length === 4 && uploads.every(u => u.startsWith(trip.id + '/photos/')), 'each is uploaded with a thumbnail, under the trip');

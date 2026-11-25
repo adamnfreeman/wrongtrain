@@ -12,15 +12,15 @@ import { indexTrip, whereNow } from './model/trip';
 import type { ThingRef, Trip } from './model/types';
 import { Fold } from './ui/bits';
 import { shortDate } from './model/time';
-import { AppCtx, MAIN_TABS, TABS, type Tab, type UI } from './ui/ctx';
+import { AppCtx, MAIN_TABS, SUBS, TABS, holder, type Tab, type UI } from './ui/ctx';
+import { GroupPage, MapPage, PlanPage, ToolSheet } from './ui/sections';
 import { useGeo } from './ui/geo';
-import { Days, Places, Prep, Today } from './ui/views';
-import { MapView, ShareNotice } from './ui/map';
+import { Today } from './ui/views';
+import { ShareNotice } from './ui/map';
 import { RemindNotice } from './ui/remind';
 import { NewDocNotice } from './ui/newDocs';
 import { startPush } from './sync/push';
 import { DocEditor, ExpenseEditor, Wallet } from './ui/wallet';
-import { Phrases } from './ui/phrases';
 import { Search } from './ui/search';
 import { DetailsCard } from './ui/details';
 import { CopySampleSheet, DayEditor, LegEditor, NewTripSheet, PlaceEditor, TodoEditor, TripSettings, type Edit } from './ui/editors';
@@ -28,7 +28,6 @@ import { makeSample } from './model/sample';
 import { SignInSheet, AccountButton, JoinSheet, SyncLine, joinCodeFromLink } from './ui/account';
 import { Toast, useWaitingForMe } from './ui/requests';
 import { PlannerSheet } from './ui/planner';
-import { TripHub } from './ui/trip';
 import { AddAnything, AddButton, addOn, type AddKind } from './ui/addAnything';
 import { addPhotos } from './sync/photos';
 import { useWalletSeg } from './ui/wallet';
@@ -36,10 +35,7 @@ import { canFile } from './sync/filing';
 import { saveToAccount, useSync } from './sync/engine';
 import { usePullToRefresh } from './ui/pull';
 import { PlanItemEditor } from './ui/planItem';
-import { Essentials } from './ui/essentials';
 import { scheduleReminders } from './sync/reminders';
-import { MyNotes } from './ui/mynotes';
-import { PhotosPage } from './ui/photos';
 import { offCentre, useDock } from './ui/dock';
 import { useRef } from 'react';
 import { TastesSheet } from './ui/tastes';
@@ -206,7 +202,7 @@ const ICONS: Record<string, { label: string; icon: React.ReactNode }> = {
   now: { label: 'Right now', icon: <path d="M13.5 2.5 5 13.5h6.2l-1 8 8.8-11.2h-6.3z" /> },
   today: { label: 'Today', icon: <><circle cx="12" cy="12" r="8.5" /><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none" /></> },
   essentials: { label: 'Essentials', icon: <><circle cx="8" cy="12" r="4.2" /><path d="M12.2 12H21M17.5 12v3.4M20.5 12v2.4" /></> },
-  days: { label: 'Days', icon: <><rect x="3.5" y="5" width="17" height="15.5" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></> },
+  days: { label: 'Plan', icon: <><rect x="3.5" y="5" width="17" height="15.5" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></> },
   map: { label: 'Map', icon: <><path d="M12 21s7-6.2 7-11.5a7 7 0 0 0-14 0C5 14.8 12 21 12 21z" /><circle cx="12" cy="9.5" r="2.4" /></> },
   photos: { label: 'Photos', icon: <><rect x="3" y="6" width="18" height="14" rx="3" /><circle cx="12" cy="13" r="3.6" /><path d="M8.5 6l1.4-2.2h4.2L15.5 6" /></> },
   shop: { label: 'Shopping', icon: <><path d="M5 8h14l-1.2 12.5H6.2z" /><path d="M9 8V6.5a3 3 0 0 1 6 0V8" /></> },
@@ -215,37 +211,52 @@ const ICONS: Record<string, { label: string; icon: React.ReactNode }> = {
   phrases: { label: 'Phrases', icon: <><path d="M4 5h16v11H10l-4.5 3.5V16H4z" /><path d="M8.5 9.5h7M8.5 12.5h4.5" /></> },
   prep: { label: 'To do', icon: <path d="M4 7.5l2 2 3-3.5M4 15.5l2 2 3-3.5M12.5 8H20M12.5 16H20" /> },
   wallet: { label: 'Wallet', icon: <><rect x="3.5" y="6" width="17" height="13" rx="2.5" /><path d="M3.5 10h17M15 14.5h2.5" /></> },
-  trip: { label: 'Trip', icon: <><circle cx="6" cy="6" r="1.6" /><circle cx="12" cy="6" r="1.6" /><circle cx="18" cy="6" r="1.6" /><circle cx="6" cy="12" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="18" cy="12" r="1.6" /><circle cx="6" cy="18" r="1.6" /><circle cx="12" cy="18" r="1.6" /><circle cx="18" cy="18" r="1.6" /></> },
+  trip: { label: 'Group', icon: <><circle cx="9" cy="8.5" r="3.2" /><path d="M3.5 19.5c.6-3.3 2.8-5.2 5.5-5.2s4.9 1.9 5.5 5.2" /><circle cx="16.5" cy="9.5" r="2.6" /><path d="M15.5 14.6c2.6-.3 4.6 1.3 5 4.4" /></> },
 };
 
-function fromHash(ids: Set<string>): Partial<UI> {
+/** The page a link asks for (#essentials, #places, a day's id…), if any. */
+function fromHash(ids: Set<string>): { page?: Tab; day?: string } {
   const h = decodeURIComponent((location.hash || '').slice(1));
-  if ((TABS as readonly string[]).includes(h)) return { tab: h as Tab };
-  if (ids.has(h)) return { tab: 'days', day: h };
+  if ((TABS as readonly string[]).includes(h)) return { page: h as Tab };
+  if (ids.has(h)) return { page: 'days', day: h };
   return {};
 }
 
-/** The tab this trip had open last time; a trip opened for the first time starts on Today. */
-const lastTab = (tripId: string): Tab => {
+/** Opening a page: its tab, and the page inside it when the tab holds several (ctx.tsx SUBS). */
+function openPage(u: UI, page: Tab, day?: string): UI {
+  const tab = holder(page);
+  if (!(MAIN_TABS as readonly string[]).includes(tab) && tab !== 'now') return u;
+  return { ...u, tab, sub: SUBS[tab] ? { ...u.sub, [tab]: page } : u.sub, day: day || u.day, q: '' };
+}
+
+/** The page this trip had open last time; a trip opened for the first time starts on Today. */
+const lastPage = (tripId: string): Tab => {
   const t = pref<string>('last-tab-' + tripId, 'today');
-  return (MAIN_TABS as readonly string[]).includes(t) ? (t as Tab) : 'today';
+  return (TABS as readonly string[]).includes(t) && t !== 'now' ? (t as Tab) : 'today';
 };
+
+/** The page you're looking at: the tab, or the page picked inside it. */
+const hereOf = (u: UI): Tab => (SUBS[u.tab] ? (u.sub[u.tab] && SUBS[u.tab]!.some(s => s.id === u.sub[u.tab]) ? u.sub[u.tab]! : SUBS[u.tab]![0].id) : u.tab);
 
 function TripApp({ trip, me }: { trip: Trip; me: string }) {
   const ix = useMemo(() => indexTrip(trip), [trip]);
   const now = whereNow(ix);
   const ids = useMemo(() => new Set(trip.days.map(d => d.id)), [trip.days]);
-  const [ui, setUi] = useState<UI>(() => ({
-    /* back where you were: the tab you had open last time (Adam: swiping back to the currency
-       converter every time was too much); Right now opens by itself when it's needed */
-    tab: lastTab(trip.id), day: (now.cur || trip.days[0])?.id || '', seg: 'food',
+  const [ui, setUi] = useState<UI>(() => {
+    const base: UI = {
+    tab: 'today', sub: {}, tool: null, day: (now.cur || trip.days[0])?.id || '', seg: 'food',
     /* one city at a time: the one you're in, else the first (lists of every city were too much) */
     dest: (now.cur?.destinationId && !now.cur.travel ? now.cur.destinationId : (now.cur || trip.days[0])?.destinationId) || trip.destinations[0]?.id || 'all',
     /* the veg filter starts on for people who said they're vegetarian or vegan, off for everyone else */
     veg: pref('veg', eatsVeg(tastesOf(trip, me))), hide: {}, sim: { day: '', min: 840 }, pcat: pref<string[]>('fav-phrases', []).length ? '★ Favourites' : 'All', pq: '', q: '',
-    ...fromHash(ids),
-  }));
-  useEffect(() => { if (ui.tab !== 'now') setPref('last-tab-' + trip.id, ui.tab); }, [ui.tab, trip.id]);
+    };
+    /* back where you were: the page you had open last time (Adam: swiping back to the currency
+       converter every time was too much), unless a link says otherwise; Right now opens by itself */
+    const h = fromHash(ids);
+    return openPage(base, h.page || lastPage(trip.id), h.day);
+  });
+  const here = hereOf(ui);
+  useEffect(() => { if (ui.tab !== 'now') setPref('last-tab-' + trip.id, here); }, [here, ui.tab, trip.id]);
   const set = useCallback((p: Partial<UI>) => {
     if ('veg' in p) setPref('veg', p.veg);
     setUi(u => ({ ...u, ...p }));
@@ -253,7 +264,13 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
   /* a new day, or a tab opened by a tap or a link, starts at the top of its page */
   const toTop = useRef<Tab | null>(null);
   const go = useCallback((tab: Tab, day?: string) => {
-    setUi(u => { if (u.tab !== tab || (day && day !== u.day)) toTop.current = tab; return { ...u, tab, day: day || u.day, q: '' }; });
+    /* Phrases is a tool on Today now: it opens over whatever page you're on */
+    if (tab === 'phrases') return setUi(u => ({ ...u, tool: 'phrases' }));
+    setUi(u => {
+      const next = openPage(u, tab, day);
+      if (u.tab !== next.tab || hereOf(u) !== hereOf(next) || (day && day !== u.day)) toTop.current = next.tab;
+      return next;
+    });
   }, []);
   const [editing, edit] = useState<Edit | null>(null);
   const [showing, show] = useState<ThingRef | null>(null);
@@ -271,7 +288,7 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
   const [adding, setAdding] = useState(false);
   const photoPick = useRef<HTMLInputElement>(null);
   const walletSeg = useWalletSeg();
-  const addKind = ui.tab === 'wallet' ? (walletSeg === 'docs' ? 'doc' : 'expense') : addOn(ui.tab);
+  const addKind = here === 'wallet' ? (walletSeg === 'docs' ? 'doc' : 'expense') : addOn(here);
   const signedIn = useSync().session;
   /* push notifications (reminders, someone sharing where they are): asked for once you're signed in */
   useEffect(() => { if (signedIn && !trip.sample) void startPush(t => go(t as Tab)); }, [!!signedIn, trip.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -279,7 +296,7 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
   /* Today needs it during the trip, and for "Something nearby" at any time */
   /* while you share where you are with the group, location stays on as you move between pages */
   const sharingUntil = useSharingUntil(trip.id);
-  const geoWanted = ui.tab === 'map' || ui.tab === 'today' || !!sharingUntil;
+  const geoWanted = here === 'map' || here === 'today' || !!sharingUntil;
   const geo = useGeo(geoWanted);
   useEffect(() => { if (sharingUntil && !geo.on && !geo.bad) geo.toggle(); }, [sharingUntil, geo]);
   useEffect(() => { if (sharingUntil && geo.pos) void sendSpot(trip.id, geo.pos, sharingUntil); }, [sharingUntil, geo.pos, trip.id]);
@@ -287,10 +304,10 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
   useEffect(() => {
     /* leave a sign-in link's tokens in place until Supabase has read them */
     if (/access_token|error_description/.test(location.hash)) return;
-    try { history.replaceState(null, '', '#' + (ui.tab === 'days' ? ui.day : ui.tab)); } catch { /* ignore */ }
-  }, [ui.tab, ui.day]);
+    try { history.replaceState(null, '', '#' + (here === 'days' ? ui.day : here)); } catch { /* ignore */ }
+  }, [here, ui.day]);
   useEffect(() => {
-    const f = () => setUi(u => ({ ...u, ...fromHash(ids) }));
+    const f = () => setUi(u => { const h = fromHash(ids); return h.page ? openPage(u, h.page, h.day) : u; });
     window.addEventListener('hashchange', f);
     return () => window.removeEventListener('hashchange', f);
   }, [ids]);
@@ -316,7 +333,7 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
 
   const q = ui.q.trim(), searching = q.length > 1;
   const waiting = useWaitingForMe(trip.id);
-  const PAGES = { today: Today, days: Days, essentials: Essentials, photos: PhotosPage, notes: MyNotes, places: Places, map: MapView, phrases: Phrases, wallet: Wallet, trip: TripHub, prep: Prep };
+  const PAGES: Partial<Record<Tab, () => React.ReactNode>> = { today: Today, days: PlanPage, map: MapPage, wallet: Wallet, trip: GroupPage };
   /* ---------- one long sheet: every page side by side, sliding with your finger ----------
      The pager scrolls sideways (the phone's own scrolling, so it tracks the finger and coasts);
      each page scrolls up and down by itself. The bottom bar and the pager move together: drag
@@ -406,6 +423,8 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
      bar follow left the bar behind on the iPhone.) */
   const tapTab = (t: Tab, el: HTMLElement) => {
     const row = bar.current;
+    /* five tabs fit side by side: nothing to slide, just open it */
+    if (row && row.scrollWidth <= row.clientWidth + 1) return go(t);
     if (!row || Math.abs(offCentre(row, el)) < 4 || matchMedia('(prefers-reduced-motion: reduce)').matches) return go(t);
     barDragging.current = true; tapping.current = true;
     window.setTimeout(() => { tapping.current = false; }, 1500); // in case the bar never moves
@@ -427,23 +446,28 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
     barDragging.current = false;
     if (Math.abs(pg.scrollLeft - left) > 2) {
       if (!pagerReady.current || matchMedia('(prefers-reduced-motion: reduce)').matches) pg.scrollLeft = left;
-      else glide(pg, bar.current, left);
+      else {
+        /* a pause on the way (a slow frame) is not a choice: the glide decides where it lands */
+        tapping.current = true;
+        window.setTimeout(() => { tapping.current = false; }, 450);
+        glide(pg, bar.current, left);
+      }
     }
     pagerReady.current = true;
   }, [ui.tab, ui.day, order]);
 
   return (
-    <AppCtx.Provider value={{ ix, now, ui, set, go, geo, me, edit, show }}>
+    <AppCtx.Provider value={{ ix, now, ui, set, go, geo, me, edit, show, here }}>
       <div className="pager" ref={pager}>
         {order.map(t => {
-          const Page = t === 'now' ? null : PAGES[t];
+          const Page = t === 'now' ? null : PAGES[t]!;
           return (
             <section key={t} className="pane" data-tab={t} aria-hidden={t !== ui.tab}>
               <div className="wrap" id={t === ui.tab ? 'view' : undefined}>
                 {(all || t === ui.tab) && <>
                   <AccountButton trip={trip} />
                   {Page ? <Page /> : <RightNow moment={rn.m} next={rn.next} />}
-                  {t === 'trip' && (searching ? <Search q={q} /> : <Footer trip={trip} />)}
+                  {t === 'trip' && here === 'trip' && (searching ? <Search q={q} /> : <Footer trip={trip} />)}
                 </>}
               </div>
             </section>
@@ -452,6 +476,7 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
       </div>
       <div className="sheets">
         {showing && !editing && <DetailsCard thing={showing} close={() => show(null)} />}
+        {!editing && <ToolSheet />}
         {JAPAN && editing && <SheetOnly close={close} toNotes={() => go('prep')} />}
         {!JAPAN && editing?.kind === 'trip' && <TripSettings trip={trip} close={close} />}
         {!JAPAN && editing?.kind === 'plan' && <PlanItemEditor trip={trip} dayId={editing.dayId} id={editing.id} close={close} />}
@@ -465,7 +490,7 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
       </div>
       {/* the main way in: on every page but Right now, out of the way of any open editor */}
       {/* Add fits the page: photos on Photos, an expense on Wallet, otherwise the box, worded for the page */}
-      {!JAPAN && !editing && !adding && addKind && <AddButton kind={addKind} onOpen={() => {
+      {!JAPAN && !editing && !adding && !ui.tool && addKind && <AddButton kind={addKind} onOpen={() => {
         const k = addKind;
         if (k === 'expense') edit({ kind: 'expense' });
         else if (k === 'doc') edit({ kind: 'doc' });
@@ -481,7 +506,7 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
         const f = [...(e.target.files || [])]; e.target.value = '';
         if (f.length) void addPhotos(trip, f, now.cur?.id);
       }} />
-      {adding && <AddAnything kind={(addOn(ui.tab) as AddKind) || 'any'} close={() => setAdding(false)} />}
+      {adding && <AddAnything kind={(addOn(here) as AddKind) || 'any'} close={() => setAdding(false)} />}
       {!JAPAN && <ShareNotice />}
       {!JAPAN && <RemindNotice />}
       {!JAPAN && <NewDocNotice />}
@@ -495,16 +520,16 @@ function TripApp({ trip, me }: { trip: Trip; me: string }) {
         {order.map(t => (
           <button key={t} className={'sidetab' + (t === 'now' ? ' tab-now' : '')} aria-current={ui.tab === t ? 'page' : undefined} onClick={() => go(t)}>
             <svg viewBox="0 0 24 24" aria-hidden="true">{ICONS[t].icon}</svg><span>{ICONS[t].label}</span>
-            {t === 'prep' && waiting > 0 && <span className="tabn" aria-label={`${waiting} waiting for your OK`}>{waiting}</span>}
+            {t === 'trip' && waiting > 0 && <span className="tabn" aria-label={`${waiting} waiting for your OK`}>{waiting}</span>}
           </button>
         ))}
       </nav>
       <nav className="tabs" aria-label="Sections">
-        <div className="tabs-in" ref={bar}>
+        <div className="tabs-in fixed" ref={bar}>
           {order.map(t => (
             <button key={t} data-tab={t} className={'tab' + (t === 'now' ? ' tab-now' : '')} aria-current={ui.tab === t ? 'page' : undefined} onClick={e => tapTab(t, e.currentTarget)}>
               <svg viewBox="0 0 24 24" aria-hidden="true">{ICONS[t].icon}</svg>{ICONS[t].label}
-              {t === 'prep' && waiting > 0 && <span className="tabn" aria-label={`${waiting} waiting for your OK`}>{waiting}</span>}
+              {t === 'trip' && waiting > 0 && <span className="tabn" aria-label={`${waiting} waiting for your OK`}>{waiting}</span>}
             </button>
           ))}
         </div>

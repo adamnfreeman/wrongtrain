@@ -1,6 +1,7 @@
 // Plan a trip from nothing in the WrongTrain build, edit every kind of thing, reload, and check it all stuck.
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
+import { openTab } from './_nav.mjs';
 
 const DIST = process.argv[2], OUT = process.argv[3];
 const wait = ms => new Promise(r => setTimeout(r, ms));
@@ -41,7 +42,7 @@ check(/days to go/.test(await page.textContent('#view .board h1')), 'new trip op
 check(/Italy in May/.test(await page.textContent('#view .board .kicker')), 'trip name on the board');
 
 /* plan day 1 */
-await page.click('.tab:has-text("Days")');
+await openTab(page, 'Days');
 check((await view()).includes('Nothing planned for this day yet'), 'empty day says so');
 await page.click('text=Plan this day');
 await sheet.waitFor();
@@ -66,7 +67,7 @@ check((await page.textContent('#view .board-sub')).includes('Hotel near Termini'
 await shot('3-day');
 
 /* a place with a pasted pin, on day 1 */
-await page.click('.tab:has-text(\"Places\")');
+await openTab(page, 'Places');
 await page.click('text=+ Add a place');
 await sheet.waitFor();
 await sheet.getByLabel('Name', { exact: true }).fill('Trevi Fountain');
@@ -78,11 +79,11 @@ await shot('4-place-editor');
 await sheet.getByText('Save', { exact: true }).click();
 await page.click('#view .cattile:has-text("Sights")');
 check((await view()).includes('Trevi Fountain'), 'place listed under Sights');
-await page.click('.tab:has-text("Map")');
+await openTab(page, 'Map');
 check(await page.locator('.leaflet-interactive').count() >= 1, 'place has a pin on the map');
 
 /* a booked leg on the Florence day */
-await page.click('.tab:has-text(\"Essentials\")');
+await openTab(page, 'Essentials');
 await page.click('#view >> text=+ Add travel');
 await sheet.waitFor();
 const opts = await sheet.getByLabel('When').locator('option').allTextContents();
@@ -97,7 +98,7 @@ check(v.includes('Rome → Florence') && !v.includes('To book'), 'leg listed on 
 check(/Train · May 4 · 10:00 AM/.test(v), 'leg on its day, with its time: ' + (v.match(/Train · [^\n]*/) || [''])[0]);
 
 /* a to-do, ticked */
-await page.click('.tab:has-text(\"To do\")');
+await openTab(page, 'To do');
 await page.locator('text=+ Add a to-do').first().click();
 await sheet.waitFor();
 await sheet.getByLabel('To do', { exact: true }).fill('Book Colosseum tickets');
@@ -106,12 +107,12 @@ await page.click('[aria-label="Tick off: Book Colosseum tickets"]');
 check(await page.locator('[aria-label="Untick: Book Colosseum tickets"]').count() === 1, 'new to-do can be ticked');
 
 /* settings: rename, add a day at the end */
-await page.click('.tab:has-text("Trip")').then(() => page.click('.hubrows button:has-text("Trip settings")'));
+await openTab(page, 'Trip').then(() => page.click('.hubrows button:has-text("Trip settings")'));
 await sheet.waitFor();
 await sheet.getByLabel('Trip name').fill('Rome and Florence');
 await shot('5-settings');
 await sheet.getByText('+ Add a day at the end').click();
-await page.click('.tab:has-text("Days")');
+await openTab(page, 'Days');
 check(await page.locator('.dbox').count() === 7, 'a day added at the end (7 days)');
 
 /* delete day 2: later days move up, the Florence leg stays on its day */
@@ -127,25 +128,25 @@ await page.reload();
 await page.waitForSelector('.tab');
 await page.click('.tab:has-text("Today")');
 check(/Rome and Florence/.test(await page.textContent('#view .board .kicker')), 'new name kept after reload');
-await page.click('.tab:has-text(\"Essentials\")');
+await openTab(page, 'Essentials');
 v = await view();
 check(v.includes('Rome → Florence'), 'leg kept after reload');
 check(/Train · May 3/.test(v), 'leg moved with its day to May 3: ' + (v.match(/Train · [^\n]*/) || [''])[0]);
-await page.click('.tab:has-text("Days")');
+await openTab(page, 'Days');
 await page.locator('.dbox').first().click(); await wait(900);
 check((await view()).includes('Colosseum, timed entry'), 'day 1 plan kept after reload');
 
 /* start from the sample */
-await page.click('.tab:has-text("Trip")'); await page.click('.pane[data-tab="trip"] .acctbtn').then(() => page.click('.hubrows button:has-text(\"All trips\")'));
+await openTab(page, 'Trip'); await page.click('.pane[data-tab="trip"] .acctbtn').then(() => page.click('.hubrows button:has-text(\"All trips\")'));
 await page.click('text=Start from the sample');
 await sheet.waitFor();
 await sheet.getByLabel('First day').fill('2027-10-01');
 await sheet.getByText('Create').click();
 await page.waitForSelector('.board h1');
 check(/Our Japan trip/.test(await page.textContent('#view .board .kicker')), 'copy of the sample opens');
-await page.click('.tab:has-text("Days")');
+await openTab(page, 'Days');
 check((await page.textContent('#view .board .kicker')).includes('Oct 1'), 'copy starts on the chosen date');
-await page.click('.tab:has-text("Trip")'); await page.click('.pane[data-tab="trip"] .acctbtn').then(() => page.click('.hubrows button:has-text(\"All trips\")'));
+await openTab(page, 'Trip'); await page.click('.pane[data-tab="trip"] .acctbtn').then(() => page.click('.hubrows button:has-text(\"All trips\")'));
 check((await page.locator('.gate .sheet li').count()) === 2, 'welcome lists both trips');
 await shot('6-welcome-trips');
 

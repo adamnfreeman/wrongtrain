@@ -20,12 +20,12 @@ function Hl({ s, terms }: { s: string; terms: string[] }) {
 }
 
 export function Search({ q }: { q: string }) {
-  const { ix, ui, set, go } = useApp();
+  const { ix, set, go, here } = useApp();
   const idx = useMemo(() => buildIndex(ix.trip), [ix.trip]);
   const [exp, setExp] = useState<Record<string, boolean>>({});
   const { terms, hits } = search(idx, q);
   if (!hits.length) return <Empty>Nothing in the trip matches “{q}”.</Empty>;
-  const first = FIRST[ui.tab];
+  const first = FIRST[here] || FIRST.today;
   return (
     <>
       <p className="lede">{hits.length} {hits.length === 1 ? 'result' : 'results'} across the whole trip.</p>

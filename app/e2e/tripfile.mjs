@@ -5,6 +5,7 @@ import { spawn, execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { openTab } from './_nav.mjs';
 
 const DIST = process.argv[2];
 const wait = ms => new Promise(r => setTimeout(r, ms));
@@ -31,30 +32,30 @@ await page.waitForSelector('[role=alert]:has-text("not a trip file")', { timeout
 check(await page.locator('[role=alert]:has-text("not a trip file")').count() === 1, 'a file that is not a trip says so');
 
 await page.setInputFiles('input[aria-label="Trip file"]', FILE);
-await page.waitForSelector('.tab:has-text("Days")');
-await page.click('.tab:has-text("Days")');
+await page.waitForSelector('.tab[data-tab="days"]');
+await openTab(page, 'Days');
 await page.waitForSelector('#view .dayhead h1, #view .board h1');
 const days = await page.locator('#view').textContent();
 check(/Kyoto/.test(days), 'the trip opens, with its Kyoto day');
 check(/teamLab Biovortex/.test(days), "the day's plan came across");
 
 /* tick a to-do, then open a newer file: the change arrives, the tick stays */
-await page.click('.tab:has-text("To do")');
+await openTab(page, 'To do');
 await page.click('[aria-label="Tick off: Add Suica to Apple Wallet"]');
 const trip = JSON.parse(readFileSync(FILE, 'utf8'));
 trip.trip.days[0].summary = 'Updated in the sheet';
 writeFileSync(FILE, JSON.stringify(trip));
-await page.click('.tab:has-text("Trip")'); await page.click('.pane[data-tab="trip"] .acctbtn'); await page.click('text=All trips');
+await openTab(page, 'Trip'); await page.click('.pane[data-tab="trip"] .acctbtn'); await page.click('text=All trips');
 await page.waitForSelector('text=Open a trip file');
 page.once('dialog', d => d.accept());
 await page.setInputFiles('input[aria-label="Trip file"]', FILE);
-await page.waitForSelector('.tab:has-text("Trip")');
-await page.click('.tab:has-text("Trip")');
+await page.waitForSelector('.tab[data-tab="trip"]');
+await openTab(page, 'Trip');
 await page.waitForTimeout(400);
 check(/Updated in the sheet/.test(await page.locator('#view').textContent()), 'a newer file updates the trip');
-await page.click('.tab:has-text("To do")');
+await openTab(page, 'To do');
 check(await page.locator('[aria-label="Untick: Add Suica to Apple Wallet"]').count() === 1, 'and the tick made in the app stays');
-await page.click('.tab:has-text("Trip")'); await page.click('.pane[data-tab="trip"] .acctbtn'); await page.click('text=All trips');
+await openTab(page, 'Trip'); await page.click('.pane[data-tab="trip"] .acctbtn'); await page.click('text=All trips');
 check(await page.locator('.sheet li:has-text("Japan 2026")').count() === 1, 'still one Japan trip, not two');
 
 check(errors.length === 0, 'no script errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
