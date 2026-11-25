@@ -145,6 +145,18 @@ on a Mac.
   (`ThingRow`) that open it. Today is the hub (Oct 24): How much time, then Coming up (each opens its
   card) with Tonight's hotel, Waiting on you (to-dos that are yours), What's nearby, the day's plan;
   before the trip, Getting there (day one's travel and first night).
+- Nov 24, from Adam's trip comments: how early to be at the airport depends on the flight
+  (`src/model/airport.ts`: 2½ hours international, 1½ domestic, or the leg's own "Be at the airport";
+  legs also take a terminal and gate); Right now knows when you're already there (by location: "You're
+  at the airport", the gate, boarding time) and says when boarding starts; passport reminders come the
+  evening before (8 PM) and when you'd set off, saying when it boards and leaves. Details cards have
+  faces to tap for who's going (`GoingFaces`). Who's going shows one face per name. Comments for Adam:
+  Send on the left, a camera button on the right. The 7-day weather goes hour by hour (today until
+  midnight; tap a day for its hours), in the place's own time. Veg labels and the veg-only switch only
+  when someone on the trip eats vegetarian (`tripEatsVeg`; the sample's Sam does). Today shows the
+  time in the trip's other cities and at home (`src/ui/clocks.tsx`). Your own Notes follow you to all
+  your devices (`my_notes` in schema.sql, `src/sync/mynotes.ts`). The Japan edition's test plays a
+  day during the trip (it's over now).
 - Oct 25, before the trip: "Change of plans?" on Today during the trip (`ChangePlans` in
   `src/ui/changePlans.tsx`): pick what to skip from what's left today, a mood and near you or near the
   hotel, and one tap swaps a nearby place in (about 15 minutes plus the walk from now), with Undo.
@@ -395,7 +407,7 @@ Next:
    top of Today), and show ratings. Google ratings come from the Places API (paid per request;
    its terms require Google's attribution, and Google data shown on a map must be on a Google
    map, so in a list is fine). Alternatives: Foursquare or Yelp ratings.
-63. **Real-time flight alerts** (Adam, Oct 20): delays, gate and terminal changes and
+63. **Real-time flight alerts** (Adam, Oct 20; and Oct 26: "let me know my gate"): delays, gate and terminal changes and
    cancellations for the trip's booked flights, as they happen (needs a flight status service and,
    with the app closed, push notifications; see Right now, 16).
 68. **Our own icons instead of emojis** (Adam, Oct 20): replace the emojis used as icons everywhere
@@ -443,6 +455,10 @@ Next:
    planned and one for people who'd rather go with the flow.
 90. **Carry-on checker** (Adam, Oct 25): check that your carry-on bags are within the size and weight
    limits of the airline you're flying (from the trip's booked flights).
+91. **A walking list on a map** (Adam, Oct 28): the places you want to get to, as a list you can walk
+   through on the map (an order that makes sense, directions from one to the next).
+92. **Two unclear comments** (Adam, Oct 28): "Add a check to 'open on this tab'" and "Make them look
+   more like tabs". Nothing in the app says that; ask Adam again when he sees it.
 
 ## Working together
 

@@ -7,6 +7,7 @@
 import type { Day, Place, ThingRef } from './types';
 import { fmtT, hm, minutesIn, weekday } from './time';
 import { type TripIndex, clockZone, metres, travel, pinGroup } from './trip';
+import { earlyFor } from './airport';
 
 export interface Anchor {
   at: number | null;
@@ -26,7 +27,7 @@ export function anchorsFor(ix: TripIndex, d: Day): Anchor[] {
     if (l.dayId !== d.id || l.status !== 'booked') return;
     const at = hm(l.depart); if (at == null) return;
     const flight = l.mode === 'flight';
-    out.push({ at, lead: flight ? 150 : 10, name: `${l.from} → ${l.to}`, what: l.how,
+    out.push({ at, lead: earlyFor(ix, l), name: `${l.from} → ${l.to}`, what: l.how,
       place: (l.fromPlaceId && ix.place.get(l.fromPlaceId)) || null, kind: flight ? 'flight' : 'ride', ref: { kind: 'leg', id: l.id } });
   });
   d.plan.forEach(p => {

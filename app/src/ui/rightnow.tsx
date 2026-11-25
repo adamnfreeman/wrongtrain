@@ -5,6 +5,7 @@ import { useState } from 'react';
 import type { Moment } from '../model/rightNow';
 import { fmtT, fmtDur } from '../model/time';
 import { dirLink, fmtDist, mapsLink } from '../model/trip';
+import { BOARDS_BEFORE, international } from '../model/airport';
 import { usePrivateDocs } from '../model/privateDocs';
 import { useLimitedDocs } from '../sync/limitedDocs';
 import type { Doc } from '../model/types';
@@ -39,6 +40,9 @@ export function RightNow({ moment: m, next }: { moment: Moment | null; next: Mom
   const pinned = m.place && m.place.lat != null && m.place.lng != null ? m.place : null;
   const facts: { k: string; v: string }[] = [];
   if (m.leg) {
+    /* a flight: the gate (typed in the leg editor) and when boarding starts, first */
+    if (m.kind === 'flight' && m.leg.gate) facts.push({ k: 'Gate', v: m.leg.gate });
+    if (m.kind === 'flight') facts.push({ k: 'Boards', v: `about ${fmtT(m.at - BOARDS_BEFORE)}` });
     if (m.leg.how) facts.push({ k: m.kind === 'flight' ? 'Flight' : 'Service', v: m.leg.how });
     if (m.leg.arrive) facts.push({ k: 'Arrives', v: fmtT(Number(m.leg.arrive.slice(0, 2)) * 60 + Number(m.leg.arrive.slice(3, 5))) });
     if (m.leg.details) facts.push({ k: 'Details', v: m.leg.details });
@@ -57,11 +61,18 @@ export function RightNow({ moment: m, next }: { moment: Moment | null; next: Mom
         <span className={'rn-count' + (m.inMin <= 15 ? ' soon' : '')}>{countdown(m)}</span>
       </div>
 
-      {m.inMin > 0 && (
+      {/* already there (by your location): no "leave by"; for a flight, the gate instead */}
+      {m.inMin > 0 && m.there && (
+        <div className="rn-leave">
+          <b>{m.kind === 'flight' ? "You're at the airport" : "You're here"}</b>
+          {m.kind === 'flight' && <small>{m.leg?.gate ? `Gate ${m.leg.gate}. ` : 'Check the screens for your gate. '}Boarding about {fmtT(m.at - BOARDS_BEFORE)}.</small>}
+        </div>
+      )}
+      {m.inMin > 0 && !m.there && (
         <div className={'rn-leave' + (leaveIn <= 0 ? ' now' : '')}>
           {leaveIn <= 0 ? <b>Leave now</b> : <><span>Leave by</span><b>{fmtT(m.leaveBy)}</b><span>in {fmtDur(leaveIn)}</span></>}
           {m.trip && <small>{fmtDist(m.trip.metres)} away, about {fmtDur(m.trip.min)} {m.trip.how}</small>}
-          {m.kind === 'flight' && <small>Be at the airport 2½ hours before.</small>}
+          {m.kind === 'flight' && <small>Be at the airport {fmtDur(m.lead)} before{m.leg && !m.leg.early ? (international(ix, m.leg) ? ' (international)' : ' (domestic)') : ''}.</small>}
         </div>
       )}
 

@@ -1,5 +1,6 @@
 /* Today, Days, Places and To do. */
 import { Weather } from './weather';
+import { Clocks } from './clocks';
 import { useRef, useState } from 'react';
 import type { FileRef } from '../model/types';
 import { keep, shrink, useFileUrl } from '../sync/files';
@@ -21,6 +22,7 @@ import { Empty, Fold, Pill, SecH, Txt, line } from './bits';
 import { Board, DayBody, DaySlider, EatItem, TodoItem, VegToggle, tapped, vegOk } from './day';
 import { NextCard } from './next';
 import { useApp } from './ctx';
+import { tripEatsVeg } from '../model/tastes';
 
 /* ---------- Today ---------- */
 
@@ -33,6 +35,7 @@ export function Today() {
       <>
         <Board d={now.cur} compact />
         <Weather ix={ix} day={now.cur} live />
+        <Clocks ix={ix} />
         <NextCard />
         <DayBody d={now.cur} />
       </>
@@ -65,6 +68,7 @@ export function Today() {
         </div>
       </header>
       {now.phase === 'before' && <Weather ix={ix} day={days[0]} live={false} />}
+      {now.phase === 'before' && <Clocks ix={ix} />}
       {now.phase === 'before' && firstUp.length > 0 && (
         <section className="sec">
           <SecH title="Getting there" />
@@ -132,7 +136,7 @@ export function Places() {
   const counts = CATS.map(c => ({ ...c, n: inCity.filter(c.has).length }));
   const cat = counts.find(c => c.key === ui.seg && c.n) || counts.find(c => c.n);
   const dayOf = (p: Place) => ix.trip.days.find(d => onToday(p, d));
-  const list = cat ? inCity.filter(cat.has).filter(p => !(cat.key === 'food' || cat.key === 'coffee') || vegOk(p, ui.veg)) : [];
+  const list = cat ? inCity.filter(cat.has).filter(p => !(cat.key === 'food' || cat.key === 'coffee') || vegOk(p, ui.veg && tripEatsVeg(ix.trip))) : [];
   const food = cat?.key === 'food' || cat?.key === 'coffee';
   /* the card's Add to itinerary; the Japan edition's plan is changed in the sheet, so not there */
   const tap = (p: Place) => JAPAN ? undefined : () => { show({ kind: 'place', id: p.id }); setTimeout(() => document.getElementById('addplan')?.scrollIntoView({ block: 'start' }), 60); };
@@ -152,7 +156,7 @@ export function Places() {
       <div className="chips"><button className="linkbtn" onClick={() => edit({ kind: 'place', as: cat?.key === 'food' || cat?.key === 'coffee' ? 'food' : 'sight', ...(ui.dest !== 'all' ? { destinationId: ui.dest } : {}) })}>+ Add a place</button></div>
       {cat && (
         <div id="results">
-          {food && ix.trip.places.some(p => p.diet) && <div className="chips"><VegToggle /></div>}
+          {food && tripEatsVeg(ix.trip) && ix.trip.places.some(p => p.diet) && <div className="chips"><VegToggle /></div>}
           {list.length ? <ul className="sheet">{list.map(p => food ? <EatItem key={p.id} p={p} day={dayOf(p)?.date} onOpen={tap(p)} /> : <IdeaItem key={p.id} p={p} day={dayOf(p)?.date} onOpen={tap(p)} />)}</ul>
             : <Empty>Nothing here for that filter.</Empty>}
         </div>

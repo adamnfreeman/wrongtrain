@@ -110,17 +110,20 @@ export function Weather({ ix, day, live }: { ix: TripIndex; day?: Day; live: boo
 /* ---------- the next 7 days, tapped open ---------- */
 
 interface Week {
-  at: number; now?: { t: number; code: number };
+  /** now.time: the place's own clock ("2026-10-26T20:15"), as are the hours' times (timezone=auto) */
+  at: number; now?: { t: number; code: number; time?: string };
+  /** the place's time zone, e.g. "JST": the hours are in it */
+  zone?: string;
   hours: { time: string; t: number; code: number; rain: number }[];
   days: { date: string; code: number; hi: number; lo: number; rain: number; wind: number }[];
 }
 
 async function fetchWeek(at: { lat: number; lng: number }): Promise<Week | null> {
-  const key = `wxweek-${at.lat.toFixed(2)},${at.lng.toFixed(2)}`;
+  const key = `wxweek2-${at.lat.toFixed(2)},${at.lng.toFixed(2)}`;
   const had = pref<Week | null>(key, null);
   if (had && Date.now() - had.at < 30 * 60_000) return had;
   if (!navigator.onLine) return had;
-  const u = `https://api.open-meteo.com/v1/forecast?latitude=${at.lat}&longitude=${at.lng}&timezone=auto&forecast_days=7&forecast_hours=24`
+  const u = `https://api.open-meteo.com/v1/forecast?latitude=${at.lat}&longitude=${at.lng}&timezone=auto&forecast_days=7`
     + '&current=temperature_2m,weather_code&hourly=temperature_2m,weather_code,precipitation_probability'
     + '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max'
     + (F ? '&temperature_unit=fahrenheit&wind_speed_unit=mph' : '');
@@ -128,8 +131,9 @@ async function fetchWeek(at: { lat: number; lng: number }): Promise<Week | null>
     const j = await (await fetch(u)).json(), d = j?.daily, h = j?.hourly;
     if (!d?.time?.length) return had;
     const w: Week = {
-      at: Date.now(), now: j.current ? { t: j.current.temperature_2m, code: j.current.weather_code } : undefined,
-      hours: (h?.time || []).map((time: string, i: number) => ({ time, t: h.temperature_2m[i], code: h.weather_code[i], rain: h.precipitation_probability?.[i] ?? 0 })).filter((_: unknown, i: number) => i % 3 === 0),
+      at: Date.now(), zone: j.timezone_abbreviation || undefined, now: j.current ? { t: j.current.temperature_2m, code: j.current.weather_code, time: j.current.time } : undefined,
+      /* every hour of the week, so any day can show its own */
+      hours: (h?.time || []).map((time: string, i: number) => ({ time, t: h.temperature_2m[i], code: h.weather_code[i], rain: h.precipitation_probability?.[i] ?? 0 })),
       days: d.time.map((date: string, i: number) => ({ date, code: d.weather_code[i], hi: d.temperature_2m_max[i], lo: d.temperature_2m_min[i], rain: d.precipitation_probability_max[i] ?? 0, wind: d.wind_speed_10m_max[i] ?? 0 })),
     };
     setPref(key, w);
@@ -140,6 +144,13 @@ async function fetchWeek(at: { lat: number; lng: number }): Promise<Week | null>
 const hourLabel = (iso: string) => { const h = +iso.slice(11, 13); return h === 0 ? '12 AM' : h === 12 ? 'Noon' : h < 12 ? `${h} AM` : `${h - 12} PM`; };
 const dayLabel = (iso: string, i: number) => (i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : `${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][new Date(iso + 'T12:00:00').getDay()]} ${shortDate(iso)}`);
 
+/** One day's hours, hour by hour, in the place's own time: for today, from this hour until midnight. */
+function dayHours(w: Week, day: string): Week['hours'] {
+  const d = day || w.days[0]?.date || '';
+  const from = d === w.days[0]?.date && w.now?.time ? w.now.time.slice(0, 13) : '';
+  return w.hours.filter(h => h.time.startsWith(d) && h.time.slice(0, 13) >= from);
+}
+
 /** The next 7 days for one place: where you are (if the phone knows) or any of the trip's cities. */
 function WeekView({ ix, start, close }: { ix: TripIndex; start: string; close: () => void }) {
   const { geo } = useApp();
@@ -147,9 +158,11 @@ function WeekView({ ix, start, close }: { ix: TripIndex; start: string; close: (
   const [pick, setPick] = useState(here ? 'here' : start);
   const [week, setWeek] = useState<Week | null>(null);
   const [busy, setBusy] = useState(true);
+  /* the day whose hours show: today from now until midnight (swipe along), or any day tapped */
+  const [day, setDay] = useState('');
   useEffect(() => {
     let on = true;
-    setBusy(true);
+    setBusy(true); setDay('');
     (async () => {
       const at = pick === 'here' ? here : await whereCity(ix, pick);
       const w = at ? await fetchWeek(at) : null;
@@ -170,18 +183,18 @@ function WeekView({ ix, start, close }: { ix: TripIndex; start: string; close: (
           {week.now && (
             <div className="wxnow"><span aria-hidden>{look(week.now.code)[1]}</span><b>{deg(week.now.t)}</b><span>{look(week.now.code)[2]}</span></div>
           )}
-          <div className="wxhours">{week.hours.map(h => (
+          <div className="wxhours">{dayHours(week, day).map(h => (
             <div key={h.time}><small>{hourLabel(h.time)}</small><span aria-hidden>{look(h.code)[1]}</span><b>{deg(h.t)}</b>{h.rain >= 20 && <i>{h.rain}%</i>}</div>
           ))}</div>
           <ul className="wxdays">{week.days.map((d, i) => (
-            <li key={d.date}>
+            <li key={d.date} className={'tapme' + ((day || week.days[0].date) === d.date ? ' on' : '')} onClick={() => setDay(d.date)} role="button" aria-pressed={(day || week.days[0].date) === d.date}>
               <span className="wxd">{dayLabel(d.date, i)}</span>
               <span aria-hidden>{look(d.code)[1]}</span>
               <span className="wxw">{look(d.code)[2]}{d.rain >= 20 ? ` · ${d.rain}% rain` : ''}{d.wind >= (F ? 20 : 30) ? ` · wind ${Math.round(d.wind)} ${unit}` : ''}</span>
               <span className="wxt"><b>{deg(d.hi)}</b> {deg(d.lo)}</span>
             </li>
           ))}</ul>
-          <p className="note">Open-Meteo forecast{busy ? ', updating…' : ''}.</p>
+          <p className="note">{week.zone ? `Hours in local time (${week.zone}). ` : ''}Open-Meteo forecast{busy ? ', updating…' : ''}.</p>
         </>}
       </div>
     </div>,

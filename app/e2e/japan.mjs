@@ -38,6 +38,10 @@ page.on('dialog', d => { errors.push('dialog: ' + d.message()); d.dismiss(); });
 let failures = 0;
 const check = (c, m) => { if (!c) failures++; console.log((c ? 'PASS ' : 'FAIL ') + m); };
 
+/* the trip (Oct 26 to Nov 8, 2026) is over now; the test plays a day in the middle of it, so Today
+   shows the trip in progress (Something nearby and all) */
+const DURING = new Date('2026-10-30T01:00:00Z');
+await page.clock.setFixedTime(DURING);
 await page.goto('http://localhost:8099/');
 await page.waitForSelector('text=Japan 2026');
 await page.fill('#jn', 'Adam'); await page.fill('#jc', 'wrong'); await page.click('button:has-text("Sign in")');
@@ -116,6 +120,7 @@ await ctx2.addInitScript(raw => {
 }, RAW);
 const page2 = await ctx2.newPage();
 page2.on('pageerror', e => errors.push('old page: ' + e.message));
+await page2.clock.setFixedTime(DURING);
 await page2.goto('http://localhost:8099/');
 await page2.waitForSelector('.tab:has-text("Today")', { timeout: 15000 }).catch(() => {});
 check(await page2.locator('.tab:has-text("Today")').count() === 1, 'coming from the old page: no sign-in, trip shows with no signal');

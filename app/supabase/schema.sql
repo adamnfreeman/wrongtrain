@@ -880,3 +880,20 @@ create index if not exists push_sent_recent on public.push_sent (trip_id, kind, 
 create index if not exists push_sent_sender on public.push_sent (sender, created_at);
 alter table public.push_sent enable row level security;
 
+
+-- ---------- your own notes, on all your devices ----------
+-- The Notes tab is just for you (Oct 26: they didn't follow you to your other phone or iPad). One
+-- row per person per trip; nobody else can read or write it. The trip id isn't a foreign key: an
+-- unshared trip lives only on your phones, and its notes still travel with you.
+create table if not exists public.my_notes (
+  user_id     uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  trip_id     text not null check (char_length(trip_id) <= 100),
+  text        text not null default '' check (char_length(text) <= 50000),
+  updated_at  timestamptz not null default now(),
+  primary key (user_id, trip_id)
+);
+alter table public.my_notes enable row level security;
+drop policy if exists "your own notes" on public.my_notes;
+create policy "your own notes" on public.my_notes for all to authenticated
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
+revoke all on public.my_notes from anon;

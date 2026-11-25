@@ -366,6 +366,8 @@ export function makeSample(now: Date): Trip {
     id: 'sample',
     name: 'Japan in ten days',
     travelers: ['Alex', 'Sam', 'Jordan', 'Riley'],
+    /* Sam eats vegetarian, so the sample shows veg labels and the veg-only switch */
+    tastes: { Sam: { diets: ['Vegetarian'], likes: ['Food', 'Nightlife'] } },
     destinations,
     days: ds,
     legs: [...legs.map((l, i) => ({ id: `l${i}`, ...l })),

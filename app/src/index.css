@@ -886,3 +886,13 @@ button.wx { width: 100%; background: none; border: 0; padding: 0; text-align: le
 .bigbtn + .bigbtn { background: var(--ink); color: var(--bg); border-color: var(--ink) }
 .fb-shot { display: flex; align-items: center; gap: 12px; margin-top: 10px }
 .fb-shot img { width: 72px; height: 120px; object-fit: cover; border-radius: 10px; border: 1px solid var(--rule) }
+/* who's going on a details card: tap a face to put them in or out */
+.gofaces { margin: 14px 0 4px }
+/* comments for Adam: Send on the left, the camera on the right */
+.fb-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 10px 0 }
+.fb-row .fb-cam { position: static; transform: none }
+/* the 7-day weather: tap a day for its hours */
+.wxdays li.on { background: var(--card); border-radius: 10px }
+/* the time elsewhere, on Today */
+.clocks { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: -2px 0 12px; font-size: 13.5px; color: var(--muted) }
+.clocks b { color: var(--ink); font-weight: 700 }

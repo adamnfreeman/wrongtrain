@@ -134,6 +134,10 @@ export interface Leg {
   statusText?: string;
   tickets?: string;
   details?: string;
+  /** A flight: minutes to be at the airport before it leaves, when not the usual (model/airport.ts). */
+  early?: number;
+  /** A flight: terminal and gate, shown big on Right now. */
+  gate?: string;
 }
 
 export type PlaceKind = 'stay' | 'sight' | 'area' | 'food' | 'coffee' | 'shop' | 'event' | 'transit' | 'other';

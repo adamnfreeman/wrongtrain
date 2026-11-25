@@ -34,6 +34,30 @@ export function WhoGoing({ trip, item }: { trip: Trip; item: PlanItem }) {
   );
 }
 
+/** On a details card: everyone on the trip as a face; tap one to put them in or out. One tap each,
+    no editor (Adam: adding and removing people took too many clicks). Plan items and legs alike. */
+export function GoingFaces({ trip, id }: { trip: Trip; id: string }) {
+  if (trip.travelers.length < 2) return null;
+  const going = trip.going?.[id] ?? trip.travelers;
+  const isIn = (n: string) => going.some(g => same(g, n));
+  const flip = (n: string) => patchTrip(trip.id, t => {
+    const now = t.going?.[id] ?? t.travelers;
+    return setGoing(t, id, now.some(g => same(g, n)) ? now.filter(g => !same(g, n)) : [...now, n]);
+  });
+  return (
+    <div className="gofaces" role="group" aria-label="Who's going">
+      <div className="kick">Who's going · tap to change</div>
+      <div className="whopick">
+        {trip.travelers.map(n => (
+          <button key={n} type="button" className={'face' + (isIn(n) ? '' : ' waiting')} aria-pressed={isIn(n)} onClick={() => flip(n)}>
+            <Face tripId={trip.id} name={n} size={44} /><span>{n}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /** The days a plan item would fit best, other than the one it's on: in the right city if it has
     a place, then the days with the least on them, keeping clear of travel days and the last day. */
 export function bestDays(t: Trip, item: PlanItem, fromDay: string): Day[] {

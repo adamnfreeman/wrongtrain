@@ -20,6 +20,10 @@ export function setTastes(t: Trip, name: string, x: Tastes): Trip {
   return { ...t, tastes };
 }
 
+/** Whether anyone on the trip said they eat vegetarian or vegan: only then do places to eat show
+    veg labels and the veg-only switch (Adam: veg shouldn't come first when nobody chose it). */
+export const tripEatsVeg = (t: { tastes?: Record<string, Tastes> }) => Object.values(t.tastes || {}).some(x => eatsVeg(x));
+
 /** Whether they only eat vegetarian (or vegan) food. */
 export const eatsVeg = (x?: Tastes) => !!x?.diets.some(d => /^(vegetarian|vegan)$/i.test(d));
 

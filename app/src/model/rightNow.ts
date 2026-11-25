@@ -3,13 +3,15 @@
    a little after it starts. Outside those windows there's nothing, and the page isn't there.
 
    The windows, by kind (how early it opens is on top of the travel time to get there):
-   - flight: from about 3 hours before it leaves (2.5 h at the airport, plus getting there)
+   - flight: half an hour before you need to leave for the airport (2½ hours early for an
+     international flight, 1½ for a domestic one; model/airport.ts)
    - train, bus or other ride: from 45 minutes before you need to leave
    - booking or meeting: from 30 minutes before you need to leave
    Each closes a little after its time: 20 minutes for a flight or booking, 10 for a ride. */
 import type { Day, Leg, Place, PlanItem } from './types';
 import { hm } from './time';
 import { type TripIndex, metres, travel } from './trip';
+import { earlyFor } from './airport';
 import type { Ctx } from './next';
 
 export interface Moment {
@@ -29,13 +31,16 @@ export interface Moment {
   trip: { min: number; how: string; mode: string; metres: number } | null;
   /** When to set off, minutes into the day. */
   leaveBy: number;
+  /** You're already there (at the airport, the station, the door), by your location. */
+  there: boolean;
   /** Minutes from now until it leaves or starts (negative once it has). */
   inMin: number;
 }
 
 const OPEN = { flight: 30, ride: 45, event: 30 } as const;
 const CLOSE = { flight: 20, ride: 10, event: 20 } as const;
-const LEAD = { flight: 150, ride: 10, event: 10 } as const;
+/** Closer than this to where it leaves from and you're already there: no "leave by". */
+const THERE = { flight: 1500, ride: 300, event: 150 } as const;
 
 const pinned = (p?: Place | null) => (p && p.lat != null && p.lng != null ? p : null);
 
@@ -58,9 +63,10 @@ export function momentsOn(ix: TripIndex, d: Day, ctx: Pick<Ctx, 'pos' | 'min'>, 
     const m = metres(ctx.pos.lat, ctx.pos.lng, p.lat!, p.lng!);
     return { ...travel(m), metres: m };
   };
-  const add = (m: Omit<Moment, 'leaveBy' | 'inMin' | 'trip' | 'lead'>) => {
-    const lead = LEAD[m.kind], trip = reach(m.place);
-    out.push({ ...m, lead, trip, leaveBy: m.at - lead - (trip?.min ?? 0), inMin: m.at - ctx.min });
+  const add = (m: Omit<Moment, 'leaveBy' | 'inMin' | 'trip' | 'lead' | 'there'>) => {
+    const lead = m.leg ? earlyFor(ix, m.leg) : 10, trip = reach(m.place);
+    const there = !!trip && trip.metres <= THERE[m.kind];
+    out.push({ ...m, lead, trip, there, leaveBy: m.at - lead - (there ? 0 : trip?.min ?? 0), inMin: m.at - ctx.min });
   };
   for (const l of ix.trip.legs) {
     if (l.dayId !== d.id || l.status !== 'booked' || !yours(ix, l.id, me)) continue;

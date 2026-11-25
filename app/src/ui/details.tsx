@@ -11,7 +11,7 @@ import { JAPAN } from '../edition';
 import { DocLinks } from './wallet';
 import { Popup } from './form';
 import { Ext, Pill, Txt, line } from './bits';
-import { WhoGoing } from './planItem';
+import { GoingFaces } from './planItem';
 import { AddToItinerary } from './addToPlan';
 import { useApp } from './ctx';
 
@@ -121,6 +121,7 @@ function LegCard({ l, close }: { l: Leg; close: () => void }) {
         {l.details && <Row label="Details"><span className="pre">{l.details}</span></Row>}
       </div>
       <DocLinks kind="leg" id={l.id} />
+      {!JAPAN && <GoingFaces trip={ix.trip} id={l.id} />}
       <div className="dc-btns">
         <button type="button" className="bigbtn" onClick={go(() => edit({ kind: 'leg', id: l.id }))}>Edit</button>
         <button type="button" className="bigbtn" onClick={go(() => edit({ kind: 'doc', for: { kind: 'leg', id: l.id } }))}>Add a ticket</button>
@@ -153,7 +154,7 @@ function PlanCard({ d, p, close }: { d: Day; p: PlanItem; close: () => void }) {
       )}
       <Found p={place} />
       <DocLinks kind="plan" id={p.id} />
-      {!JAPAN && <WhoGoing trip={ix.trip} item={p} />}
+      {!JAPAN && <GoingFaces trip={ix.trip} id={p.id} />}
       <div className="dc-btns">
         <button type="button" className="bigbtn" onClick={go(() => edit({ kind: 'plan', dayId: d.id, id: p.id }))}>Edit</button>
         <button type="button" className="bigbtn" onClick={go(() => edit({ kind: 'doc', for: { kind: 'plan', id: p.id } }))}>Add a ticket</button>

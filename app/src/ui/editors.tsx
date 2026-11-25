@@ -1,5 +1,6 @@
 /* The editors: one full-screen sheet per thing you can change. Each works on a draft and only
    touches the trip when you press Save. */
+import { international } from '../model/airport';
 import { useTripPeople } from './avatar';
 import { useMemo, useState } from 'react';
 import type { DocKind, Day, Destination, Leg, LegMode, LegStatus, Place, PlaceKind, PlanItem, Todo, Trip } from '../model/types';
@@ -157,6 +158,14 @@ export function LegEditor({ trip, id, dayId, close }: Props & { id?: string; day
         <Text label="Leaves" type="time" value={l.depart || ''} onChange={v => up({ depart: v || undefined })} />
         <Text label="Arrives" type="time" value={l.arrive || ''} onChange={v => up({ arrive: v || undefined })} />
       </div>
+      {l.mode === 'flight' && (
+        <div className="frow">
+          <Choice label="Be at the airport" value={l.early == null ? '' : String(l.early)} onChange={v => up({ early: v ? Number(v) : undefined })}
+            options={[{ value: '', label: `Usual (${international(ix, l) ? '2½ h, international' : '1½ h, domestic'})` },
+              ...[60, 90, 120, 150, 180].map(n => ({ value: String(n), label: `${n / 60} h before`.replace('.5', '½') }))]} />
+          <Text label="Terminal and gate" value={l.gate || ''} onChange={v => up({ gate: v || undefined })} placeholder="e.g. T3, gate 112" />
+        </div>
+      )}
       <Choice label="Leaves from" value={l.fromPlaceId || ''} onChange={v => up({ fromPlaceId: v || undefined })}
         hint="Pick the station or airport so Today can tell you when to leave for it."
         options={[{ value: '', label: 'No map pin' }, ...stations.map(p => ({ value: p.id, label: p.name }))]} />

@@ -15,6 +15,7 @@ import { sendPush } from '../sync/push';
 import { stamp } from '../model/time';
 import { Ext, Pill, Rich, SecH, Txt, line, Fold } from './bits';
 import { useApp } from './ctx';
+import { tripEatsVeg } from '../model/tastes';
 
 /** The day's heading: which day, the city, tonight's stay. compact on Today, where the time to leave leads. */
 export function Board({ d, compact }: { d: Day; compact?: boolean }) {
@@ -53,7 +54,8 @@ export function DayBody({ d }: { d: Day }) {
   const { ix, ui, go, edit, show } = useApp();
   const legs = ix.trip.legs.filter(l => l.dayId === d.id);
   const eats = d.eatIds.map(id => ix.place.get(id)).filter((p): p is Place => !!p);
-  const shown = eats.filter(p => vegOk(p, ui.veg));
+  const veg = tripEatsVeg(ix.trip);
+  const shown = eats.filter(p => vegOk(p, ui.veg && veg));
   const fixed = anchorsFor(ix, d);
   const empty = !d.plan.length && !legs.length && !d.around.length && !d.tips.length && !eats.length;
   if (empty) return (
@@ -112,7 +114,7 @@ export function DayBody({ d }: { d: Day }) {
       {d.tips.length > 0 && <section className="sec"><SecH title="Good to know" /><Bullets items={d.tips} /></section>}
       {eats.length > 0 && (
         <section className="sec">
-          <SecH title="Where to eat"><VegToggle /></SecH>
+          <SecH title="Where to eat">{veg && <VegToggle />}</SecH>
           {shown.length ? <ul className="sheet">{shown.map(p => <EatItem key={p.id} p={p} />)}</ul>
             : <p className="empty">Nothing veg-friendly listed for this day.</p>}
         </section>
@@ -218,7 +220,9 @@ export function LegItem({ l }: { l: Leg }) {
 export const vegOk = (p: Place, veg: boolean) => !veg || ((p.diet === 'veg' || p.diet === 'veg-some') && !p.closed);
 
 export function VegPill({ p }: { p: Place }) {
+  const { ix } = useApp();
   if (p.closed) return <Pill kind="no">Closed for good</Pill>;
+  if (!tripEatsVeg(ix.trip)) return null;
   if (p.diet === 'veg') return <Pill kind="ok">Veg-friendly</Pill>;
   if (p.diet === 'veg-some') return <Pill kind="todo">Some veg</Pill>;
   if (p.diet === 'no') return <Pill>Not veg</Pill>;

@@ -3,23 +3,42 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { pref, setPref } from '../model/store';
 import { useSync } from '../sync/engine';
+import { localNotes, keepNotes, pullNotes, pushNotes } from '../sync/mynotes';
 import { myFeedback, sendFeedback, type Feedback, type FeedbackKind } from '../sync/feedback';
 import { Fold, SecH } from './bits';
 import { useApp } from './ctx';
 import { stamp } from '../model/time';
 import { JAPAN } from '../edition';
 
+const sample = (t: { sample?: boolean }) => !!t.sample;
+
 export function MyNotes() {
   const t = useApp().ix.trip;
-  const key = 'mynotes-' + t.id;
-  const [text, setText] = useState(() => pref(key, ''));
-  useEffect(() => { setText(pref(key, '')); }, [key]);
-  useEffect(() => { const h = window.setTimeout(() => setPref(key, text), 300); return () => clearTimeout(h); }, [key, text]);
+  const { session } = useSync();
+  const [text, setText] = useState(() => localNotes(t.id));
+  const typed = useRef(false);
+  /* the account's copy, if it's newer: on opening, signing in, coming back to the app, pulling down */
+  useEffect(() => {
+    setText(localNotes(t.id)); typed.current = false;
+    if (sample(t)) return;
+    const pull = () => { if (!document.hidden) void pullNotes(t.id).then(x => { if (x != null) { typed.current = false; setText(x); } }); };
+    pull();
+    document.addEventListener('visibilitychange', pull);
+    window.addEventListener('wt-refresh', pull);
+    return () => { document.removeEventListener('visibilitychange', pull); window.removeEventListener('wt-refresh', pull); };
+  }, [t.id, !!session]); // eslint-disable-line react-hooks/exhaustive-deps
+  /* what you type: on the phone at once, to the account a moment after you stop */
+  useEffect(() => {
+    if (!typed.current) return;
+    const h = window.setTimeout(() => keepNotes(t.id, text), 300);
+    const up = window.setTimeout(() => { if (!sample(t)) void pushNotes(t.id); }, 1500);
+    return () => { clearTimeout(h); clearTimeout(up); };
+  }, [t.id, text]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <>
       <h1 className="page-h">Notes</h1>
-      <p className="note" style={{ marginTop: 0 }}>Just for you, on this phone. Anything you want to remember on this trip.</p>
-      <textarea className="mynotes" value={text} onChange={e => setText(e.target.value)} placeholder="Start typing…" aria-label="Your notes" />
+      <p className="note" style={{ marginTop: 0 }}>Just for you{session ? ', on all your devices' : ', on this phone'}.</p>
+      <textarea className="mynotes" value={text} onChange={e => { typed.current = true; setText(e.target.value); }} placeholder="Start typing…" aria-label="Your notes" />
       {!JAPAN && <AppComments />}
     </>
   );
@@ -77,9 +96,12 @@ function AppComments() {
           </div>
         )}
         <input ref={pick} type="file" accept="image/*" hidden onChange={e => { setShot(e.target.files?.[0] || null); e.target.value = ''; }} />
-        <div className="chips">
-          <button type="button" className="chipbtn" onClick={() => pick.current?.click()}>{shot ? 'Change screenshot' : 'Add a screenshot'}</button>
+        {/* Send on the left, a camera button for a screenshot on the right (Adam, Oct 26) */}
+        <div className="fb-row">
           <button type="button" className="chipbtn go" disabled={!draft.trim() || busy} onClick={() => void send()}>{busy ? 'Sending…' : 'Send to Adam'}</button>
+          <button type="button" className="cambtn fb-cam" onClick={() => pick.current?.click()} aria-label={shot ? 'Change the screenshot' : 'Add a screenshot'}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5h3l1.6-2.5h6.8L17 8.5h3v10.5H4z" /><circle cx="12" cy="13.5" r="3.4" /></svg>
+          </button>
         </div>
         {msg && <p className={'geomsg' + (msg.bad ? ' bad' : '')} role="status">{msg.text}</p>}
         {sent.length > 0 && <>

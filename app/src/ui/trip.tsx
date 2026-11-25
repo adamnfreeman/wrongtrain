@@ -97,7 +97,15 @@ function WhosGoing() {
   const { ix, edit } = useApp();
   const t = ix.trip, shared = !!useStore().sync[t.id], me = useStore().me;
   const people = useTripPeople(t.id), mine = useMyAvatar();
-  const joined = people.map(p => ({ key: p.user_id, name: p.name || 'Someone', src: p.name && p.name === me && mine ? mine : p.avatar || null, waiting: false }));
+  /* one face per name: the same person signed in with two accounts showed twice (Adam, Oct 26);
+     the one with a picture is kept */
+  const byName = new Map<string, { key: string; name: string; src: string | null; waiting: boolean }>();
+  for (const p of people) {
+    const face = { key: p.user_id, name: p.name || 'Someone', src: p.name && p.name === me && mine ? mine : p.avatar || null, waiting: false };
+    const k = face.name.trim().toLowerCase(), had = byName.get(k);
+    if (!had || (!had.src && face.src)) byName.set(k, face);
+  }
+  const joined = [...byName.values()];
   const names = new Set(joined.map(p => p.name.trim().toLowerCase()));
   const listed = t.travelers.filter(n => !names.has(n.trim().toLowerCase()))
     .map(n => ({ key: 'n:' + n, name: n, src: n === me ? mine : null, waiting: shared }));
